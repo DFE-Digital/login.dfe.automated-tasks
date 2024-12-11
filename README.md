@@ -8,6 +8,7 @@ Automated tasks run on schedules or triggered manually to carry out BAU activiti
     - [First time setup](#first-time-setup)
     - [Running any functions locally](#running-any-functions-locally)
   - [Adding New Database Connections](#adding-new-database-connections)
+  - [Adding New DSi Internal API Connections](#adding-new-dsi-internal-api-connections)
 
 ## DevOps Requirements
 
@@ -35,7 +36,13 @@ To ease local running/debugging of these functions, please install the recommend
     "DATABASE_DIRECTORIES_HOST": "",
     "DATABASE_DIRECTORIES_NAME": "",
     "DATABASE_DIRECTORIES_USERNAME": "",
-    "DATABASE_DIRECTORIES_PASSWORD": ""
+    "DATABASE_DIRECTORIES_PASSWORD": "",
+    "API_INTERNAL_DIRECTORIES_HOST": "",
+    "API_INTERNAL_TENANT": "",
+    "API_INTERNAL_AUTHORITY_HOST": "",
+    "API_INTERNAL_CLIENT_ID": "",
+    "API_INTERNAL_CLIENT_SECRET": "",
+    "API_INTERNAL_RESOURCE": ""
   },
   "ConnectionStrings": {}
 }
@@ -53,6 +60,12 @@ To ease local running/debugging of these functions, please install the recommend
 | DATABASE_DIRECTORIES_NAME | The directories database name | Retrieve from KeyVault or other database connections. | `""`
 | DATABASE_DIRECTORIES_USERNAME | SQL username for connecting to the directories database. | Use your own username or retrieve from KeyVault. | `""`
 | DATABASE_DIRECTORIES_PASSWORD | SQL password for connecting to the directories database. | Use your own password or retrieve from KeyVault. | `""`
+| API_INTERNAL_DIRECTORIES_HOST | Host URL for the internal directories API. | Retrieve from "Domains" section of the app service's "Overview" page. | `""`
+| API_INTERNAL_TENANT | Tenant ID of the internal API tenant. | Retrieve from KeyVault. | `""`
+| API_INTERNAL_AUTHORITY_HOST | Authority host URL of the internal API tenant. | Retrieve from KeyVault. | `""`
+| API_INTERNAL_CLIENT_ID | Client ID of the internal API tenant. | Retrieve from KeyVault. | `""`
+| API_INTERNAL_CLIENT_SECRET | Client secret of the internal API tenant. | Retrieve from KeyVault. | `""`
+| API_INTERNAL_RESOURCE | Resource ID of the internal API tenant. | Retrieve from KeyVault. | `""`
 
 2. Start the Azurite storage emulator using the "Azurite: Start" command from the command palette (`F1` or `ctrl + shift + p`) as the functions need somewhere to write their state that mimics Azure's storage when deployed.
 3. Open the "Run and Debug" menu in VSCode, select "Attach to Node functions" if it isn't selected by default, and click the start debugging button, this does the following:
@@ -72,3 +85,11 @@ To ease local running/debugging of these functions, please install the recommend
    - `DATABASE_FOO_PASSWORD`
 3. Update the blank `local.settings.json` in step 2 of the ["First time setup"](#first-time-setup) section above.
 4. Add descriptions to the table in step 1 of the ["Running any functions locally"](#running-any-functions-locally) section above.
+
+## Adding New DSi Internal API Connections
+
+1. Add an additional value to the `ApiName` enum within `src/infrastructure/api/dsiInternal/DsiInternalApiClient.ts` e.g. `Foo = "foo"`.
+2. Add an app setting/environment variable for the API's URL to the app and your `local.settings.json` file named using the API name in capitals, the following is using the `"foo"` example:
+   - `API_INTERNAL_FOO_HOST`
+3. Update the blank `local.settings.json` in step 2 of the ["First time setup"](#first-time-setup) section above.
+4. Add a description to the table in step 1 of the ["Running any functions locally"](#running-any-functions-locally) section above.
