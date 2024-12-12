@@ -4,6 +4,7 @@ Automated tasks run on schedules or triggered manually to carry out BAU activiti
 
 - [login.dfe.automated-tasks](#logindfeautomated-tasks)
   - [DevOps Requirements](#devops-requirements)
+  - [What is that weird prepare code in package.json?](#what-is-that-weird-prepare-code-in-packagejson)
   - [Local Debugging](#local-debugging)
     - [First time setup](#first-time-setup)
     - [Running any functions locally](#running-any-functions-locally)
@@ -13,6 +14,28 @@ Automated tasks run on schedules or triggered manually to carry out BAU activiti
 ## DevOps Requirements
 
 TBD
+
+## What is that weird prepare code in package.json?
+
+The `@azure/service-bus` package uses a package names `long` which as of writing hasn't been updated since April 16th 2023. The `long` package does not like the following newer compiler options for typescript `"module": "Node16"` and `"moduleResolution": "node16"`, due to the way it exports one of its types. These compiler options (at least its currently matching option `nodenext`) are recommended by the [TypeScript documentation](https://www.typescriptlang.org/tsconfig/#module) "You very likely want `"nodenext"` for modern Node.js projects". Without it, some of our other dependencies fail to compile and the last thing we want to do is turn off dependency checking with TypeScript, as we lose some type safety protection.
+
+The `long` package has issues raised about this problem, [this one](https://github.com/dcodeIO/long.js/issues/125) in July 2023 found the problem and PRs have been made to fix it but never merged. I also personally tried:
+
+- Turning the compiler options back to their defaults, and attempting to see if other options fixed issues.
+- Installing `long` as a dependency.
+- Installing `@types/long` type definitions with/without the `long` package installed.
+- Attempting to overwrite the types manually with a mocked types file copied from the package (another workaround listed) but as it's a dependency of `@azure/service-bus` not us directly I couldn't get it working.
+
+So we are left with two choices, turn off the dependency checking in TypeScript, or use the workaround in the [GitHub issue](https://github.com/dcodeIO/long.js/issues/125#issuecomment-1897638682) which copies the correct version of the type definitions to replace the broken one. Ideally we want to turn off dependency checking as a last resort, so I slightly modified the workaround to only copy the file if both the original file and the destination exists:
+
+```js
+const fs = require('node:fs');
+if (fs.existsSync('./node_modules/@azure/service-bus/node_modules/long/index.d.ts') && fs.existsSync('./node_modules/@azure/service-bus/node_modules/long/umd/index.d.ts')) {
+  fs.copyFileSync('./node_modules/@azure/service-bus/node_modules/long/index.d.ts', './node_modules/@azure/service-bus/node_modules/long/umd/index.d.ts');
+}
+```
+
+**NOTE:** I am not overly happy with this solution, but as the fix PRs in the package haven't been merged, and there have been no updates since 2023, I believe this is the best way until the `@azure/service-bus` package does a fix on their imported version, or the original `long` package is fixed.
 
 ## Local Debugging
 
