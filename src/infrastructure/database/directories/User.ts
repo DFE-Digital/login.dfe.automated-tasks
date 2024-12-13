@@ -1,6 +1,8 @@
-import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional } from "sequelize";
-import { connection, DatabaseName } from "../common/connection";
+import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional, Sequelize } from "sequelize";
 
+/**
+ * User database schema model for CRUD operations the API doesn't currently support.
+ */
 export class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> {
   declare id: string;
   declare email: string;
@@ -22,88 +24,95 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
   declare entraLinkedAt: Date | null;
 };
 
-User.init({
-  id: {
-    type: DataTypes.UUIDV4,
-    primaryKey: true,
-    field: "sub",
-    unique: true,
-    allowNull: false,
-  },
-  email: {
-    type: DataTypes.STRING,
-    unique: true,
-    allowNull: false
-  },
-  firstName: {
-    type: DataTypes.STRING,
-    field: "given_name",
-    allowNull: false
-  },
-  lastName: {
-    type: DataTypes.STRING,
-    field: "family_name",
-    allowNull: false
-  },
-  password: {
-    type: DataTypes.STRING(5000),
-    allowNull: false,
-  },
-  salt: {
-    type: DataTypes.STRING(500),
-    allowNull: false,
-  },
-  status: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-  },
-  createdAt: {
-    type: DataTypes.DATE,
-    allowNull: false,
-  },
-  updatedAt: {
-    type: DataTypes.DATE,
-    allowNull: false,
-  },
-  phoneNumber: {
-    type: DataTypes.STRING(50),
-    field: "phone_number",
-  },
-  lastLogin: {
-    type: DataTypes.DATE,
-    field: "last_login",
-  },
-  isMigrated: {
-    type: DataTypes.BOOLEAN,
-    allowNull: false,
-  },
-  jobTitle: {
-    type: DataTypes.STRING,
-    field: "job_title",
-  },
-  passwordResetRequired: {
-    type: DataTypes.BOOLEAN,
-    field: "password_reset_required",
-    allowNull: false,
-  },
-  previousLogin: {
-    type: DataTypes.DATE,
-    field: "prev_login",
-  },
-  isEntra: {
-    type: DataTypes.BOOLEAN,
-    allowNull: false,
-  },
-  entraId: {
-    type: DataTypes.UUID,
-    field: "entra_oid",
-    unique: true,
-  },
-  entraLinkedAt: {
-    type: DataTypes.DATE,
-    field: "entra_linked",
-  },
-}, {
-  tableName: "user",
-  sequelize: connection(DatabaseName.Directories),
-});
+/**
+ * Initialise the User model with the data types and fields expected by the database.
+ * 
+ * @param connection - A {@link Sequelize} object connected to a database.
+ */
+export function initialiseUserModel(connection: Sequelize): void {
+  User.init({
+    id: {
+      type: DataTypes.UUIDV4,
+      primaryKey: true,
+      field: "sub",
+      unique: true,
+      allowNull: false,
+    },
+    email: {
+      type: DataTypes.STRING,
+      unique: true,
+      allowNull: false
+    },
+    firstName: {
+      type: DataTypes.STRING,
+      field: "given_name",
+      allowNull: false
+    },
+    lastName: {
+      type: DataTypes.STRING,
+      field: "family_name",
+      allowNull: false
+    },
+    password: {
+      type: DataTypes.STRING(5000),
+      allowNull: false,
+    },
+    salt: {
+      type: DataTypes.STRING(500),
+      allowNull: false,
+    },
+    status: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+    },
+    phoneNumber: {
+      type: DataTypes.STRING(50),
+      field: "phone_number",
+    },
+    lastLogin: {
+      type: DataTypes.DATE,
+      field: "last_login",
+    },
+    isMigrated: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+    },
+    jobTitle: {
+      type: DataTypes.STRING,
+      field: "job_title",
+    },
+    passwordResetRequired: {
+      type: DataTypes.BOOLEAN,
+      field: "password_reset_required",
+      allowNull: false,
+    },
+    previousLogin: {
+      type: DataTypes.DATE,
+      field: "prev_login",
+    },
+    isEntra: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+    },
+    entraId: {
+      type: DataTypes.UUID,
+      field: "entra_oid",
+      unique: true,
+    },
+    entraLinkedAt: {
+      type: DataTypes.DATE,
+      field: "entra_linked",
+    },
+  }, {
+    tableName: "user",
+    sequelize: connection,
+  });  
+};
