@@ -49,6 +49,7 @@ function createClientApplication(options: MsalApiClientOptions["auth"]) {
 export class MsalApiClient extends ApiClient {
   private cca: ConfidentialClientApplication;
   private resource: string;
+  private cachedToken: AuthenticationResult;
 
   /**
    * Instantiates a new API client capable of connecting to MSAL protected APIs.
@@ -72,19 +73,20 @@ export class MsalApiClient extends ApiClient {
   private async addAuthHeader(options?: ApiRequestOptions): Promise<ApiRequestOptions> {
     const initialOptions = options ?? {};
     const errorInfo = `(baseUri: ${this.baseUri}, correlationId: ${options?.correlationId ?? "Not provided"})`;
-    let authResult: AuthenticationResult;
 
-    try {
-      authResult = await this.cca.acquireTokenByClientCredential({
-        scopes: [ `${this.resource}/.default` ],
-      });
-    } catch (error) {
-      throw new Error(`Error acquiring auth token "${error.message}" ${errorInfo}`);
+    if (!this.cachedToken || (this.cachedToken && this.cachedToken.expiresOn < new Date())) {
+      try {
+        this.cachedToken = await this.cca.acquireTokenByClientCredential({
+          scopes: [ `${this.resource}/.default` ],
+        });
+      } catch (error) {
+        throw new Error(`Error acquiring auth token "${error.message}" ${errorInfo}`);
+      }
     }
 
     initialOptions.headers = {
       ...initialOptions.headers ?? {},
-      authorization: `Bearer ${authResult.accessToken}`,
+      authorization: `Bearer ${this.cachedToken.accessToken}`,
     };
 
     return initialOptions;

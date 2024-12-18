@@ -18,9 +18,13 @@ describe("MSAL API client", () => {
   };
   const clientApp = jest.mocked(ConfidentialClientApplication);
   const parentClient = jest.mocked(ApiClient);
-  const setAccessToken = (token: string) => {
+  const setAccessToken = (token: string, daysUntilExpired = 30) => {
+    const expiryDate = new Date();
+    expiryDate.setDate(new Date().getDate() + daysUntilExpired);
+
     clientApp.prototype.acquireTokenByClientCredential.mockResolvedValue({
       accessToken: token,
+      expiresOn: expiryDate,
     } as AuthenticationResult);
   };
   let client: MsalApiClient;
@@ -79,13 +83,29 @@ describe("MSAL API client", () => {
       client["baseUri"] = defaultOptions.baseUri;
     });
 
-    it("it acquires a token using the MSAL client application with the default scope", async () => {
+    it("it acquires a token using the MSAL client application with the default scope on the first request", async () => {
       await client.requestRaw(ApiRequestMethod.GET, "", {});
 
       expect(clientApp.prototype.acquireTokenByClientCredential).toHaveBeenCalled();
       expect(clientApp.prototype.acquireTokenByClientCredential).toHaveBeenCalledWith({
         scopes: [ `${defaultOptions.auth.resource}/.default` ],
       });
+    });
+
+    it("it reuses the same token for a second request if it hasn't expired", async () => {
+      setAccessToken("", 1);
+      await client.requestRaw(ApiRequestMethod.GET, "", {});
+      await client.requestRaw(ApiRequestMethod.GET, "", {});
+
+      expect(clientApp.prototype.acquireTokenByClientCredential).toHaveBeenCalledTimes(1);
+    });
+
+    it("it acquires another token if the cached token exists and has expired", async () => {
+      setAccessToken("", -1);
+      await client.requestRaw(ApiRequestMethod.GET, "", {});
+      await client.requestRaw(ApiRequestMethod.GET, "", {});
+
+      expect(clientApp.prototype.acquireTokenByClientCredential).toHaveBeenCalledTimes(2);
     });
 
     it("it throws an error with a correlation ID if the MSAL package fails to retrieve an access token, when one is provided", async () => {
@@ -208,13 +228,29 @@ describe("MSAL API client", () => {
       client["baseUri"] = defaultOptions.baseUri;
     });
 
-    it("it acquires a token using the MSAL client application with the default scope", async () => {
+    it("it acquires a token using the MSAL client application with the default scope on the first request", async () => {
       await client.request(ApiRequestMethod.GET, "", {});
 
       expect(clientApp.prototype.acquireTokenByClientCredential).toHaveBeenCalled();
       expect(clientApp.prototype.acquireTokenByClientCredential).toHaveBeenCalledWith({
         scopes: [ `${defaultOptions.auth.resource}/.default` ],
       });
+    });
+
+    it("it reuses the same token for a second request if it hasn't expired", async () => {
+      setAccessToken("", 1);
+      await client.request(ApiRequestMethod.GET, "", {});
+      await client.request(ApiRequestMethod.GET, "", {});
+
+      expect(clientApp.prototype.acquireTokenByClientCredential).toHaveBeenCalledTimes(1);
+    });
+
+    it("it acquires another token if the cached token exists and has expired", async () => {
+      setAccessToken("", -1);
+      await client.request(ApiRequestMethod.GET, "", {});
+      await client.request(ApiRequestMethod.GET, "", {});
+
+      expect(clientApp.prototype.acquireTokenByClientCredential).toHaveBeenCalledTimes(2);
     });
 
     it("it throws an error with a correlation ID if the MSAL package fails to retrieve an access token, when one is provided", async () => {
