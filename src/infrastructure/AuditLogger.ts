@@ -3,10 +3,21 @@ import { ServiceBusClient, ServiceBusMessage } from "@azure/service-bus";
 import { WebSocket } from "ws";
 
 /**
+ * Available audit levels to accompany audit messages.
+ */
+export enum AuditLevel {
+  Debug = "debug",
+  Info = "info",
+  Audit = "audit",
+  Warning = "warning",
+  Error = "error",
+};
+
+/**
  * Audit log fields.
  */
 export interface AuditLog {
-  level?: string,
+  level?: AuditLevel,
   message: string,
   application?: string,
   env?: string,
@@ -51,7 +62,7 @@ export class AuditLogger {
     const formattedRecord = { ...record };
 
     if (!formattedRecord.level) {
-      formattedRecord.level = "audit";
+      formattedRecord.level = AuditLevel.Audit;
     }
 
     if (!formattedRecord.application) {

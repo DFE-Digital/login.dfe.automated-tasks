@@ -1,5 +1,5 @@
 import { ServiceBusClient } from "@azure/service-bus";
-import { AuditLogger } from "../../src/infrastructure/AuditLogger";
+import { AuditLevel, AuditLogger } from "../../src/infrastructure/AuditLogger";
 import WebSocket from "ws";
 
 jest.mock("@azure/service-bus", () => ({
@@ -94,7 +94,7 @@ describe("Service bus audit logger", () => {
       });
 
       it("it sets each audit record's level to 'audit' if it is not set", async () => {
-        const level = "testLevel";
+        const level = AuditLevel.Debug;
         const logs = [
           minimumLog,
           minimumLog, {
@@ -143,7 +143,7 @@ describe("Service bus audit logger", () => {
 
       it("it sends the JSON stringified array of the stringified body for each message to the service bus topic", async () => {
         const fullLog = {
-          level: "test",
+          level: AuditLevel.Audit,
           message: "test",
           application: "test",
           env: "test",
@@ -226,7 +226,7 @@ describe("Service bus audit logger", () => {
 
       it("it sends the JSON stringified array of the stringified body to the service bus topic", async () => {
         const fullLog = {
-          level: "test",
+          level: AuditLevel.Audit,
           message: "test",
           application: "test",
           env: "test",
