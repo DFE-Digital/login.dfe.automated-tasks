@@ -53,44 +53,29 @@ describe("Base API client", () => {
 
     it("it passes null as the body if the method is GET", async () => {
       await apiClient.requestRaw(ApiRequestMethod.GET, "", {
-        jsonBody: "test",
-        textBody: "test",
+        body: "test",
       });
 
       expect(mockedFetch).toHaveBeenCalled();
       expect(mockedFetch.mock.lastCall[1].body).toEqual(null);
     });
 
-    it("it passes the JSON stringified body if the method is not GET and the jsonBody option is set", async () => {
+    it("it passes the JSON stringified body if the method is not GET and the body option is an object", async () => {
       const requestBody = {
         test: "testing",
       };
       await apiClient.requestRaw(ApiRequestMethod.POST, "", {
-        jsonBody: requestBody,
+        body: requestBody,
       });
 
       expect(mockedFetch).toHaveBeenCalled();
       expect(mockedFetch.mock.lastCall[1].body).toEqual(JSON.stringify(requestBody));
     });
 
-    it("it passes the JSON stringified body if the method is not GET and the jsonBody/textBody options are set", async () => {
-      const requestBody = {
-        test: "testing",
-      };
-      await apiClient.requestRaw(ApiRequestMethod.POST, "", {
-        jsonBody: requestBody,
-        textBody: "testing 123",
-      });
-
-      expect(mockedFetch).toHaveBeenCalled();
-      expect(mockedFetch.mock.lastCall[1].body).toEqual(JSON.stringify(requestBody));
-    });
-
-    it("it passes the string body if the method is not GET, textBody option is set, and jsonBody is not set", async () => {
+    it("it passes the string body if the method is not GET, and the body is not an object", async () => {
       const requestBody = "testing123";
       await apiClient.requestRaw(ApiRequestMethod.POST, "", {
-        textBody: requestBody,
-        jsonBody: undefined,
+        body: requestBody,
       });
 
       expect(mockedFetch).toHaveBeenCalled();
@@ -98,10 +83,9 @@ describe("Base API client", () => {
       expect(mockedFetch.mock.lastCall[1].body).not.toEqual(JSON.stringify(requestBody));
     });
 
-    it("it passes null as the body if the method is not GET and the jsonBody/textBody options aren't set", async () => {
+    it("it passes null as the body if the method is not GET and the body option isn't set", async () => {
       await apiClient.requestRaw(ApiRequestMethod.POST, "", {
-        jsonBody: undefined,
-        textBody: undefined,
+        body: undefined,
       });
 
       expect(mockedFetch).toHaveBeenCalled();
@@ -110,10 +94,10 @@ describe("Base API client", () => {
 
     it("it passes the specified headers to the request", async () => {
       const requestOptions = {
-        headers: {
+        headers: new Headers({
           foo: "Bar",
           testing: "123",
-        },
+        }),
       };
       await apiClient.requestRaw(ApiRequestMethod.GET, "", requestOptions);
 
@@ -121,16 +105,16 @@ describe("Base API client", () => {
       expect(mockedFetch.mock.lastCall[1].headers).toEqual(requestOptions.headers);
     });
 
-    it("it doesn't pass headers if none are specified and correlationId/jsonBody options aren't set", async () => {
+    it("it doesn't pass headers if none are specified and correlationId/body options aren't set", async () => {
       const requestOptions = {
-        jsonBody: undefined,
+        body: undefined,
         correlationId: undefined,
         headers: undefined,
       };
       await apiClient.requestRaw(ApiRequestMethod.GET, "", requestOptions);
 
       expect(mockedFetch).toHaveBeenCalled();
-      expect(mockedFetch.mock.lastCall[1].headers).toEqual({});
+      expect(mockedFetch.mock.lastCall[1].headers).toEqual(new Headers());
     });
 
     it("it passes a correlation ID header if the correlationId option is set", async () => {
@@ -140,41 +124,41 @@ describe("Base API client", () => {
       await apiClient.requestRaw(ApiRequestMethod.GET, "", requestOptions);
 
       expect(mockedFetch).toHaveBeenCalled();
-      expect(mockedFetch.mock.lastCall[1].headers).toEqual({
+      expect(mockedFetch.mock.lastCall[1].headers).toEqual(new Headers({
         "x-correlation-id": requestOptions.correlationId,
-      });
+      }));
     });
 
-    it("it passes a JSON content type header if the method is not GET and the jsonBody option is set", async () => {
+    it("it passes a JSON content type header if the method is not GET and the body option is an object", async () => {
       const requestOptions = {
-        jsonBody: "testing123",
+        body: {},
       };
       await apiClient.requestRaw(ApiRequestMethod.POST, "", requestOptions);
 
       expect(mockedFetch).toHaveBeenCalled();
-      expect(mockedFetch.mock.lastCall[1].headers).toEqual({
+      expect(mockedFetch.mock.lastCall[1].headers).toEqual(new Headers({
         "content-type": "application/json",
-      });
+      }));
     });
 
-    it("it doesn't pass a JSON content type header if the method is not GET and the jsonBody option is not set", async () => {
+    it("it doesn't pass a JSON content type header if the method is not GET and the body option is not an object", async () => {
       const requestOptions = {
-        jsonBody: undefined,
+        body:  "testing123",
       };
       await apiClient.requestRaw(ApiRequestMethod.GET, "", requestOptions);
 
       expect(mockedFetch).toHaveBeenCalled();
-      expect(mockedFetch.mock.lastCall[1].headers).toEqual({});
+      expect(mockedFetch.mock.lastCall[1].headers).toEqual(new Headers());
     });
 
-    it("it doesn't pass a JSON content type header if the method is GET and the jsonBody option is set", async () => {
+    it("it doesn't pass a JSON content type header if the method is GET and the body option is an object", async () => {
       const requestOptions = {
-        jsonBody: "testing123",
+        body: {},
       };
       await apiClient.requestRaw(ApiRequestMethod.GET, "", requestOptions);
 
       expect(mockedFetch).toHaveBeenCalled();
-      expect(mockedFetch.mock.lastCall[1].headers).toEqual({});
+      expect(mockedFetch.mock.lastCall[1].headers).toEqual(new Headers());
     });
 
     it("it passes no headers and null as the body if the method is GET and the options are not defined", async () => {
@@ -184,7 +168,7 @@ describe("Base API client", () => {
       expect(mockedFetch.mock.lastCall[1]).toEqual({
         method: ApiRequestMethod.GET,
         body: null,
-        headers: {},
+        headers: new Headers(),
       });
     });
 
@@ -195,13 +179,13 @@ describe("Base API client", () => {
       expect(mockedFetch.mock.lastCall[1]).toEqual({
         method: ApiRequestMethod.POST,
         body: null,
-        headers: {},
+        headers: new Headers(),
       });
     });
 
     it("it throws an error with correlationId if fetch throws an error, and correlationId is set", async () => {
       const errorMessage = "Fetch Failed";
-      globalThis.fetch = mockedFetch.mockRejectedValue(new Error(errorMessage));
+      mockedFetch.mockRejectedValue(new Error(errorMessage));
       const requestOptions = {
         correlationId: "testing123",
       };
@@ -213,7 +197,7 @@ describe("Base API client", () => {
 
     it("it throws an error without correlationId if fetch throws an error, and correlationId is not set", async () => {
       const errorMessage = "Fetch Failed";
-      globalThis.fetch = mockedFetch.mockRejectedValue(new Error(errorMessage));
+      mockedFetch.mockRejectedValue(new Error(errorMessage));
 
       expect(apiClient.requestRaw(ApiRequestMethod.GET, "", {})).rejects.toThrow(
         `API fetch error "${errorMessage}" (baseUri: ${defaultOptions.baseUri}, correlationId: Not provided)`
@@ -226,7 +210,7 @@ describe("Base API client", () => {
         statusText: "Internal Server Error",
         ok: false,
       };
-      globalThis.fetch = mockedFetch.mockResolvedValue(failedResponse);
+      mockedFetch.mockResolvedValue(failedResponse);
       const requestOptions = {
         correlationId: "testing123",
       };
@@ -242,7 +226,7 @@ describe("Base API client", () => {
         statusText: "Internal Server Error",
         ok: false,
       };
-      globalThis.fetch = mockedFetch.mockResolvedValue(failedResponse);
+      mockedFetch.mockResolvedValue(failedResponse);
 
       expect(apiClient.requestRaw(ApiRequestMethod.GET, "", {})).rejects.toThrow(
         `API request failed with status ${failedResponse.status} "${failedResponse.statusText}" (baseUri: ${defaultOptions.baseUri}, correlationId: Not provided)`
@@ -255,7 +239,7 @@ describe("Base API client", () => {
         statusText: "Not Found",
         ok: false,
       };
-      globalThis.fetch = mockedFetch.mockResolvedValue(failedResponse);
+      mockedFetch.mockResolvedValue(failedResponse);
 
       expect(apiClient.requestRaw(ApiRequestMethod.GET, "", {})).resolves.not.toThrow();
     });
@@ -279,21 +263,21 @@ describe("Base API client", () => {
     it("it passes the method, path, and options to the requestRaw function", async () => {
       const requestOptions = {
         correlationId: "testing123",
-        headers: {
+        headers: new Headers({
           test: "testing"
-        },
-        textBody: "testing testing 123",
+        }),
+        body: "testing testing 123",
       };
       await apiClient.request(ApiRequestMethod.GET, "test", requestOptions);
 
-      expect(spyRequestRaw).toHaveBeenCalled();
-      expect(spyRequestRaw).toHaveBeenCalledWith(ApiRequestMethod.GET, "test", requestOptions);
+      expect(apiClient.requestRaw).toHaveBeenCalled();
+      expect(apiClient.requestRaw).toHaveBeenCalledWith(ApiRequestMethod.GET, "test", requestOptions);
     });
 
     it("it returns the JSON parsed response body if the response status is not 404", async () => {
       const result = await apiClient.request(ApiRequestMethod.GET, "", {});
 
-      expect(spyRequestRaw).toHaveBeenCalled();
+      expect(apiClient.requestRaw).toHaveBeenCalled();
       expect(result).toEqual("JSON: Testing Testing 123");
     });
 
@@ -304,7 +288,7 @@ describe("Base API client", () => {
       } as Response);
       const result = await apiClient.request(ApiRequestMethod.GET, "", {});
 
-      expect(spyRequestRaw).toHaveBeenCalled();
+      expect(apiClient.requestRaw).toHaveBeenCalled();
       expect(result).toEqual(null);
     });
   });

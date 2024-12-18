@@ -84,10 +84,8 @@ export class MsalApiClient extends ApiClient {
       }
     }
 
-    initialOptions.headers = {
-      ...initialOptions.headers ?? {},
-      authorization: `Bearer ${this.cachedToken.accessToken}`,
-    };
+    initialOptions.headers = initialOptions.headers ?? new Headers();
+    initialOptions.headers.set("authorization", `Bearer ${this.cachedToken.accessToken}`);
 
     return initialOptions;
   };

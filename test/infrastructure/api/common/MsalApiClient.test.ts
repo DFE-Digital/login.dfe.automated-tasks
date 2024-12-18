@@ -151,10 +151,10 @@ describe("MSAL API client", () => {
       await client.requestRaw(ApiRequestMethod.GET, "");
 
       expect(parentClient.prototype.requestRaw).toHaveBeenCalled();
-      expect(parentClient.prototype.requestRaw.mock.calls[0][2]).toMatchObject({
-        headers: {
+      expect(parentClient.prototype.requestRaw.mock.calls[0][2]).toEqual({
+        headers: new Headers({
           authorization: `Bearer ${token}`,
-        },
+        }),
       });
     });
 
@@ -164,10 +164,10 @@ describe("MSAL API client", () => {
       await client.requestRaw(ApiRequestMethod.GET, "", {});
 
       expect(parentClient.prototype.requestRaw).toHaveBeenCalled();
-      expect(parentClient.prototype.requestRaw.mock.calls[0][2]).toMatchObject({
-        headers: {
+      expect(parentClient.prototype.requestRaw.mock.calls[0][2]).toEqual({
+        headers: new Headers({
           authorization: `Bearer ${token}`,
-        },
+        }),
       });
     });
 
@@ -179,15 +179,15 @@ describe("MSAL API client", () => {
       };
       setAccessToken(token);
       await client.requestRaw(ApiRequestMethod.GET, "", {
-        headers: initialHeaders,
+        headers: new Headers(initialHeaders),
       });
 
       expect(parentClient.prototype.requestRaw).toHaveBeenCalled();
-      expect(parentClient.prototype.requestRaw.mock.calls[0][2]).toMatchObject({
-        headers: {
+      expect(parentClient.prototype.requestRaw.mock.calls[0][2]).toEqual({
+        headers: new Headers({
           ...initialHeaders,
           authorization: `Bearer ${token}`,
-        },
+        }),
       });
     });
 
@@ -195,29 +195,28 @@ describe("MSAL API client", () => {
       const token = "testing-token-123";
       setAccessToken(token);
       await client.requestRaw(ApiRequestMethod.GET, "", {
-        headers: {
+        headers: new Headers({
           authorization: "1234",
-        },
+        }),
       });
 
       expect(parentClient.prototype.requestRaw).toHaveBeenCalled();
-      expect(parentClient.prototype.requestRaw.mock.calls[0][2]).toMatchObject({
-        headers: {
+      expect(parentClient.prototype.requestRaw.mock.calls[0][2]).toEqual({
+        headers: new Headers({
           authorization: `Bearer ${token}`,
-        },
+        }),
       });
     });
 
     it("it calls ApiClient requestRaw with the other ApiRequestOptions left as-is", async () => {
       const requestOptions = {
         correlationId: "ID",
-        jsonBody: "JSON",
-        textBody: "TEXT"
+        body: "TEST",
       };
       await client.requestRaw(ApiRequestMethod.GET, "", requestOptions);
 
       expect(parentClient.prototype.requestRaw).toHaveBeenCalled();
-      expect(parentClient.prototype.requestRaw.mock.calls[0][2]).toMatchObject(requestOptions);
+      expect(parentClient.prototype.requestRaw.mock.calls[0][2]).toEqual(requestOptions);
     });
   });
 
@@ -296,10 +295,10 @@ describe("MSAL API client", () => {
       await client.request(ApiRequestMethod.GET, "");
 
       expect(parentClient.prototype.request).toHaveBeenCalled();
-      expect(parentClient.prototype.request.mock.calls[0][2]).toMatchObject({
-        headers: {
+      expect(parentClient.prototype.request.mock.calls[0][2]).toEqual({
+        headers: new Headers({
           authorization: `Bearer ${token}`,
-        },
+        }),
       });
     });
 
@@ -309,10 +308,10 @@ describe("MSAL API client", () => {
       await client.request(ApiRequestMethod.GET, "", {});
 
       expect(parentClient.prototype.request).toHaveBeenCalled();
-      expect(parentClient.prototype.request.mock.calls[0][2]).toMatchObject({
-        headers: {
+      expect(parentClient.prototype.request.mock.calls[0][2]).toEqual({
+        headers: new Headers({
           authorization: `Bearer ${token}`,
-        },
+        }),
       });
     });
 
@@ -324,15 +323,15 @@ describe("MSAL API client", () => {
       };
       setAccessToken(token);
       await client.request(ApiRequestMethod.GET, "", {
-        headers: initialHeaders,
+        headers: new Headers(initialHeaders),
       });
 
       expect(parentClient.prototype.request).toHaveBeenCalled();
-      expect(parentClient.prototype.request.mock.calls[0][2]).toMatchObject({
-        headers: {
+      expect(parentClient.prototype.request.mock.calls[0][2]).toEqual({
+        headers: new Headers({
           ...initialHeaders,
           authorization: `Bearer ${token}`,
-        },
+        }),
       });
     });
 
@@ -340,29 +339,28 @@ describe("MSAL API client", () => {
       const token = "testing-token-123";
       setAccessToken(token);
       await client.request(ApiRequestMethod.GET, "", {
-        headers: {
+        headers: new Headers({
           authorization: "1234",
-        },
+        }),
       });
 
       expect(parentClient.prototype.request).toHaveBeenCalled();
-      expect(parentClient.prototype.request.mock.calls[0][2]).toMatchObject({
-        headers: {
+      expect(parentClient.prototype.request.mock.calls[0][2]).toEqual({
+        headers: new Headers({
           authorization: `Bearer ${token}`,
-        },
+        }),
       });
     });
 
     it("it calls ApiClient request with the other ApiRequestOptions left as-is", async () => {
       const requestOptions = {
         correlationId: "ID",
-        jsonBody: "JSON",
-        textBody: "TEXT"
+        body: "TEST",
       };
       await client.request(ApiRequestMethod.GET, "", requestOptions);
 
       expect(parentClient.prototype.request).toHaveBeenCalled();
-      expect(parentClient.prototype.request.mock.calls[0][2]).toMatchObject(requestOptions);
+      expect(parentClient.prototype.request.mock.calls[0][2]).toEqual(requestOptions);
     });
   });
 });

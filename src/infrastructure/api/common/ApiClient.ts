@@ -10,9 +10,8 @@ export interface ApiClientOptions {
  */
 export interface ApiRequestOptions {
   correlationId?: string,
-  headers?: Record<string, string>,
-  textBody?: string,
-  jsonBody?: unknown,
+  headers?: Headers,
+  body?: object | string,
 };
 
 /**
@@ -50,7 +49,7 @@ export class ApiClient {
    */
   private buildBody(method: ApiRequestMethod, options?: ApiRequestOptions): string | null {
     if (method !== ApiRequestMethod.GET) {
-      return (options?.jsonBody) ? JSON.stringify(options.jsonBody) : (options?.textBody ?? null);
+      return (typeof options?.body === "object") ? JSON.stringify(options.body) : (options?.body ?? null);
     }
 
     return null;
@@ -63,15 +62,15 @@ export class ApiClient {
    * @param options - HTTP request options ({@link ApiRequestOptions}).
    * @returns The HTTP request headers object.
    */
-  private buildHeaders(method: ApiRequestMethod, options?: ApiRequestOptions): Record<string, string> {
-    let headers = options?.headers ?? {};
+  private buildHeaders(method: ApiRequestMethod, options?: ApiRequestOptions): Headers {
+    let headers = options?.headers ?? new Headers();
 
     if (typeof options?.correlationId === "string") {
-      headers["x-correlation-id"] = options.correlationId;
+      headers.set("x-correlation-id", options.correlationId);
     }
 
-    if (method !== ApiRequestMethod.GET && options?.jsonBody) {
-      headers["content-type"] = "application/json";
+    if (method !== ApiRequestMethod.GET && typeof options?.body === "object") {
+      headers.set("content-type", "application/json");
     }
 
     return headers;
@@ -101,7 +100,7 @@ export class ApiClient {
       throw new Error(`API fetch error "${error.message}" ${errorInfo}`);
     }
 
-    if (response && response.status !== 404 && !response.ok) {
+    if (response.status !== 404 && !response.ok) {
       throw new Error(`API request failed with status ${response.status} "${response.statusText}" ${errorInfo}`);
     }
 
