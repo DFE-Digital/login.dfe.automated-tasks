@@ -1,5 +1,5 @@
-import assert from "assert";
 import { Sequelize } from "sequelize";
+import { checkEnv } from "../../utils";
 
 /**
  * Names of databases currently accepted by this application.
@@ -19,11 +19,12 @@ export enum DatabaseName {
 export function connection(database: DatabaseName): Sequelize {
   const dbEnvName = database.toUpperCase();
 
-  ["HOST", "NAME", "USERNAME", "PASSWORD"].forEach((requiredOption) => {
-    const envName = `DATABASE_${dbEnvName}_${requiredOption}`;
-    const envValue = process.env[envName] ?? "";
-    assert(envValue.length > 0, `${envName} is missing, cannot create database connection!`);
-  });
+  checkEnv([
+    `DATABASE_${dbEnvName}_HOST`,
+    `DATABASE_${dbEnvName}_NAME`,
+    `DATABASE_${dbEnvName}_USERNAME`,
+    `DATABASE_${dbEnvName}_PASSWORD`,
+  ], "database");
 
   return new Sequelize(
     process.env[`DATABASE_${dbEnvName}_NAME`],

@@ -1,25 +1,18 @@
 import { ServiceBusClient } from "@azure/service-bus";
 import { AuditLevel, AuditLogger } from "../../src/infrastructure/AuditLogger";
 import WebSocket from "ws";
+import { checkEnv } from "../../src/infrastructure/utils";
 
-jest.mock("@azure/service-bus", () => ({
-  ServiceBusClient: jest.fn(() => ({
-    createSender: jest.fn().mockImplementation(() => ({
-      sendMessages: jest.fn(),
-      close: jest.fn(),
-    })),
-  })),
-}));
+jest.mock("@azure/service-bus");
+jest.mock("../../src/infrastructure/utils");
 
 describe("Service bus audit logger", () => {
   const originalEnv = { ...process.env };
-  const serviceBusClient = ServiceBusClient as jest.MockedClass<typeof ServiceBusClient>;
+  const serviceBusClient = jest.mocked(ServiceBusClient);
+  const checkEnvMock = jest.mocked(checkEnv);
 
   beforeEach(() => {
-    process.env = {
-      AUDIT_CONNECTION_STRING: "Testing",
-      AUDIT_TOPIC_NAME: "Testing",
-    };
+    process.env = {};
   });
 
   afterEach(() => {
@@ -27,13 +20,23 @@ describe("Service bus audit logger", () => {
   });
 
   describe("When creating a service bus audit logger", () => {
-    it.each([
-      "AUDIT_CONNECTION_STRING",
-      "AUDIT_TOPIC_NAME",
-    ])("it will throw an error if any required auth environment variables are not set (%p)", (variable) => {
-      delete process.env[variable];
+    it("it will call checkEnv with the required environment variables and name for connecting to the service bus", () => {
+      new AuditLogger();
 
-      expect(() => new AuditLogger()).toThrow(`${variable} is missing, cannot create audit service bus connection!`);
+      expect(checkEnvMock).toHaveBeenCalled();
+      expect(checkEnvMock).toHaveBeenCalledWith([
+        "AUDIT_CONNECTION_STRING",
+        "AUDIT_TOPIC_NAME",
+      ], "audit service bus");
+    });
+
+    it("it will throw an error if checkEnv throws an error when any required environment variables are not set", () => {
+      const errorMessage = "Test Error";
+      checkEnvMock.mockImplementation(() => {
+        throw new Error(errorMessage);
+      });
+
+      expect(() => new AuditLogger()).toThrow(errorMessage);
     });
 
     it("it will create a ServiceBusClient using the connection string environment variable", () => {

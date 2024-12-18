@@ -1,42 +1,56 @@
 import { connection, DatabaseName } from "../../../../src/infrastructure/database/common/connection";
 import { Sequelize } from "sequelize";
+import { checkEnv } from "../../../../src/infrastructure/utils";
 
 jest.mock("sequelize", () => ({
   Sequelize: jest.fn(),
 }));
+jest.mock("../../../../src/infrastructure/utils");
 
 describe("When building a sequelize connection", () => {
   const originalEnv = { ...process.env };
   const sequelizeConstructor = Sequelize as unknown as jest.Mock;
-  
+  const checkEnvMock = jest.mocked(checkEnv);
+
   beforeEach(() => {
-    process.env = {
-      DATABASE_DIRECTORIES_HOST: "Testing",
-      DATABASE_DIRECTORIES_NAME: "Testing",
-      DATABASE_DIRECTORIES_USERNAME: "Testing",
-      DATABASE_DIRECTORIES_PASSWORD: "Testing",
-    };
+    process.env = {};
   });
-  
+
   afterEach(() => {
     process.env = originalEnv;
   });
 
-  it.each([
-    "HOST",
-    "NAME",
-    "USERNAME",
-    "PASSWORD",
-  ])("it will throw an error if any required environment variables are not set (%p)", (variable) => {
-    const dbName = DatabaseName.Directories;
-    const dbEnvName = dbName.toUpperCase();
-    delete process.env[`DATABASE_${dbEnvName}_${variable}`];
+  it("it will call checkEnv with the required environment variables and name for connecting to the specified database", () => {
+    const databaseName = DatabaseName.Directories;
+    const databaseEnvName = databaseName.toUpperCase();
+    connection(databaseName);
 
-    expect(() => connection(dbName)).toThrow(`DATABASE_${dbEnvName}_${variable} is missing, cannot create database connection!`);
+    expect(checkEnvMock).toHaveBeenCalled();
+    expect(checkEnvMock).toHaveBeenCalledWith([
+      `DATABASE_${databaseEnvName}_HOST`,
+      `DATABASE_${databaseEnvName}_NAME`,
+      `DATABASE_${databaseEnvName}_USERNAME`,
+      `DATABASE_${databaseEnvName}_PASSWORD`,
+    ], "database");
+  });
+
+  it("it will throw an error if checkEnv throws an error when any required environment variables are not set", () => {
+    const errorMessage = "Test Error";
+    checkEnvMock.mockImplementation(() => {
+      throw new Error(errorMessage);
+    });
+
+    expect(() => connection(DatabaseName.Directories)).toThrow(errorMessage);
   });
 
   it("it will create a sequelize connection with the expected options if all required environment variables are set", () => {
-    connection(DatabaseName.Directories);
+    const databaseName = DatabaseName.Directories;
+    const databaseEnvPrefix = `DATABASE_${databaseName.toUpperCase()}`;
+    process.env[`${databaseEnvPrefix}_HOST`] = "Testing Host";
+    process.env[`${databaseEnvPrefix}_NAME`] = "Testing Name";
+    process.env[`${databaseEnvPrefix}_USERNAME`] = "Testing Username";
+    process.env[`${databaseEnvPrefix}_PASSWORD`] = "Testing Password";
+    connection(databaseName);
 
     expect(sequelizeConstructor).toHaveBeenCalled();
     expect(sequelizeConstructor).toHaveBeenCalledWith(

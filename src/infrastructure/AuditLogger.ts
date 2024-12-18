@@ -1,6 +1,6 @@
-import assert from "assert";
 import { ServiceBusClient, ServiceBusMessage } from "@azure/service-bus";
 import { WebSocket } from "ws";
+import { checkEnv } from "./utils";
 
 /**
  * Available audit levels to accompany audit messages.
@@ -38,10 +38,7 @@ export class AuditLogger {
    * Instantiates a logger {@link AuditLogger} to log records to the DSi audit tables.
    */
   constructor() {
-    ["AUDIT_CONNECTION_STRING", "AUDIT_TOPIC_NAME"].forEach((requiredOption) => {
-      const envValue = process.env[requiredOption] ?? "";
-      assert(envValue.length > 0, `${requiredOption} is missing, cannot create audit service bus connection!`);
-    });
+    checkEnv(["AUDIT_CONNECTION_STRING", "AUDIT_TOPIC_NAME"], "audit service bus");
 
     const options = (process.env.DEBUG?.toLowerCase() === "true") ? {
       webSocketOptions: {

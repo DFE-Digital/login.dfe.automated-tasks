@@ -1,47 +1,47 @@
 import { MsalApiClient } from "../../../../src/infrastructure/api/common/MsalApiClient";
 import { ApiName, DsiInternalApiClient } from "../../../../src/infrastructure/api/dsiInteral/DsiInternalApiClient";
+import { checkEnv } from "../../../../src/infrastructure/utils";
 
 jest.mock("../../../../src/infrastructure/api/common/MsalApiClient");
+jest.mock("../../../../src/infrastructure/utils");
 
 describe("When creating a DSi internal API client", () => {
   const originalEnv = { ...process.env };
   const parentClient = jest.mocked(MsalApiClient);
+  const checkEnvMock = jest.mocked(checkEnv);
 
   beforeEach(() => {
-    process.env = {
-      API_INTERNAL_DIRECTORIES_HOST: "Testing",
-      API_INTERNAL_TENANT: "Testing",
-      API_INTERNAL_AUTHORITY_HOST: "Testing",
-      API_INTERNAL_CLIENT_ID: "Testing",
-      API_INTERNAL_CLIENT_SECRET: "Testing",
-      API_INTERNAL_RESOURCE: "Testing",
-    };
+    process.env = {};
   });
 
   afterEach(() => {
     process.env = originalEnv;
   });
 
-  it("it will throw an error if the required HOST environment variable is not set for the API", () => {
+  it("it will call checkEnv with the required environment variables and name for connecting to the specified API", () => {
     const apiName = ApiName.Directories;
     const apiEnvName = apiName.toUpperCase();
-    const envVarName = `API_INTERNAL_${apiEnvName}_HOST`;
-    delete process.env[envVarName];
+    process.env[`API_INTERNAL_${apiEnvName}_HOST`] = "testing";
+    new DsiInternalApiClient(apiName);
 
-    expect(() => new DsiInternalApiClient(apiName)).toThrow(`${envVarName} is missing, cannot create API connection!`);
+    expect(checkEnvMock).toHaveBeenCalled();
+    expect(checkEnvMock).toHaveBeenCalledWith([
+      `API_INTERNAL_${apiEnvName}_HOST`,
+      "API_INTERNAL_TENANT",
+      "API_INTERNAL_AUTHORITY_HOST",
+      "API_INTERNAL_CLIENT_ID",
+      "API_INTERNAL_CLIENT_SECRET",
+      "API_INTERNAL_RESOURCE",
+    ], "DSi internal API");
   });
 
-  it.each([
-    "TENANT",
-    "AUTHORITY_HOST",
-    "CLIENT_ID",
-    "CLIENT_SECRET",
-    "RESOURCE",
-  ])("it will throw an error if any required auth environment variables are not set (%p)", (variable) => {
-    const envVarName = `API_INTERNAL_${variable}`;
-    delete process.env[envVarName];
+  it("it will throw an error if checkEnv throws an error when any required environment variables are not set", () => {
+    const errorMessage = "Test Error";
+    checkEnvMock.mockImplementation(() => {
+      throw new Error(errorMessage);
+    });
 
-    expect(() => new DsiInternalApiClient(ApiName.Directories)).toThrow(`${envVarName} is missing, cannot create API connection!`);
+    expect(() => new DsiInternalApiClient(ApiName.Directories)).toThrow(errorMessage);
   });
 
   it("it will call the MSAL API client constructor with the expected options", () => {

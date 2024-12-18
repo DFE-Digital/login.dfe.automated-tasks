@@ -1,5 +1,5 @@
-import assert from "assert";
 import { MsalApiClient } from "../common/MsalApiClient";
+import { checkEnv } from "../../utils";
 
 /**
  * Names of internal APIs currently accepted by this application.
@@ -21,21 +21,16 @@ export class DsiInternalApiClient extends MsalApiClient {
    */
   constructor(api: ApiName) {
     const apiEnvName = api.toUpperCase();
-
-    [
-      `${apiEnvName}_HOST`,
-      "TENANT",
-      "AUTHORITY_HOST",
-      "CLIENT_ID",
-      "CLIENT_SECRET",
-      "RESOURCE",
-    ].forEach((requiredOption) => {
-      const envName = `API_INTERNAL_${requiredOption}`;
-      const envValue = process.env[envName] ?? "";
-      assert(envValue.length > 0, `${envName} is missing, cannot create API connection!`);
-    });
-
     const apiHostUrl = process.env[`API_INTERNAL_${apiEnvName}_HOST`];
+
+    checkEnv([
+      `API_INTERNAL_${apiEnvName}_HOST`,
+      "API_INTERNAL_TENANT",
+      "API_INTERNAL_AUTHORITY_HOST",
+      "API_INTERNAL_CLIENT_ID",
+      "API_INTERNAL_CLIENT_SECRET",
+      "API_INTERNAL_RESOURCE",
+    ], "DSi internal API");
 
     super({
       baseUri: (apiHostUrl.toLowerCase().startsWith("http")) ? apiHostUrl : `https://${apiHostUrl}`,
