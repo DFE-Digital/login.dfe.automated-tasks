@@ -14,7 +14,8 @@ Automated tasks run on schedules or triggered manually to carry out BAU activiti
 
 ## DevOps Requirements
 
-TBD
+- The app service for this repo, and the pipeline should be in the backend tier, as it's an automated function that isn't used by anything else.
+- In `DevOps/pipeline/azure-pipeline.yml` make sure that `buildFlow: true` is set for the `pipeline/buildAzureFunctions.yml@devopsTemplates` template, this ensures the TypeScript code is transpiled into JavaScript so it will function correctly.
 
 ## What is that weird prepare code in package.json?
 
