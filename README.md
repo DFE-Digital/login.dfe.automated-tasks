@@ -9,6 +9,7 @@ Automated tasks run on schedules or triggered manually to carry out BAU activiti
   - [Local Debugging](#local-debugging)
     - [First time setup](#first-time-setup)
     - [Running any functions locally](#running-any-functions-locally)
+  - [Adding New Azure Functions](#adding-new-azure-functions)
   - [Adding New Database Connections](#adding-new-database-connections)
   - [Adding New DSi Internal API Connections](#adding-new-dsi-internal-api-connections)
 
@@ -111,6 +112,40 @@ To ease local running/debugging of these functions, please install the recommend
 | API_INTERNAL_RESOURCE | Resource ID of the internal API tenant. | Retrieve from KeyVault. | `""`
 | AUDIT_CONNECTION_STRING | Connection string of the environment's shared service bus. | Retrieve from KeyVault or the service bus' "Shared access policies" page in the Azure portal. | `""`
 | AUDIT_TOPIC_NAME | Service bus audit topic name. | Retrieve from KeyVault or the service bus' "Overview" page in the Azure portal. | `"audit"`
+
+## Adding New Azure Functions
+
+In the following steps we'll create a new handler for our new timer trigger  `functionName` Azure function, and register it with our function app.
+
+1. Create a new TypeScript file in `src/functions` to house the handler for the Azure function, similar to the one below, and export it.
+
+```js
+import { InvocationContext, Timer } from "@azure/functions";
+
+export async function functionName(_: Timer, context: InvocationContext): Promise<void> {
+  context.log(`functionName function processed invocation: ${context.invocationId}`);
+};
+```
+
+2. In `src/index.ts`, add a new definition for the function by calling `app.TRIGGER`, in our case of a timer it'll be `app.timer`, and passing the necessary information:
+    - The first argument is the name you want the function to have in the Azure Portal.
+    - The second argument will depend on the type of trigger but for timer triggers it needs the following options:
+      - Schedule: An [NCrontab expression](https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-timer?tabs=python-v2%2Cisolated-process%2Cnodejs-v4&pivots=programming-language-typescript#ncrontab-expressions) or an environment variable name between `%` symbols to retrieve the schedule from.
+      - Handler: The function that will be executed when the scheduled timer is triggered.
+      - Retry: The retry options, as defined in the [Microsoft documentation](https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-error-pages?tabs=fixed-delay%2Cisolated-process%2Cnode-v4%2Cpython-v2&pivots=programming-language-typescript#retry-examples) for how the function should retry in case an error is thrown. Other types of trigger may need to be configured in the `host.json` file.
+
+```js
+app.timer("functionName", {
+  schedule: "%TIMER_FUNCTION_NAME%",
+  handler: functionName,
+  retry: {
+    strategy: "exponentialBackoff",
+    maximumInterval: 300000,
+    minimumInterval: 30000,
+    maxRetryCount: 5,
+  },
+});
+```
 
 ## Adding New Database Connections
 
