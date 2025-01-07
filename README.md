@@ -70,7 +70,9 @@ To ease local running/debugging of these functions, please install the recommend
     "DATABASE_DIRECTORIES_NAME": "",
     "DATABASE_DIRECTORIES_USERNAME": "",
     "DATABASE_DIRECTORIES_PASSWORD": "",
+    "API_INTERNAL_ACCESS_HOST": "",
     "API_INTERNAL_DIRECTORIES_HOST": "",
+    "API_INTERNAL_ORGANISATIONS_HOST": "",
     "API_INTERNAL_TENANT": "",
     "API_INTERNAL_AUTHORITY_HOST": "",
     "API_INTERNAL_CLIENT_ID": "",
@@ -104,7 +106,9 @@ To ease local running/debugging of these functions, please install the recommend
 | DATABASE_DIRECTORIES_NAME | The directories database name | Retrieve from KeyVault or other database connections. | `""`
 | DATABASE_DIRECTORIES_USERNAME | SQL username for connecting to the directories database. | Use your own username or retrieve from KeyVault. | `""`
 | DATABASE_DIRECTORIES_PASSWORD | SQL password for connecting to the directories database. | Use your own password or retrieve from KeyVault. | `""`
+| API_INTERNAL_ACCESS_HOST | Host URL for the internal access API. | Retrieve from KeyVault or the "Domains" section of the app service's "Overview" page in the Azure portal. | `""`
 | API_INTERNAL_DIRECTORIES_HOST | Host URL for the internal directories API. | Retrieve from KeyVault or the "Domains" section of the app service's "Overview" page in the Azure portal. | `""`
+| API_INTERNAL_ORGANISATIONS_HOST | Host URL for the internal organisations API. | Retrieve from KeyVault or the "Domains" section of the app service's "Overview" page in the Azure portal. | `""`
 | API_INTERNAL_TENANT | Tenant ID of the internal API tenant. | Retrieve from KeyVault. | `""`
 | API_INTERNAL_AUTHORITY_HOST | Authority host URL of the internal API tenant. | Retrieve from KeyVault. | `""`
 | API_INTERNAL_CLIENT_ID | Client ID of the internal API tenant. | Retrieve from KeyVault. | `""`

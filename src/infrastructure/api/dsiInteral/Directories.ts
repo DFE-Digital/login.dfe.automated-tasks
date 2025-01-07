@@ -9,6 +9,8 @@ export class Directories {
 
   /**
    * Instantiates a wrapper for the internal Directories API client.
+   *
+   * @throws Error if the host URL/auth environment variables are not set.
    */
   constructor() {
     this.client = new DsiInternalApiClient(ApiName.Directories);
