@@ -70,6 +70,10 @@ To ease local running/debugging of these functions, please install the recommend
     "DATABASE_DIRECTORIES_NAME": "",
     "DATABASE_DIRECTORIES_USERNAME": "",
     "DATABASE_DIRECTORIES_PASSWORD": "",
+    "DATABASE_ORGANISATIONS_HOST": "",
+    "DATABASE_ORGANISATIONS_NAME": "",
+    "DATABASE_ORGANISATIONS_USERNAME": "",
+    "DATABASE_ORGANISATIONS_PASSWORD": "",
     "API_INTERNAL_ACCESS_HOST": "",
     "API_INTERNAL_DIRECTORIES_HOST": "",
     "API_INTERNAL_ORGANISATIONS_HOST": "",
@@ -106,6 +110,10 @@ To ease local running/debugging of these functions, please install the recommend
 | DATABASE_DIRECTORIES_NAME | The directories database name | Retrieve from KeyVault or other database connections. | `""`
 | DATABASE_DIRECTORIES_USERNAME | SQL username for connecting to the directories database. | Use your own username or retrieve from KeyVault. | `""`
 | DATABASE_DIRECTORIES_PASSWORD | SQL password for connecting to the directories database. | Use your own password or retrieve from KeyVault. | `""`
+| DATABASE_ORGANISATIONS_HOST | The organisations database hostname/URL. | Retrieve from KeyVault or other database connections. | `""`
+| DATABASE_ORGANISATIONS_NAME | The organisations database name | Retrieve from KeyVault or other database connections. | `""`
+| DATABASE_ORGANISATIONS_USERNAME | SQL username for connecting to the organisations database. | Use your own username or retrieve from KeyVault. | `""`
+| DATABASE_ORGANISATIONS_PASSWORD | SQL password for connecting to the organisations database. | Use your own password or retrieve from KeyVault. | `""`
 | API_INTERNAL_ACCESS_HOST | Host URL for the internal access API. | Retrieve from KeyVault or the "Domains" section of the app service's "Overview" page in the Azure portal. | `""`
 | API_INTERNAL_DIRECTORIES_HOST | Host URL for the internal directories API. | Retrieve from KeyVault or the "Domains" section of the app service's "Overview" page in the Azure portal. | `""`
 | API_INTERNAL_ORGANISATIONS_HOST | Host URL for the internal organisations API. | Retrieve from KeyVault or the "Domains" section of the app service's "Overview" page in the Azure portal. | `""`
