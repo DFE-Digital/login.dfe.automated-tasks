@@ -26,7 +26,7 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
 
 /**
  * Initialise the User model with the data types and fields expected by the database.
- * 
+ *
  * @param connection - A {@link Sequelize} object connected to a database.
  */
 export function initialiseUserModel(connection: Sequelize): void {
@@ -39,19 +39,19 @@ export function initialiseUserModel(connection: Sequelize): void {
       allowNull: false,
     },
     email: {
-      type: DataTypes.STRING,
+      type: DataTypes.STRING(255),
       unique: true,
-      allowNull: false
+      allowNull: false,
     },
     firstName: {
-      type: DataTypes.STRING,
+      type: DataTypes.STRING(255),
       field: "given_name",
-      allowNull: false
+      allowNull: false,
     },
     lastName: {
-      type: DataTypes.STRING,
+      type: DataTypes.STRING(255),
       field: "family_name",
-      allowNull: false
+      allowNull: false,
     },
     password: {
       type: DataTypes.STRING(5000),
@@ -86,7 +86,7 @@ export function initialiseUserModel(connection: Sequelize): void {
       allowNull: false,
     },
     jobTitle: {
-      type: DataTypes.STRING,
+      type: DataTypes.STRING(255),
       field: "job_title",
     },
     passwordResetRequired: {
@@ -100,6 +100,7 @@ export function initialiseUserModel(connection: Sequelize): void {
     },
     isEntra: {
       type: DataTypes.BOOLEAN,
+      field: "is_entra",
       allowNull: false,
     },
     entraId: {
@@ -114,5 +115,5 @@ export function initialiseUserModel(connection: Sequelize): void {
   }, {
     tableName: "user",
     sequelize: connection,
-  });  
+  });
 };

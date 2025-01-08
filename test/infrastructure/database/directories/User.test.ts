@@ -21,19 +21,19 @@ describe("User database model", () => {
           allowNull: false,
         },
         email: {
-          type: DataTypes.STRING,
+          type: DataTypes.STRING(255),
           unique: true,
-          allowNull: false
+          allowNull: false,
         },
         firstName: {
-          type: DataTypes.STRING,
+          type: DataTypes.STRING(255),
           field: "given_name",
-          allowNull: false
+          allowNull: false,
         },
         lastName: {
-          type: DataTypes.STRING,
+          type: DataTypes.STRING(255),
           field: "family_name",
-          allowNull: false
+          allowNull: false,
         },
         password: {
           type: DataTypes.STRING(5000),
@@ -68,7 +68,7 @@ describe("User database model", () => {
           allowNull: false,
         },
         jobTitle: {
-          type: DataTypes.STRING,
+          type: DataTypes.STRING(255),
           field: "job_title",
         },
         passwordResetRequired: {
@@ -82,6 +82,7 @@ describe("User database model", () => {
         },
         isEntra: {
           type: DataTypes.BOOLEAN,
+          field: "is_entra",
           allowNull: false,
         },
         entraId: {
