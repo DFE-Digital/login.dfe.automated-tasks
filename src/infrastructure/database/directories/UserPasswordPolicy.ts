@@ -1,4 +1,4 @@
-import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional, Sequelize, ForeignKey } from "sequelize";
+import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional, Sequelize, ForeignKey, NonAttribute } from "sequelize";
 import { User } from "./User";
 
 /**
@@ -11,6 +11,7 @@ export class UserPasswordPolicy extends Model<InferAttributes<UserPasswordPolicy
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
   declare passwordHistoryLimit: Number;
+  declare user?: NonAttribute<User>;
 };
 
 /**

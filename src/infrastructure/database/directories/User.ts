@@ -1,4 +1,5 @@
-import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional, Sequelize } from "sequelize";
+import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional, Sequelize, NonAttribute } from "sequelize";
+import { UserPasswordPolicy } from "./UserPasswordPolicy";
 
 /**
  * User database schema model for CRUD operations the API doesn't currently support.
@@ -22,6 +23,7 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
   declare isEntra: boolean;
   declare entraId: string | null;
   declare entraLinkedAt: Date | null;
+  declare passwordPolicies?: NonAttribute<UserPasswordPolicy[]>;
 };
 
 /**
