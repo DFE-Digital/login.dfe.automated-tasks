@@ -29,7 +29,7 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
  *
  * @param connection - A {@link Sequelize} object connected to a database.
  */
-export function initialiseUserModel(connection: Sequelize): void {
+export function initialiseUser(connection: Sequelize): void {
   User.init({
     id: {
       type: DataTypes.UUIDV4,

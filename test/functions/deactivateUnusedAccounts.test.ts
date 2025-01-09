@@ -2,7 +2,7 @@ import { InvocationContext, Timer } from "@azure/functions";
 import { Op, Sequelize } from "sequelize";
 import { Directories } from "../../src/infrastructure/api/dsiInteral/Directories";
 import { AuditLogger } from "../../src/infrastructure/AuditLogger";
-import { initialiseUserModel, User } from "../../src/infrastructure/database/directories/User";
+import { initialiseUser, User } from "../../src/infrastructure/database/directories/User";
 import { deactivateUnusedAccounts } from "../../src/functions/deactivateUnusedAccounts";
 import { connection, DatabaseName } from "../../src/infrastructure/database/common/connection";
 
@@ -59,8 +59,8 @@ describe("Deactivate unused accounts automated task", () => {
   it("it attempts to initialise the User model with a connection to the directories DB", async () => {
     await deactivateUnusedAccounts({} as Timer, new InvocationContext());
 
-    expect(initialiseUserModel).toHaveBeenCalled();
-    expect(initialiseUserModel).toHaveBeenCalledWith(connection(DatabaseName.Directories));
+    expect(initialiseUser).toHaveBeenCalled();
+    expect(initialiseUser).toHaveBeenCalledWith(connection(DatabaseName.Directories));
   });
 
   it("it throws an error if the user retrieval query throws an error", async () => {

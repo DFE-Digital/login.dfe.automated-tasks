@@ -1,5 +1,5 @@
 import { InvocationContext, Timer } from "@azure/functions";
-import { initialiseUserModel, User } from "../infrastructure/database/directories/User";
+import { initialiseUser, User } from "../infrastructure/database/directories/User";
 import { Op, Sequelize } from "sequelize";
 import { Directories } from "../infrastructure/api/dsiInteral/Directories";
 import { AuditLogger } from "../infrastructure/AuditLogger";
@@ -28,7 +28,7 @@ export async function deactivateUnusedAccounts(_: Timer, context: InvocationCont
     const auditLogger = new AuditLogger();
     const targetDate = Sequelize.fn("DATEADD", Sequelize.literal("YEAR"), -2, Sequelize.fn("GETDATE"));
 
-    initialiseUserModel(connection(DatabaseName.Directories));
+    initialiseUser(connection(DatabaseName.Directories));
 
     const users: Pick<User, "id" | "email">[] = await User.findAll({
       attributes: ["id", "email"],

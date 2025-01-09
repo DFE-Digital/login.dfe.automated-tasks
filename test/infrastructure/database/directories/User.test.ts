@@ -1,15 +1,15 @@
 import { DataTypes, Model, Sequelize } from "sequelize";
-import { initialiseUserModel } from "../../../../src/infrastructure/database/directories/User";
+import { initialiseUser } from "../../../../src/infrastructure/database/directories/User";
 
 jest.mock("sequelize");
 
 describe("User database model", () => {
   const model = jest.mocked(Model);
 
-  describe("initialiseUserModel", () => {
+  describe("initialiseUser", () => {
     it("it initialises the user model with the expected attributes and passed sequelize connection", () => {
       const connection = new Sequelize();
-      initialiseUserModel(connection);
+      initialiseUser(connection);
 
       expect(model.init).toHaveBeenCalled();
       expect(model.init).toHaveBeenCalledWith({
