@@ -17,7 +17,7 @@ export class Directories {
   };
 
   /**
-   * Deactivates a DSi user account.
+   * Deactivates a user account.
    *
    * @param id - The ID of the user to be deactivated.
    * @param correlationId - Correlation ID to be passed with the request.
@@ -31,5 +31,21 @@ export class Directories {
     });
     const body = await response.text();
     return body === "true";
+  };
+
+  /**
+   * Deletes a user code, such as a password reset code, from a user account.
+   *
+   * @param id - The ID of the user to delete a code from.
+   * @param correlationId - Correlation ID to be passed with the request.
+   * @returns true if the user's code was successfully deleted, false otherwise.
+   *
+   * @throws Error when the API client throws.
+   */
+  async deleteUserCode(id: string, correlationId: string): Promise<boolean> {
+    const response = await this.client.requestRaw(ApiRequestMethod.DELETE, `/userCodes/${id}`, {
+      correlationId,
+    });
+    return response.status === 200;
   };
 };

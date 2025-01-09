@@ -95,5 +95,62 @@ describe("Directories API wrapper", () => {
         expect(directories.deactivateUser("", "")).rejects.toThrow(errorMessage);
       });
     });
+
+    describe("deleteUserCode", () => {
+      it("it calls requestRaw using the DELETE method", async () => {
+        await directories.deleteUserCode("user", "correlation");
+
+        expect(internalClient.prototype.requestRaw).toHaveBeenCalled();
+        expect(internalClient.prototype.requestRaw.mock.calls[0][0]).toEqual(ApiRequestMethod.DELETE);
+      });
+
+      it("it calls requestRaw to the /userCodes/ID path with the passed user ID", async () => {
+        const userId = "test-123";
+        await directories.deleteUserCode(userId, "");
+
+        expect(internalClient.prototype.requestRaw).toHaveBeenCalled();
+        expect(internalClient.prototype.requestRaw.mock.calls[0][1]).toEqual(`/userCodes/${userId}`);
+      });
+
+      it("it calls requestRaw with the passed correlation ID", async () => {
+        const correlationId = "test-123";
+        await directories.deleteUserCode("", correlationId);
+
+        expect(internalClient.prototype.requestRaw).toHaveBeenCalled();
+        expect(internalClient.prototype.requestRaw.mock.calls[0][2]).toEqual({
+          correlationId
+        });
+      });
+
+      it("it returns true if the response status is 200", async () => {
+        internalClient.prototype.requestRaw.mockResolvedValue({
+          status: 200,
+        } as Response);
+
+        expect(await directories.deleteUserCode("", "")).toEqual(true);
+      });
+
+      it.each([
+        201,
+        202,
+        302,
+        304,
+      ])("it returns false if the response status is not 200 (%p)", async (status) => {
+        internalClient.prototype.requestRaw.mockResolvedValue({
+          status,
+        } as Response);
+
+        expect(await directories.deleteUserCode("", "")).toEqual(false);
+      });
+
+      it("it re-throws any errors thrown by requestRaw", async () => {
+        const errorMessage = "This is a test error";
+        internalClient.prototype.requestRaw.mockImplementation(() => {
+          throw new Error(errorMessage);
+        });
+
+        expect(directories.deleteUserCode("", "")).rejects.toThrow(errorMessage);
+      });
+    });
   });
 });
