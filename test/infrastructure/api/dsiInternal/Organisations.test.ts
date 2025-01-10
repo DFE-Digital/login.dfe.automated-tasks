@@ -31,7 +31,7 @@ describe("Organisations API wrapper", () => {
         status,
       } as Response);
     };
-    const setRequestResponse = (object: Object) => {
+    const setRequestResponse = (object: Object | null) => {
       internalClient.prototype.request.mockResolvedValue(object);
     };
     let organisations: Organisations;

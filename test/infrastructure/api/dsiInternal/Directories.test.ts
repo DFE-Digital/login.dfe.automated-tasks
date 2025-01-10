@@ -31,7 +31,7 @@ describe("Directories API wrapper", () => {
         text: () => Promise.resolve(text),
       } as Response);
     };
-    const setRequestResponse = (object: Object) => {
+    const setRequestResponse = (object: Object | null) => {
       internalClient.prototype.request.mockResolvedValue(object);
     };
     let directories: Directories;
