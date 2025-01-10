@@ -42,6 +42,94 @@ describe("Access API wrapper", () => {
       access = new Access();
     });
 
+    describe("getInvitationServices", () => {
+      it("it calls request using the GET method", async () => {
+        await access.getInvitationServices("inv-1", "correlation");
+
+        expect(internalClient.prototype.request).toHaveBeenCalled();
+        expect(internalClient.prototype.request.mock.calls[0][0]).toEqual(ApiRequestMethod.GET);
+      });
+
+      it("it calls request to the correct path with the passed invitation ID", async () => {
+        const invId = "test-123";
+        await access.getInvitationServices(invId, "");
+
+        expect(internalClient.prototype.request).toHaveBeenCalled();
+        expect(internalClient.prototype.request.mock.calls[0][1]).toEqual(
+          `/invitations/${invId}/services`
+        );
+      });
+
+      it("it calls request with the passed correlation ID", async () => {
+        const correlationId = "test-123";
+        await access.getInvitationServices("", correlationId);
+
+        expect(internalClient.prototype.request).toHaveBeenCalled();
+        expect(internalClient.prototype.request.mock.calls[0][2]).toEqual({
+          correlationId,
+        });
+      });
+
+      it("it returns an empty array if request returns null", async () => {
+        setRequestResponse(null);
+
+        expect(await access.getInvitationServices("", "")).toEqual([]);
+      });
+
+      it("it re-throws any errors thrown by request", async () => {
+        const errorMessage = "This is a test error";
+        internalClient.prototype.request.mockImplementation(() => {
+          throw new Error(errorMessage);
+        });
+
+        expect(access.getInvitationServices("", "")).rejects.toThrow(errorMessage);
+      });
+    });
+
+    describe("getUserServices", () => {
+      it("it calls request using the GET method", async () => {
+        await access.getUserServices("user-1", "correlation");
+
+        expect(internalClient.prototype.request).toHaveBeenCalled();
+        expect(internalClient.prototype.request.mock.calls[0][0]).toEqual(ApiRequestMethod.GET);
+      });
+
+      it("it calls request to the correct path with the passed user ID", async () => {
+        const userId = "test-123";
+        await access.getUserServices(userId, "");
+
+        expect(internalClient.prototype.request).toHaveBeenCalled();
+        expect(internalClient.prototype.request.mock.calls[0][1]).toEqual(
+          `/users/${userId}/services`
+        );
+      });
+
+      it("it calls request with the passed correlation ID", async () => {
+        const correlationId = "test-123";
+        await access.getUserServices("", correlationId);
+
+        expect(internalClient.prototype.request).toHaveBeenCalled();
+        expect(internalClient.prototype.request.mock.calls[0][2]).toEqual({
+          correlationId,
+        });
+      });
+
+      it("it returns an empty array if request returns null", async () => {
+        setRequestResponse(null);
+
+        expect(await access.getUserServices("", "")).toEqual([]);
+      });
+
+      it("it re-throws any errors thrown by request", async () => {
+        const errorMessage = "This is a test error";
+        internalClient.prototype.request.mockImplementation(() => {
+          throw new Error(errorMessage);
+        });
+
+        expect(access.getUserServices("", "")).rejects.toThrow(errorMessage);
+      });
+    });
+
     describe("deleteInvitationService", () => {
       it("it calls requestRaw using the DELETE method", async () => {
         await access.deleteInvitationService("inv-1", "svc-1", "org-1", "correlation");

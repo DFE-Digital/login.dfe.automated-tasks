@@ -1,6 +1,42 @@
 import { ApiRequestMethod } from "../common/ApiClient";
 import { ApiName, DsiInternalApiClient } from "./DsiInternalApiClient"
 
+type serviceRecord = {
+  serviceId: string,
+  organisationId: string,
+  roles: {
+    id: string,
+    invitation_id: string,
+    organisation_id: string,
+    service_id: string,
+    role_id: string,
+    createdAt: string,
+    updatedAt: string,
+    Role: {
+      id: string,
+      name: string,
+      code: string,
+      numericId: string,
+      status: {
+        id: number,
+      },
+    },
+  }[],
+  identifiers: {
+    key: string,
+    value: string
+  }[],
+  accessGrantedOn: string,
+}
+
+export type invitationServiceRecord = {
+  invitationId: string,
+} & serviceRecord;
+
+export type userServiceRecord = {
+  userId: string,
+} & serviceRecord;
+
 /**
  * Wrapper for the internal Access API client, turning required endpoints into functions.
  */
@@ -14,6 +50,40 @@ export class Access {
    */
   constructor() {
     this.client = new DsiInternalApiClient(ApiName.Access);
+  };
+
+  /**
+   * Gets all service links for an invitation if any exist.
+   *
+   * @param invitationId - The ID of the invitation to retrieve service links for.
+   * @param correlationId - Correlation ID to be passed with the request.
+   * @returns An array of {@link invitationServiceRecord} elements, or an empty array if none exist.
+   *
+   * @throws Error when the API client throws.
+   */
+  async getInvitationServices(invitationId: string, correlationId: string): Promise<invitationServiceRecord[]> {
+    return await this.client.request<invitationServiceRecord[]>(
+      ApiRequestMethod.GET,
+      `/invitations/${invitationId}/services`, {
+        correlationId,
+    }) ?? [];
+  };
+
+  /**
+   * Gets all service links for a user if any exist.
+   *
+   * @param userId - The ID of the user to retrieve service links for.
+   * @param correlationId - Correlation ID to be passed with the request.
+   * @returns An array of {@link userServiceRecord} elements, or an empty array if none exist.
+   *
+   * @throws Error when the API client throws.
+   */
+  async getUserServices(userId: string, correlationId: string): Promise<userServiceRecord[]> {
+    return await this.client.request<userServiceRecord[]>(
+      ApiRequestMethod.GET,
+      `/users/${userId}/services`, {
+        correlationId,
+    }) ?? [];
   };
 
   /**
