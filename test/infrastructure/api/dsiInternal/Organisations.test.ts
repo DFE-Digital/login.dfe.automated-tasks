@@ -42,6 +42,94 @@ describe("Organisations API wrapper", () => {
       organisations = new Organisations();
     });
 
+    describe("getInvitationOrganisations", () => {
+      it("it calls request using the GET method", async () => {
+        await organisations.getInvitationOrganisations("inv-1", "correlation");
+
+        expect(internalClient.prototype.request).toHaveBeenCalled();
+        expect(internalClient.prototype.request.mock.calls[0][0]).toEqual(ApiRequestMethod.GET);
+      });
+
+      it("it calls request to the correct path with the passed invitation ID", async () => {
+        const invId = "test-123";
+        await organisations.getInvitationOrganisations(invId, "");
+
+        expect(internalClient.prototype.request).toHaveBeenCalled();
+        expect(internalClient.prototype.request.mock.calls[0][1]).toEqual(
+          `/invitations/v2/${invId}`
+        );
+      });
+
+      it("it calls request with the passed correlation ID", async () => {
+        const correlationId = "test-123";
+        await organisations.getInvitationOrganisations("", correlationId);
+
+        expect(internalClient.prototype.request).toHaveBeenCalled();
+        expect(internalClient.prototype.request.mock.calls[0][2]).toEqual({
+          correlationId,
+        });
+      });
+
+      it("it returns an empty array if request returns null", async () => {
+        setRequestResponse(null);
+
+        expect(await organisations.getInvitationOrganisations("", "")).toEqual([]);
+      });
+
+      it("it re-throws any errors thrown by request", async () => {
+        const errorMessage = "This is a test error";
+        internalClient.prototype.request.mockImplementation(() => {
+          throw new Error(errorMessage);
+        });
+
+        expect(organisations.getInvitationOrganisations("", "")).rejects.toThrow(errorMessage);
+      });
+    });
+
+    describe("getUserOrganisations", () => {
+      it("it calls request using the GET method", async () => {
+        await organisations.getUserOrganisations("user-1", "correlation");
+
+        expect(internalClient.prototype.request).toHaveBeenCalled();
+        expect(internalClient.prototype.request.mock.calls[0][0]).toEqual(ApiRequestMethod.GET);
+      });
+
+      it("it calls request to the correct path with the passed user ID", async () => {
+        const userId = "test-123";
+        await organisations.getUserOrganisations(userId, "");
+
+        expect(internalClient.prototype.request).toHaveBeenCalled();
+        expect(internalClient.prototype.request.mock.calls[0][1]).toEqual(
+          `/organisations/v2/associated-with-user/${userId}`
+        );
+      });
+
+      it("it calls request with the passed correlation ID", async () => {
+        const correlationId = "test-123";
+        await organisations.getUserOrganisations("", correlationId);
+
+        expect(internalClient.prototype.request).toHaveBeenCalled();
+        expect(internalClient.prototype.request.mock.calls[0][2]).toEqual({
+          correlationId,
+        });
+      });
+
+      it("it returns an empty array if request returns null", async () => {
+        setRequestResponse(null);
+
+        expect(await organisations.getUserOrganisations("", "")).toEqual([]);
+      });
+
+      it("it re-throws any errors thrown by request", async () => {
+        const errorMessage = "This is a test error";
+        internalClient.prototype.request.mockImplementation(() => {
+          throw new Error(errorMessage);
+        });
+
+        expect(organisations.getUserOrganisations("", "")).rejects.toThrow(errorMessage);
+      });
+    });
+
     describe("deleteInvitationOrganisation", () => {
       it("it calls requestRaw using the DELETE method", async () => {
         await organisations.deleteInvitationOrganisation("inv-1", "org-1", "correlation");
