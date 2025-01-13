@@ -76,13 +76,16 @@ describe("Organisations API wrapper", () => {
         expect(await organisations.getInvitationOrganisations("", "")).toEqual([]);
       });
 
-      it("it re-throws any errors thrown by request", async () => {
+      it("it rejects with request's error if request rejects", async () => {
         const errorMessage = "This is a test error";
-        internalClient.prototype.request.mockImplementation(() => {
-          throw new Error(errorMessage);
-        });
+        internalClient.prototype.request.mockRejectedValue(new Error(errorMessage));
 
-        expect(organisations.getInvitationOrganisations("", "")).rejects.toThrow(errorMessage);
+        try {
+          await organisations.getInvitationOrganisations("", "");
+        } catch (error) {
+          expect(error).toBeInstanceOf(Error);
+          expect(error).toHaveProperty("message", errorMessage);
+        }
       });
     });
 
@@ -120,13 +123,16 @@ describe("Organisations API wrapper", () => {
         expect(await organisations.getUserOrganisations("", "")).toEqual([]);
       });
 
-      it("it re-throws any errors thrown by request", async () => {
+      it("it rejects with request's error if request rejects", async () => {
         const errorMessage = "This is a test error";
-        internalClient.prototype.request.mockImplementation(() => {
-          throw new Error(errorMessage);
-        });
+        internalClient.prototype.request.mockRejectedValue(new Error(errorMessage));
 
-        expect(organisations.getUserOrganisations("", "")).rejects.toThrow(errorMessage);
+        try {
+          await organisations.getUserOrganisations("", "");
+        } catch (error) {
+          expect(error).toBeInstanceOf(Error);
+          expect(error).toHaveProperty("message", errorMessage);
+        }
       });
     });
 
@@ -176,13 +182,16 @@ describe("Organisations API wrapper", () => {
         expect(await organisations.deleteInvitationOrganisation("", "", "")).toEqual(false);
       });
 
-      it("it re-throws any errors thrown by requestRaw", async () => {
+      it("it rejects with requestRaw's error if requestRaw rejects", async () => {
         const errorMessage = "This is a test error";
-        internalClient.prototype.requestRaw.mockImplementation(() => {
-          throw new Error(errorMessage);
-        });
+        internalClient.prototype.requestRaw.mockRejectedValue(new Error(errorMessage));
 
-        expect(organisations.deleteInvitationOrganisation("", "", "")).rejects.toThrow(errorMessage);
+        try {
+          await organisations.deleteInvitationOrganisation("", "", "");
+        } catch (error) {
+          expect(error).toBeInstanceOf(Error);
+          expect(error).toHaveProperty("message", errorMessage);
+        }
       });
     });
 
@@ -232,13 +241,16 @@ describe("Organisations API wrapper", () => {
         expect(await organisations.deleteUserOrganisation("", "", "")).toEqual(false);
       });
 
-      it("it re-throws any errors thrown by requestRaw", async () => {
+      it("it rejects with requestRaw's error if requestRaw rejects", async () => {
         const errorMessage = "This is a test error";
-        internalClient.prototype.requestRaw.mockImplementation(() => {
-          throw new Error(errorMessage);
-        });
+        internalClient.prototype.requestRaw.mockRejectedValue(new Error(errorMessage));
 
-        expect(organisations.deleteUserOrganisation("", "", "")).rejects.toThrow(errorMessage);
+        try {
+          await organisations.deleteUserOrganisation("", "", "");
+        } catch (error) {
+          expect(error).toBeInstanceOf(Error);
+          expect(error).toHaveProperty("message", errorMessage);
+        }
       });
     });
   });

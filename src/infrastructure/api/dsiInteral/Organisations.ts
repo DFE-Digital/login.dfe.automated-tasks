@@ -144,8 +144,6 @@ export class Organisations {
    * @param invitationId - The ID of the invitation to retrieve organisation links for.
    * @param correlationId - Correlation ID to be passed with the request.
    * @returns An array of {@link invitationOrganisationRecord} elements, or an empty array if none exist.
-   *
-   * @throws Error when the API client throws.
    */
   async getInvitationOrganisations(invitationId: string, correlationId: string): Promise<invitationOrganisationRecord[]> {
     return await this.client.request<invitationOrganisationRecord[]>(
@@ -161,8 +159,6 @@ export class Organisations {
    * @param userId - The ID of the user to retrieve organisation links for.
    * @param correlationId - Correlation ID to be passed with the request.
    * @returns An array of {@link userOrganisationRecord} elements, or an empty array if none exist.
-   *
-   * @throws Error when the API client throws.
    */
   async getUserOrganisations(userId: string, correlationId: string): Promise<userOrganisationRecord[]> {
     return await this.client.request<userOrganisationRecord[]>(
@@ -179,8 +175,6 @@ export class Organisations {
    * @param organisationId - The ID of the organisation to be removed from the invitation.
    * @param correlationId - Correlation ID to be passed with the request.
    * @returns true if the user's organisation link was successfully deleted, false otherwise.
-   *
-   * @throws Error when the API client throws.
    */
   async deleteInvitationOrganisation(invitationId: string, organisationId: string, correlationId: string): Promise<boolean> {
     const response = await this.client.requestRaw(
@@ -198,8 +192,6 @@ export class Organisations {
    * @param organisationId - The ID of the organisation to be removed from the user.
    * @param correlationId - Correlation ID to be passed with the request.
    * @returns true if the user's organisation link was successfully deleted, false otherwise.
-   *
-   * @throws Error when the API client throws.
    */
   async deleteUserOrganisation(userId: string, organisationId: string, correlationId: string): Promise<boolean> {
     const response = await this.client.requestRaw(

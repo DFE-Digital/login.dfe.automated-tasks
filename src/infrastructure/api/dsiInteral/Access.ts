@@ -58,8 +58,6 @@ export class Access {
    * @param invitationId - The ID of the invitation to retrieve service links for.
    * @param correlationId - Correlation ID to be passed with the request.
    * @returns An array of {@link invitationServiceRecord} elements, or an empty array if none exist.
-   *
-   * @throws Error when the API client throws.
    */
   async getInvitationServices(invitationId: string, correlationId: string): Promise<invitationServiceRecord[]> {
     return await this.client.request<invitationServiceRecord[]>(
@@ -75,8 +73,6 @@ export class Access {
    * @param userId - The ID of the user to retrieve service links for.
    * @param correlationId - Correlation ID to be passed with the request.
    * @returns An array of {@link userServiceRecord} elements, or an empty array if none exist.
-   *
-   * @throws Error when the API client throws.
    */
   async getUserServices(userId: string, correlationId: string): Promise<userServiceRecord[]> {
     return await this.client.request<userServiceRecord[]>(
@@ -94,8 +90,6 @@ export class Access {
    * @param organisationId - The ID of the organisation the invitation has the service in.
    * @param correlationId - Correlation ID to be passed with the request.
    * @returns true if the invitation's service link was successfully deleted, false otherwise.
-   *
-   * @throws Error when the API client throws.
    */
   async deleteInvitationService(invitationId: string, serviceId: string, organisationId: string, correlationId: string): Promise<boolean> {
     const response = await this.client.requestRaw(
@@ -114,8 +108,6 @@ export class Access {
    * @param organisationId - The ID of the organisation the user has the service in.
    * @param correlationId - Correlation ID to be passed with the request.
    * @returns true if the user's service link was successfully deleted, false otherwise.
-   *
-   * @throws Error when the API client throws.
    */
   async deleteUserService(userId: string, serviceId: string, organisationId: string, correlationId: string): Promise<boolean> {
     const response = await this.client.requestRaw(

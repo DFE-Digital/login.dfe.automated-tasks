@@ -67,8 +67,6 @@ export class MsalApiClient extends ApiClient {
    *
    * @param options - HTTP request options {@link ApiRequestOptions}.
    * @returns The HTTP request options {@link ApiRequestOptions} with an additional authorization header.
-   *
-   * @throws Error if there was an issue retrieving an access token from the MSAL application.
    */
   private async addAuthHeader(options?: ApiRequestOptions): Promise<ApiRequestOptions> {
     const initialOptions = options ?? {};
@@ -80,7 +78,7 @@ export class MsalApiClient extends ApiClient {
           scopes: [ `${this.resource}/.default` ],
         });
       } catch (error) {
-        throw new Error(`Error acquiring auth token "${error.message}" ${errorInfo}`);
+        return Promise.reject(new Error(`Error acquiring auth token "${error.message}" ${errorInfo}`));
       }
     }
 

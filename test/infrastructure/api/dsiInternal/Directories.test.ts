@@ -68,6 +68,23 @@ describe("Directories API wrapper", () => {
         });
       });
 
+      it("it rejects with any error returned by response text parsing", async () => {
+        const errorMessage = "This is a test error";
+        internalClient.prototype.requestRaw.mockResolvedValue({
+          text: () => Promise.reject(new Error(errorMessage)),
+        } as Response);
+
+        try {
+          await directories.deactivateUser("", "");
+        } catch (error) {
+          expect(error).toBeInstanceOf(Error);
+          expect(error).toHaveProperty(
+            "message",
+            `deactivateUser response body text parse failed "${errorMessage}"`
+          );
+        }
+      });
+
       it("it returns true if the response body's text is 'true'", async () => {
         setRequestRawResponse("true");
 
@@ -86,13 +103,16 @@ describe("Directories API wrapper", () => {
         expect(await directories.deactivateUser("", "")).toEqual(false);
       });
 
-      it("it re-throws any errors thrown by requestRaw", async () => {
+      it("it rejects with requestRaw's error if requestRaw rejects", async () => {
         const errorMessage = "This is a test error";
-        internalClient.prototype.requestRaw.mockImplementation(() => {
-          throw new Error(errorMessage);
-        });
+        internalClient.prototype.requestRaw.mockRejectedValue(new Error(errorMessage));
 
-        expect(directories.deactivateUser("", "")).rejects.toThrow(errorMessage);
+        try {
+          await directories.deactivateUser("", "");
+        } catch (error) {
+          expect(error).toBeInstanceOf(Error);
+          expect(error).toHaveProperty("message", errorMessage);
+        }
       });
     });
 
@@ -143,13 +163,16 @@ describe("Directories API wrapper", () => {
         expect(await directories.deleteUserCode("", "")).toEqual(false);
       });
 
-      it("it re-throws any errors thrown by requestRaw", async () => {
+      it("it rejects with requestRaw's error if requestRaw rejects", async () => {
         const errorMessage = "This is a test error";
-        internalClient.prototype.requestRaw.mockImplementation(() => {
-          throw new Error(errorMessage);
-        });
+        internalClient.prototype.requestRaw.mockRejectedValue(new Error(errorMessage));
 
-        expect(directories.deleteUserCode("", "")).rejects.toThrow(errorMessage);
+        try {
+          await directories.deleteUserCode("", "");
+        } catch (error) {
+          expect(error).toBeInstanceOf(Error);
+          expect(error).toHaveProperty("message", errorMessage);
+        }
       });
     });
   });

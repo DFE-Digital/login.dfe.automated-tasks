@@ -76,13 +76,16 @@ describe("Access API wrapper", () => {
         expect(await access.getInvitationServices("", "")).toEqual([]);
       });
 
-      it("it re-throws any errors thrown by request", async () => {
+      it("it rejects with request's error if request rejects", async () => {
         const errorMessage = "This is a test error";
-        internalClient.prototype.request.mockImplementation(() => {
-          throw new Error(errorMessage);
-        });
+        internalClient.prototype.request.mockRejectedValue(new Error(errorMessage));
 
-        expect(access.getInvitationServices("", "")).rejects.toThrow(errorMessage);
+        try {
+          await access.getInvitationServices("", "");
+        } catch (error) {
+          expect(error).toBeInstanceOf(Error);
+          expect(error).toHaveProperty("message", errorMessage);
+        }
       });
     });
 
@@ -120,13 +123,16 @@ describe("Access API wrapper", () => {
         expect(await access.getUserServices("", "")).toEqual([]);
       });
 
-      it("it re-throws any errors thrown by request", async () => {
+      it("it rejects with request's error if request rejects", async () => {
         const errorMessage = "This is a test error";
-        internalClient.prototype.request.mockImplementation(() => {
-          throw new Error(errorMessage);
-        });
+        internalClient.prototype.request.mockRejectedValue(new Error(errorMessage));
 
-        expect(access.getUserServices("", "")).rejects.toThrow(errorMessage);
+        try {
+          await access.getUserServices("", "");
+        } catch (error) {
+          expect(error).toBeInstanceOf(Error);
+          expect(error).toHaveProperty("message", errorMessage);
+        }
       });
     });
 
@@ -177,13 +183,16 @@ describe("Access API wrapper", () => {
         expect(await access.deleteInvitationService("", "", "", "")).toEqual(false);
       });
 
-      it("it re-throws any errors thrown by requestRaw", async () => {
+      it("it rejects with requestRaw's error if requestRaw rejects", async () => {
         const errorMessage = "This is a test error";
-        internalClient.prototype.requestRaw.mockImplementation(() => {
-          throw new Error(errorMessage);
-        });
+        internalClient.prototype.requestRaw.mockRejectedValue(new Error(errorMessage));
 
-        expect(access.deleteInvitationService("", "", "", "")).rejects.toThrow(errorMessage);
+        try {
+          await access.deleteInvitationService("", "", "", "");
+        } catch (error) {
+          expect(error).toBeInstanceOf(Error);
+          expect(error).toHaveProperty("message", errorMessage);
+        }
       });
     });
 
@@ -234,13 +243,16 @@ describe("Access API wrapper", () => {
         expect(await access.deleteUserService("", "", "", "")).toEqual(false);
       });
 
-      it("it re-throws any errors thrown by requestRaw", async () => {
+      it("it rejects with requestRaw's error if requestRaw rejects", async () => {
         const errorMessage = "This is a test error";
-        internalClient.prototype.requestRaw.mockImplementation(() => {
-          throw new Error(errorMessage);
-        });
+        internalClient.prototype.requestRaw.mockRejectedValue(new Error(errorMessage));
 
-        expect(access.deleteUserService("", "", "", "")).rejects.toThrow(errorMessage);
+        try {
+          await access.deleteUserService("", "", "", "");
+        } catch (error) {
+          expect(error).toBeInstanceOf(Error);
+          expect(error).toHaveProperty("message", errorMessage);
+        }
       });
     });
   });
