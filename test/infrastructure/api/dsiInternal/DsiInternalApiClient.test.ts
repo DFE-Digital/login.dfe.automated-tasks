@@ -1,5 +1,5 @@
 import { MsalApiClient } from "../../../../src/infrastructure/api/common/MsalApiClient";
-import { ApiName, DsiInternalApiClient } from "../../../../src/infrastructure/api/dsiInteral/DsiInternalApiClient";
+import { ApiName, DsiInternalApiClient } from "../../../../src/infrastructure/api/dsiInternal/DsiInternalApiClient";
 import { checkEnv } from "../../../../src/infrastructure/utils";
 
 jest.mock("../../../../src/infrastructure/api/common/MsalApiClient");

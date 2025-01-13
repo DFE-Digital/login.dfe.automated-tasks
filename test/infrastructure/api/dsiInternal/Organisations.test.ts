@@ -1,8 +1,8 @@
 import { ApiRequestMethod } from "../../../../src/infrastructure/api/common/ApiClient";
-import { ApiName, DsiInternalApiClient } from "../../../../src/infrastructure/api/dsiInteral/DsiInternalApiClient";
-import { Organisations } from "../../../../src/infrastructure/api/dsiInteral/Organisations";
+import { ApiName, DsiInternalApiClient } from "../../../../src/infrastructure/api/dsiInternal/DsiInternalApiClient";
+import { Organisations } from "../../../../src/infrastructure/api/dsiInternal/Organisations";
 
-jest.mock("../../../../src/infrastructure/api/dsiInteral/DsiInternalApiClient");
+jest.mock("../../../../src/infrastructure/api/dsiInternal/DsiInternalApiClient");
 
 describe("Organisations API wrapper", () => {
   const internalClient = jest.mocked(DsiInternalApiClient);

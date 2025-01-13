@@ -1,7 +1,7 @@
 import { InvocationContext, Timer } from "@azure/functions";
 import { initialiseUser, User } from "../infrastructure/database/directories/User";
 import { Op, Sequelize } from "sequelize";
-import { Directories } from "../infrastructure/api/dsiInteral/Directories";
+import { Directories } from "../infrastructure/api/dsiInternal/Directories";
 import { AuditLogger } from "../infrastructure/AuditLogger";
 import { connection, DatabaseName } from "../infrastructure/database/common/connection";
 

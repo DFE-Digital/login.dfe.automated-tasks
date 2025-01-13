@@ -1,8 +1,8 @@
-import { ApiName, DsiInternalApiClient } from "../../../../src/infrastructure/api/dsiInteral/DsiInternalApiClient";
-import { Access } from "../../../../src/infrastructure/api/dsiInteral/Access";
+import { ApiName, DsiInternalApiClient } from "../../../../src/infrastructure/api/dsiInternal/DsiInternalApiClient";
+import { Access } from "../../../../src/infrastructure/api/dsiInternal/Access";
 import { ApiRequestMethod } from "../../../../src/infrastructure/api/common/ApiClient";
 
-jest.mock("../../../../src/infrastructure/api/dsiInteral/DsiInternalApiClient");
+jest.mock("../../../../src/infrastructure/api/dsiInternal/DsiInternalApiClient");
 
 describe("Access API wrapper", () => {
   const internalClient = jest.mocked(DsiInternalApiClient);

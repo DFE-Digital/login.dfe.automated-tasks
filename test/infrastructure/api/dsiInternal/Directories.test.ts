@@ -1,8 +1,8 @@
 import { ApiRequestMethod } from "../../../../src/infrastructure/api/common/ApiClient";
-import { ApiName, DsiInternalApiClient } from "../../../../src/infrastructure/api/dsiInteral/DsiInternalApiClient";
-import { Directories } from "../../../../src/infrastructure/api/dsiInteral/Directories";
+import { ApiName, DsiInternalApiClient } from "../../../../src/infrastructure/api/dsiInternal/DsiInternalApiClient";
+import { Directories } from "../../../../src/infrastructure/api/dsiInternal/Directories";
 
-jest.mock("../../../../src/infrastructure/api/dsiInteral/DsiInternalApiClient");
+jest.mock("../../../../src/infrastructure/api/dsiInternal/DsiInternalApiClient");
 
 describe("Directories API wrapper", () => {
   const internalClient = jest.mocked(DsiInternalApiClient);

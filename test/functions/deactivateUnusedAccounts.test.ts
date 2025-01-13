@@ -1,6 +1,6 @@
 import { InvocationContext, Timer } from "@azure/functions";
 import { Op, Sequelize } from "sequelize";
-import { Directories } from "../../src/infrastructure/api/dsiInteral/Directories";
+import { Directories } from "../../src/infrastructure/api/dsiInternal/Directories";
 import { AuditLogger } from "../../src/infrastructure/AuditLogger";
 import { initialiseUser, User } from "../../src/infrastructure/database/directories/User";
 import { deactivateUnusedAccounts } from "../../src/functions/deactivateUnusedAccounts";
@@ -10,7 +10,7 @@ jest.mock("@azure/functions");
 jest.mock("sequelize");
 jest.mock("../../src/infrastructure/database/common/connection");
 jest.mock("../../src/infrastructure/database/directories/User");
-jest.mock("../../src/infrastructure/api/dsiInteral/Directories");
+jest.mock("../../src/infrastructure/api/dsiInternal/Directories");
 jest.mock("../../src/infrastructure/AuditLogger");
 
 describe("Deactivate unused accounts automated task", () => {
