@@ -1,7 +1,7 @@
 import { InvocationContext, Timer } from "@azure/functions";
-import { initialiseUserModel, User } from "../infrastructure/database/directories/User";
+import { initialiseUser, User } from "../infrastructure/database/directories/User";
 import { Op, Sequelize } from "sequelize";
-import { Directories } from "../infrastructure/api/dsiInteral/Directories";
+import { Directories } from "../infrastructure/api/dsiInternal/Directories";
 import { AuditLogger } from "../infrastructure/AuditLogger";
 import { connection, DatabaseName } from "../infrastructure/database/common/connection";
 
@@ -28,7 +28,7 @@ export async function deactivateUnusedAccounts(_: Timer, context: InvocationCont
     const auditLogger = new AuditLogger();
     const targetDate = Sequelize.fn("DATEADD", Sequelize.literal("YEAR"), -2, Sequelize.fn("GETDATE"));
 
-    initialiseUserModel(connection(DatabaseName.Directories));
+    initialiseUser(connection(DatabaseName.Directories));
 
     const users: Pick<User, "id" | "email">[] = await User.findAll({
       attributes: ["id", "email"],
@@ -57,16 +57,10 @@ export async function deactivateUnusedAccounts(_: Timer, context: InvocationCont
       const userRange = `${index + 1} to ${index + batch.length}`;
       context.info(`deactivateUnusedAccounts: Deactivating users ${userRange}`);
 
-      const deactivationResults = await Promise.allSettled(batch.map(async (user) =>  {
-        try {
-          return Promise.resolve({
-            user,
-            deactivated: await directoriesApi.deactivateUser(user.id, context.invocationId),
-          });
-        } catch (error) {
-          return Promise.reject(error.message);
-        }
-      }));
+      const deactivationResults = await Promise.allSettled(batch.map(async (user) => ({
+        user,
+        deactivated: await directoriesApi.deactivateUser(user.id, context.invocationId),
+      })));
 
       const successfulDeactivations = deactivationResults.filter((result): result is fulfilled => result.status === "fulfilled" && result.value.deactivated === true);
       const failedDeactivations = deactivationResults.filter((result): result is fulfilled => result.status === "fulfilled" && result.value.deactivated === false);
@@ -74,7 +68,7 @@ export async function deactivateUnusedAccounts(_: Timer, context: InvocationCont
       context.info(`deactivateUnusedAccounts: ${successfulDeactivations.length} successful, ${failedDeactivations.length} failed, and ${erroredDeactivations.length} errored deactivations for users ${userRange}`);
 
       if (erroredDeactivations.length > 0) {
-        const uniqueErrors = [...new Set(erroredDeactivations.map((result) => result.reason))];
+        const uniqueErrors = [...new Set(erroredDeactivations.map((result) => result.reason.message))];
         uniqueErrors.forEach((error) => context.error(`deactivateUnusedAccounts: ${error}`));
       }
 

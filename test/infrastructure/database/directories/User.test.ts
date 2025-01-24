@@ -1,15 +1,15 @@
 import { DataTypes, Model, Sequelize } from "sequelize";
-import { initialiseUserModel } from "../../../../src/infrastructure/database/directories/User";
+import { initialiseUser } from "../../../../src/infrastructure/database/directories/User";
 
 jest.mock("sequelize");
 
 describe("User database model", () => {
   const model = jest.mocked(Model);
 
-  describe("initialiseUserModel", () => {
+  describe("initialiseUser", () => {
     it("it initialises the user model with the expected attributes and passed sequelize connection", () => {
       const connection = new Sequelize();
-      initialiseUserModel(connection);
+      initialiseUser(connection);
 
       expect(model.init).toHaveBeenCalled();
       expect(model.init).toHaveBeenCalledWith({
@@ -21,19 +21,19 @@ describe("User database model", () => {
           allowNull: false,
         },
         email: {
-          type: DataTypes.STRING,
+          type: DataTypes.STRING(255),
           unique: true,
-          allowNull: false
+          allowNull: false,
         },
         firstName: {
-          type: DataTypes.STRING,
+          type: DataTypes.STRING(255),
           field: "given_name",
-          allowNull: false
+          allowNull: false,
         },
         lastName: {
-          type: DataTypes.STRING,
+          type: DataTypes.STRING(255),
           field: "family_name",
-          allowNull: false
+          allowNull: false,
         },
         password: {
           type: DataTypes.STRING(5000),
@@ -68,7 +68,7 @@ describe("User database model", () => {
           allowNull: false,
         },
         jobTitle: {
-          type: DataTypes.STRING,
+          type: DataTypes.STRING(255),
           field: "job_title",
         },
         passwordResetRequired: {
@@ -82,6 +82,7 @@ describe("User database model", () => {
         },
         isEntra: {
           type: DataTypes.BOOLEAN,
+          field: "is_entra",
           allowNull: false,
         },
         entraId: {

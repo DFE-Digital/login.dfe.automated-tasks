@@ -108,25 +108,37 @@ describe("MSAL API client", () => {
       expect(clientApp.prototype.acquireTokenByClientCredential).toHaveBeenCalledTimes(2);
     });
 
-    it("it throws an error with a correlation ID if the MSAL package fails to retrieve an access token, when one is provided", async () => {
+    it("it rejects with an Error with a correlation ID if the MSAL package fails to retrieve an access token, when one is provided", async () => {
       const correlationId = "test-id";
       const errorMessage = "MSAL Error Example";
       clientApp.prototype.acquireTokenByClientCredential.mockRejectedValue(new Error(errorMessage));
 
-      expect(client.requestRaw(ApiRequestMethod.GET, "", {
-        correlationId: correlationId,
-      })).rejects.toThrow(
-        `Error acquiring auth token "${errorMessage}" (baseUri: ${defaultOptions.baseUri}, correlationId: ${correlationId})`
-      );
+      try {
+        await client.requestRaw(ApiRequestMethod.GET, "", {
+          correlationId,
+        });
+      } catch (error) {
+        expect(error instanceof Error).toEqual(true);
+        expect(error).toHaveProperty(
+          "message",
+          `Error acquiring auth token "${errorMessage}" (baseUri: ${defaultOptions.baseUri}, correlationId: ${correlationId})`
+        );
+      }
     });
 
-    it("it throws an error without a correlation ID if the MSAL package fails to retrieve an access token, when one isn't provided", async () => {
+    it("it rejects with an Error without a correlation ID if the MSAL package fails to retrieve an access token, when one isn't provided", async () => {
       const errorMessage = "MSAL Error Example";
       clientApp.prototype.acquireTokenByClientCredential.mockRejectedValue(new Error(errorMessage));
 
-      expect(client.requestRaw(ApiRequestMethod.GET, "", {})).rejects.toThrow(
-        `Error acquiring auth token "${errorMessage}" (baseUri: ${defaultOptions.baseUri}, correlationId: Not provided)`
-      );
+      try {
+        await client.requestRaw(ApiRequestMethod.GET, "", {});
+      } catch (error) {
+        expect(error instanceof Error).toEqual(true);
+        expect(error).toHaveProperty(
+          "message",
+          `Error acquiring auth token "${errorMessage}" (baseUri: ${defaultOptions.baseUri}, correlationId: Not provided)`
+        );
+      }
     });
 
     it("it calls ApiClient requestRaw with the passed method", async () => {
@@ -252,25 +264,37 @@ describe("MSAL API client", () => {
       expect(clientApp.prototype.acquireTokenByClientCredential).toHaveBeenCalledTimes(2);
     });
 
-    it("it throws an error with a correlation ID if the MSAL package fails to retrieve an access token, when one is provided", async () => {
+    it("it rejects with an Error with a correlation ID if the MSAL package fails to retrieve an access token, when one is provided", async () => {
       const correlationId = "test-id";
       const errorMessage = "MSAL Error Example";
       clientApp.prototype.acquireTokenByClientCredential.mockRejectedValue(new Error(errorMessage));
 
-      expect(client.request(ApiRequestMethod.GET, "", {
-        correlationId: correlationId,
-      })).rejects.toThrow(
-        `Error acquiring auth token "${errorMessage}" (baseUri: ${defaultOptions.baseUri}, correlationId: ${correlationId})`
-      );
+      try {
+        await client.request(ApiRequestMethod.GET, "", {
+          correlationId,
+        });
+      } catch (error) {
+        expect(error instanceof Error).toEqual(true);
+        expect(error).toHaveProperty(
+          "message",
+          `Error acquiring auth token "${errorMessage}" (baseUri: ${defaultOptions.baseUri}, correlationId: ${correlationId})`
+        );
+      }
     });
 
-    it("it throws an error without a correlation ID if the MSAL package fails to retrieve an access token, when one isn't provided", async () => {
+    it("it rejects with an Error without a correlation ID if the MSAL package fails to retrieve an access token, when one isn't provided", async () => {
       const errorMessage = "MSAL Error Example";
       clientApp.prototype.acquireTokenByClientCredential.mockRejectedValue(new Error(errorMessage));
 
-      expect(client.request(ApiRequestMethod.GET, "", {})).rejects.toThrow(
-        `Error acquiring auth token "${errorMessage}" (baseUri: ${defaultOptions.baseUri}, correlationId: Not provided)`
-      );
+      try {
+        await client.request(ApiRequestMethod.GET, "", {});
+      } catch (error) {
+        expect(error instanceof Error).toEqual(true);
+        expect(error).toHaveProperty(
+          "message",
+          `Error acquiring auth token "${errorMessage}" (baseUri: ${defaultOptions.baseUri}, correlationId: Not provided)`
+        );
+      }
     });
 
     it("it calls ApiClient request with the passed method", async () => {

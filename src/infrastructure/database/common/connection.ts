@@ -6,6 +6,7 @@ import { checkEnv } from "../../utils";
  */
 export enum DatabaseName {
   Directories = "directories",
+  Organisations = "organisations",
 };
 
 /**

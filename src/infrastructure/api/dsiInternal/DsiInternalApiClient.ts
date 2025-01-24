@@ -5,7 +5,9 @@ import { checkEnv } from "../../utils";
  * Names of internal APIs currently accepted by this application.
  */
 export enum ApiName {
+  Access = "access",
   Directories = "directories",
+  Organisations = "organisations",
 };
 
 /**

@@ -83,8 +83,6 @@ export class ApiClient {
    * @param path - API path excluding the base URI.
    * @param options - HTTP request options ({@link ApiRequestOptions}).
    * @returns The HTTP response.
-   *
-   * @throws Error when the request is not successful and not a 404 response.
    */
   async requestRaw(method: ApiRequestMethod, path: string, options?: ApiRequestOptions): Promise<Response> {
     const errorInfo = `(baseUri: ${this.baseUri}, correlationId: ${options?.correlationId ?? "Not provided"})`;
@@ -97,11 +95,11 @@ export class ApiClient {
         headers: this.buildHeaders(method, options),
       });
     } catch (error) {
-      throw new Error(`API fetch error "${error.message}" ${errorInfo}`);
+      return Promise.reject(new Error(`API fetch error "${error.message}" ${errorInfo}`));
     }
 
     if (response.status !== 404 && !response.ok) {
-      throw new Error(`API request failed with status ${response.status} "${response.statusText}" ${errorInfo}`);
+      return Promise.reject(new Error(`API request failed with status ${response.status} "${response.statusText}" ${errorInfo}`));
     }
 
     return response;
@@ -114,11 +112,13 @@ export class ApiClient {
    * @param path - API path excluding the base URI.
    * @param options - HTTP request options ({@link ApiRequestOptions}).
    * @returns The requested JSON object if the response is not 404, otherwise null.
-   *
-   * @throws Error when the request is not successful and not a 404 response, or if JSON parsing fails.
    */
   async request<T>(method: ApiRequestMethod, path:string, options?: ApiRequestOptions): Promise<T | null> {
     const response = await this.requestRaw(method, path, options);
-    return (response.status !== 404) ? await response.json() as T : null;
+    try {
+      return (response.status !== 404) ? await response.json() as T : null;
+    } catch (error) {
+      return Promise.reject(new Error(`API response body JSON parse failed "${error.message}"`));
+    }
   };
 };

@@ -9,6 +9,7 @@ Automated tasks run on schedules or triggered manually to carry out BAU activiti
   - [Local Debugging](#local-debugging)
     - [First time setup](#first-time-setup)
     - [Running any functions locally](#running-any-functions-locally)
+  - [Adding New Azure Functions](#adding-new-azure-functions)
   - [Adding New Database Connections](#adding-new-database-connections)
   - [Adding New DSi Internal API Connections](#adding-new-dsi-internal-api-connections)
 
@@ -41,9 +42,12 @@ if (fs.existsSync('./node_modules/@azure/service-bus/node_modules/long/index.d.t
 
 ## Automated Tasks
 
-- deactivateUnusedAccounts:
+- `deactivateUnusedAccounts`:
   - Default Timer: Midnight on the first day of every month.
   - Description: Deactivates and creates audit records for any users whose last login is older than 2 years from the current run date, or if their account was created over 2 years from the current run date and they never logged in since verifying their email address.
+- `removeGeneratedTestAccounts`:
+  - Default timer: Midnight on every Monday.
+  - Description: Removes any records for users/invitations generated automatically by the test team as part of their regression testing.
 
 ## Local Debugging
 
@@ -65,11 +69,18 @@ To ease local running/debugging of these functions, please install the recommend
     "AzureFunctionsJobHost__logging__logLevel__default": "Trace",
     "DEBUG": "true",
     "TIMER_DEACTIVATE_UNUSED_ACCOUNTS": "0 0 0 1 * *",
+    "TIMER_REMOVE_GENERATED_TEST_ACCOUNTS": "0 0 0 * * 1",
     "DATABASE_DIRECTORIES_HOST": "",
     "DATABASE_DIRECTORIES_NAME": "",
     "DATABASE_DIRECTORIES_USERNAME": "",
     "DATABASE_DIRECTORIES_PASSWORD": "",
+    "DATABASE_ORGANISATIONS_HOST": "",
+    "DATABASE_ORGANISATIONS_NAME": "",
+    "DATABASE_ORGANISATIONS_USERNAME": "",
+    "DATABASE_ORGANISATIONS_PASSWORD": "",
+    "API_INTERNAL_ACCESS_HOST": "",
     "API_INTERNAL_DIRECTORIES_HOST": "",
+    "API_INTERNAL_ORGANISATIONS_HOST": "",
     "API_INTERNAL_TENANT": "",
     "API_INTERNAL_AUTHORITY_HOST": "",
     "API_INTERNAL_CLIENT_ID": "",
@@ -98,12 +109,19 @@ To ease local running/debugging of these functions, please install the recommend
 |   ---   |     ---     |      ---      |      ---      |
 | AzureFunctionsJobHost__logging__logLevel__default | Sets the log level for the locally running functions, to set what is shown/hidden in the debug console. | Change to one of the following values: `Trace`, `Debug`, `Information`, `Warning`, `Error`, `Critical`. | `Trace` |
 | DEBUG | Turns on additional logging for sequelize, lowers the log level for MSAL to info instead of error, and connects to service bus via Websockets to get around the VPN all to assist with debugging issues. | Simple toggle, change to `false` to disable additional logging. | `true` |
-| TIMER_DEACTIVATE_UNUSED_ACCOUNTS | The NCronTab expression that sets the schedule for the deactivateUnusedAccounts function (`./src/functions/deactivateUnusedAccounts`). | Read the [documentation on NCrontab formatting](https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-timer?tabs=python-v2%2Cisolated-process%2Cnodejs-v4&pivots=programming-language-typescript#ncrontab-expressions) and use a [tester](https://ncrontab.swimburger.net/) to verify your expression runs as you'd expect. | `0 0 0 1 * *` Runs at 12AM UTC on the first day of every month. |
+| TIMER_DEACTIVATE_UNUSED_ACCOUNTS | The NCronTab expression that sets the schedule for the `deactivateUnusedAccounts` function (`./src/functions/deactivateUnusedAccounts`). | Read the [documentation on NCrontab formatting](https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-timer?tabs=python-v2%2Cisolated-process%2Cnodejs-v4&pivots=programming-language-typescript#ncrontab-expressions) and use a [tester](https://ncrontab.swimburger.net/) to verify your expression runs as you'd expect. | `0 0 0 1 * *` Runs at 12AM UTC on the first day of every month. |
+| TIMER_REMOVE_GENERATED_TEST_ACCOUNTS | The NCronTab expression that sets the schedule for the `removeGeneratedTestAccounts` function (`./src/functions/removeGeneratedTestAccounts`). | Read the [documentation on NCrontab formatting](https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-timer?tabs=python-v2%2Cisolated-process%2Cnodejs-v4&pivots=programming-language-typescript#ncrontab-expressions) and use a [tester](https://ncrontab.swimburger.net/) to verify your expression runs as you'd expect. | `0 0 0 * * 1` Runs at 12AM UTC on every Monday. |
 | DATABASE_DIRECTORIES_HOST | The directories database hostname/URL. | Retrieve from KeyVault or other database connections. | `""`
 | DATABASE_DIRECTORIES_NAME | The directories database name | Retrieve from KeyVault or other database connections. | `""`
 | DATABASE_DIRECTORIES_USERNAME | SQL username for connecting to the directories database. | Use your own username or retrieve from KeyVault. | `""`
 | DATABASE_DIRECTORIES_PASSWORD | SQL password for connecting to the directories database. | Use your own password or retrieve from KeyVault. | `""`
+| DATABASE_ORGANISATIONS_HOST | The organisations database hostname/URL. | Retrieve from KeyVault or other database connections. | `""`
+| DATABASE_ORGANISATIONS_NAME | The organisations database name | Retrieve from KeyVault or other database connections. | `""`
+| DATABASE_ORGANISATIONS_USERNAME | SQL username for connecting to the organisations database. | Use your own username or retrieve from KeyVault. | `""`
+| DATABASE_ORGANISATIONS_PASSWORD | SQL password for connecting to the organisations database. | Use your own password or retrieve from KeyVault. | `""`
+| API_INTERNAL_ACCESS_HOST | Host URL for the internal access API. | Retrieve from KeyVault or the "Domains" section of the app service's "Overview" page in the Azure portal. | `""`
 | API_INTERNAL_DIRECTORIES_HOST | Host URL for the internal directories API. | Retrieve from KeyVault or the "Domains" section of the app service's "Overview" page in the Azure portal. | `""`
+| API_INTERNAL_ORGANISATIONS_HOST | Host URL for the internal organisations API. | Retrieve from KeyVault or the "Domains" section of the app service's "Overview" page in the Azure portal. | `""`
 | API_INTERNAL_TENANT | Tenant ID of the internal API tenant. | Retrieve from KeyVault. | `""`
 | API_INTERNAL_AUTHORITY_HOST | Authority host URL of the internal API tenant. | Retrieve from KeyVault. | `""`
 | API_INTERNAL_CLIENT_ID | Client ID of the internal API tenant. | Retrieve from KeyVault. | `""`
@@ -111,6 +129,40 @@ To ease local running/debugging of these functions, please install the recommend
 | API_INTERNAL_RESOURCE | Resource ID of the internal API tenant. | Retrieve from KeyVault. | `""`
 | AUDIT_CONNECTION_STRING | Connection string of the environment's shared service bus. | Retrieve from KeyVault or the service bus' "Shared access policies" page in the Azure portal. | `""`
 | AUDIT_TOPIC_NAME | Service bus audit topic name. | Retrieve from KeyVault or the service bus' "Overview" page in the Azure portal. | `"audit"`
+
+## Adding New Azure Functions
+
+In the following steps we'll create a new handler for our new timer trigger  `functionName` Azure function, and register it with our function app.
+
+1. Create a new TypeScript file in `src/functions` to house the handler for the Azure function, similar to the one below, and export it.
+
+```js
+import { InvocationContext, Timer } from "@azure/functions";
+
+export async function functionName(_: Timer, context: InvocationContext): Promise<void> {
+  context.log(`functionName function processed invocation: ${context.invocationId}`);
+};
+```
+
+2. In `src/index.ts`, add a new definition for the function by calling `app.TRIGGER`, in our case of a timer it'll be `app.timer`, and passing the necessary information:
+    - The first argument is the name you want the function to have in the Azure Portal.
+    - The second argument will depend on the type of trigger but for timer triggers it needs the following options:
+      - Schedule: An [NCrontab expression](https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-timer?tabs=python-v2%2Cisolated-process%2Cnodejs-v4&pivots=programming-language-typescript#ncrontab-expressions) or an environment variable name between `%` symbols to retrieve the schedule from.
+      - Handler: The function that will be executed when the scheduled timer is triggered.
+      - Retry: The retry options, as defined in the [Microsoft documentation](https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-error-pages?tabs=fixed-delay%2Cisolated-process%2Cnode-v4%2Cpython-v2&pivots=programming-language-typescript#retry-examples) for how the function should retry in case an error is thrown. Other types of trigger may need to be configured in the `host.json` file.
+
+```js
+app.timer("functionName", {
+  schedule: "%TIMER_FUNCTION_NAME%",
+  handler: functionName,
+  retry: {
+    strategy: "exponentialBackoff",
+    maximumInterval: 300000,
+    minimumInterval: 30000,
+    maxRetryCount: 5,
+  },
+});
+```
 
 ## Adding New Database Connections
 

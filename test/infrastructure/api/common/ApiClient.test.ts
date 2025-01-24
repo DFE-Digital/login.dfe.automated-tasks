@@ -183,28 +183,40 @@ describe("Base API client", () => {
       });
     });
 
-    it("it throws an error with correlationId if fetch throws an error, and correlationId is set", async () => {
+    it("it rejects with an Error with a correlationId if fetch throws an error, and correlationId is set", async () => {
       const errorMessage = "Fetch Failed";
       mockedFetch.mockRejectedValue(new Error(errorMessage));
       const requestOptions = {
         correlationId: "testing123",
       };
 
-      expect(apiClient.requestRaw(ApiRequestMethod.GET, "", requestOptions)).rejects.toThrow(
-        `API fetch error "${errorMessage}" (baseUri: ${defaultOptions.baseUri}, correlationId: ${requestOptions?.correlationId})`
-      );
+      try {
+        await apiClient.requestRaw(ApiRequestMethod.GET, "", requestOptions);
+      } catch (error) {
+        expect(error).toBeInstanceOf(Error);
+        expect(error).toHaveProperty(
+          "message",
+          `API fetch error "${errorMessage}" (baseUri: ${defaultOptions.baseUri}, correlationId: ${requestOptions.correlationId})`
+        );
+      }
     });
 
-    it("it throws an error without correlationId if fetch throws an error, and correlationId is not set", async () => {
+    it("it rejects with an Error without a correlationId if fetch throws an error, and correlationId is not set", async () => {
       const errorMessage = "Fetch Failed";
       mockedFetch.mockRejectedValue(new Error(errorMessage));
 
-      expect(apiClient.requestRaw(ApiRequestMethod.GET, "", {})).rejects.toThrow(
-        `API fetch error "${errorMessage}" (baseUri: ${defaultOptions.baseUri}, correlationId: Not provided)`
-      );
+      try {
+        await apiClient.requestRaw(ApiRequestMethod.GET, "", {});
+      } catch (error) {
+        expect(error).toBeInstanceOf(Error);
+        expect(error).toHaveProperty(
+          "message",
+          `API fetch error "${errorMessage}" (baseUri: ${defaultOptions.baseUri}, correlationId: Not provided)`
+        );
+      }
     });
 
-    it("it throws an error with correlationId if the response is not ok, the status is not 404, and correlationId is set", async () => {
+    it("it rejects with an Error with a correlationId if the response is not ok, the status is not 404, and correlationId is set", async () => {
       const failedResponse = {
         status: 500,
         statusText: "Internal Server Error",
@@ -215,12 +227,18 @@ describe("Base API client", () => {
         correlationId: "testing123",
       };
 
-      expect(apiClient.requestRaw(ApiRequestMethod.GET, "", requestOptions)).rejects.toThrow(
-        `API request failed with status ${failedResponse.status} "${failedResponse.statusText}" (baseUri: ${defaultOptions.baseUri}, correlationId: ${requestOptions?.correlationId})`
-      );
+      try {
+        await apiClient.requestRaw(ApiRequestMethod.GET, "", requestOptions);
+      } catch (error) {
+        expect(error).toBeInstanceOf(Error);
+        expect(error).toHaveProperty(
+          "message",
+          `API request failed with status ${failedResponse.status} "${failedResponse.statusText}" (baseUri: ${defaultOptions.baseUri}, correlationId: ${requestOptions.correlationId})`
+        );
+      }
     });
 
-    it("it throws an error without correlationId if the response is not ok, the status is not 404, and correlationId is not set", async () => {
+    it("it rejects with an Error without a correlationId if the response is not ok, the status is not 404, and correlationId is not set", async () => {
       const failedResponse = {
         status: 500,
         statusText: "Internal Server Error",
@@ -228,24 +246,38 @@ describe("Base API client", () => {
       };
       mockedFetch.mockResolvedValue(failedResponse);
 
-      expect(apiClient.requestRaw(ApiRequestMethod.GET, "", {})).rejects.toThrow(
-        `API request failed with status ${failedResponse.status} "${failedResponse.statusText}" (baseUri: ${defaultOptions.baseUri}, correlationId: Not provided)`
-      );
+      try {
+        await apiClient.requestRaw(ApiRequestMethod.GET, "", {});
+      } catch (error) {
+        expect(error).toBeInstanceOf(Error);
+        expect(error).toHaveProperty(
+          "message",
+          `API request failed with status ${failedResponse.status} "${failedResponse.statusText}" (baseUri: ${defaultOptions.baseUri}, correlationId: Not provided)`
+        );
+      }
     });
 
-    it("it doesn't throw an error if the response status is 404, and the response is not okay", async () => {
+    it("it resolves with the response if the response status is 404, and the response is not ok", async () => {
       const failedResponse = {
         status: 404,
         statusText: "Not Found",
         ok: false,
       };
       mockedFetch.mockResolvedValue(failedResponse);
+      const result = await apiClient.requestRaw(ApiRequestMethod.GET, "", {});
 
-      expect(apiClient.requestRaw(ApiRequestMethod.GET, "", {})).resolves.not.toThrow();
+      expect(result).toEqual(failedResponse);
     });
 
-    it("it doesn't throw an error if the response is ok", async () => {
-      expect(apiClient.requestRaw(ApiRequestMethod.GET, "", {})).resolves.not.toThrow();
+    it("it resolves with the response if the response is ok", async () => {
+      const successfulResponse = {
+        status: 200,
+        ok: true,
+      };
+      mockedFetch.mockResolvedValue(successfulResponse);
+      const result = await apiClient.requestRaw(ApiRequestMethod.GET, "", {});
+
+      expect(result).toEqual(successfulResponse);
     });
   });
 
@@ -272,6 +304,25 @@ describe("Base API client", () => {
 
       expect(apiClient.requestRaw).toHaveBeenCalled();
       expect(apiClient.requestRaw).toHaveBeenCalledWith(ApiRequestMethod.GET, "test", requestOptions);
+    });
+
+    it("it rejects with an Error if the response body fails to parse as JSON when the response status is not 404", async () => {
+      const errorMessage = "Couldn't parse JSON test error";
+      spyRequestRaw.mockResolvedValue({
+        status: 200,
+        ok: true,
+        json: () => Promise.reject(new Error(errorMessage)),
+      } as Response);
+
+      try {
+        await apiClient.request(ApiRequestMethod.GET, "", {});
+      } catch (error) {
+        expect(error).toBeInstanceOf(Error);
+        expect(error).toHaveProperty(
+          "message",
+          `API response body JSON parse failed "${errorMessage}"`
+        );
+      }
     });
 
     it("it returns the JSON parsed response body if the response status is not 404", async () => {
