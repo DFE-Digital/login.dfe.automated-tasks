@@ -34,7 +34,8 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
 export function initialiseUser(connection: Sequelize): void {
   User.init({
     id: {
-      type: DataTypes.UUIDV4,
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
       field: "sub",
       unique: true,

@@ -14,7 +14,8 @@ describe("User database model", () => {
       expect(model.init).toHaveBeenCalled();
       expect(model.init).toHaveBeenCalledWith({
         id: {
-          type: DataTypes.UUIDV4,
+          type: DataTypes.UUID,
+          defaultValue: DataTypes.UUIDV4,
           primaryKey: true,
           field: "sub",
           unique: true,

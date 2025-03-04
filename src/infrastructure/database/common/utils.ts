@@ -20,17 +20,16 @@ export function initialiseAllUserModels(directoriesConnection: Sequelize, organi
   initialiseUserPasswordPolicy(directoriesConnection);
   initialiseUserServiceRequest(organisationsConnection);
 
-  const userPasswordPolicyFk = {
-    name: "userId",
-    field: "uid",
-  };
-
   User.hasMany(UserPasswordPolicy, {
-    foreignKey: userPasswordPolicyFk,
+    foreignKey: {
+      name: "userId",
+      field: "uid",
+      allowNull: false,
+    },
+    keyType: DataTypes.UUID,
     as: "passwordPolicies",
   });
   UserPasswordPolicy.belongsTo(User, {
-    foreignKey: userPasswordPolicyFk,
     as: "user",
   });
 };

@@ -33,20 +33,20 @@ describe("Cross-database utility functions", () => {
     });
 
     it("it creates associations between models in the same database", () => {
-      const userPasswordPolicyFk = {
-        name: "userId",
-        field: "uid",
-      };
       initialiseAllUserModels(directoriesDb, organisationsDb);
 
       expect(User.hasMany).toHaveBeenCalled();
       expect(UserPasswordPolicy.belongsTo).toHaveBeenCalled();
       expect(User.hasMany).toHaveBeenCalledWith(UserPasswordPolicy, {
-        foreignKey: userPasswordPolicyFk,
+        foreignKey: {
+          name: "userId",
+          field: "uid",
+          allowNull: false,
+        },
+        keyType: DataTypes.UUID,
         as: "passwordPolicies",
       });
       expect(UserPasswordPolicy.belongsTo).toHaveBeenCalledWith(User, {
-        foreignKey: userPasswordPolicyFk,
         as: "user",
       });
     });
