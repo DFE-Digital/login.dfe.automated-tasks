@@ -238,60 +238,60 @@ describe("Remove generated test accounts automated task", () => {
 
     it("it attempts to retrieve the service records for each user", async () => {
       const invocationId = "TestId";
-      const generateQueryResult = [{
+      const queryResult = [{
         id: "test1",
       }, {
         id: "test2",
       }];
-      userMock.findAll.mockResolvedValue(generateQueryResult as User[]);
+      userMock.findAll.mockResolvedValue(queryResult as User[]);
       contextMock.prototype.invocationId = invocationId;
       await removeGeneratedTestAccounts({} as Timer, new InvocationContext());
 
       expect(accessMock.prototype.getUserServices).toHaveBeenCalledTimes(2);
-      expect(accessMock.prototype.getUserServices).toHaveBeenCalledWith(generateQueryResult[0].id, invocationId);
-      expect(accessMock.prototype.getUserServices).toHaveBeenCalledWith(generateQueryResult[1].id, invocationId);
+      expect(accessMock.prototype.getUserServices).toHaveBeenCalledWith(queryResult[0].id, invocationId);
+      expect(accessMock.prototype.getUserServices).toHaveBeenCalledWith(queryResult[1].id, invocationId);
     });
 
     it("it attempts to retrieve the organisation records for each user", async () => {
       const invocationId = "TestId";
-      const generateQueryResult = [{
+      const queryResult = [{
         id: "test1",
       }, {
         id: "test2",
       }];
-      userMock.findAll.mockResolvedValue(generateQueryResult as User[]);
+      userMock.findAll.mockResolvedValue(queryResult as User[]);
       contextMock.prototype.invocationId = invocationId;
       await removeGeneratedTestAccounts({} as Timer, new InvocationContext());
 
       expect(organisationsMock.prototype.getUserOrganisations).toHaveBeenCalledTimes(2);
       expect(organisationsMock.prototype.getUserOrganisations).toHaveBeenCalledWith(
-        generateQueryResult[0].id,
+        queryResult[0].id,
         invocationId
       );
       expect(organisationsMock.prototype.getUserOrganisations).toHaveBeenCalledWith(
-        generateQueryResult[1].id,
+        queryResult[1].id,
         invocationId
       );
     });
 
     it("it attempts to delete any present code for each user", async () => {
       const invocationId = "TestId";
-      const generateQueryResult = [{
+      const queryResult = [{
         id: "test1",
       }, {
         id: "test2",
       }];
-      userMock.findAll.mockResolvedValue(generateQueryResult as User[]);
+      userMock.findAll.mockResolvedValue(queryResult as User[]);
       contextMock.prototype.invocationId = invocationId;
       await removeGeneratedTestAccounts({} as Timer, new InvocationContext());
 
       expect(directoriesMock.prototype.deleteUserCode).toHaveBeenCalledTimes(2);
       expect(directoriesMock.prototype.deleteUserCode).toHaveBeenCalledWith(
-        generateQueryResult[0].id,
+        queryResult[0].id,
         invocationId
       );
       expect(directoriesMock.prototype.deleteUserCode).toHaveBeenCalledWith(
-        generateQueryResult[1].id,
+        queryResult[1].id,
         invocationId
       );
     });
