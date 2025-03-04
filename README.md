@@ -48,6 +48,9 @@ if (fs.existsSync('./node_modules/@azure/service-bus/node_modules/long/index.d.t
 - `removeGeneratedTestAccounts`:
   - Default timer: Midnight on every Monday.
   - Description: Removes any records for users/invitations generated automatically by the test team as part of their regression testing.
+- `removeUnresolvedInvitations`:
+  - Default Timer: Midnight on the first day of every month.
+  - Description: Removes invitations that have not been completed in the past 3 months, where no user is linked to them (manually in the DB) and they are not deactivated.
 
 ## Local Debugging
 
@@ -70,6 +73,7 @@ To ease local running/debugging of these functions, please install the recommend
     "DEBUG": "true",
     "TIMER_DEACTIVATE_UNUSED_ACCOUNTS": "0 0 0 1 * *",
     "TIMER_REMOVE_GENERATED_TEST_ACCOUNTS": "0 0 0 * * 1",
+    "TIMER_REMOVE_UNRESOLVED_INVITATIONS": "0 0 0 1 * *",
     "DATABASE_DIRECTORIES_HOST": "",
     "DATABASE_DIRECTORIES_NAME": "",
     "DATABASE_DIRECTORIES_USERNAME": "",
@@ -111,6 +115,7 @@ To ease local running/debugging of these functions, please install the recommend
 | DEBUG | Turns on additional logging for sequelize, lowers the log level for MSAL to info instead of error, and connects to service bus via Websockets to get around the VPN all to assist with debugging issues. | Simple toggle, change to `false` to disable additional logging. | `true` |
 | TIMER_DEACTIVATE_UNUSED_ACCOUNTS | The NCronTab expression that sets the schedule for the `deactivateUnusedAccounts` function (`./src/functions/deactivateUnusedAccounts`). | Read the [documentation on NCrontab formatting](https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-timer?tabs=python-v2%2Cisolated-process%2Cnodejs-v4&pivots=programming-language-typescript#ncrontab-expressions) and use a [tester](https://ncrontab.swimburger.net/) to verify your expression runs as you'd expect. | `0 0 0 1 * *` Runs at 12AM UTC on the first day of every month. |
 | TIMER_REMOVE_GENERATED_TEST_ACCOUNTS | The NCronTab expression that sets the schedule for the `removeGeneratedTestAccounts` function (`./src/functions/removeGeneratedTestAccounts`). | Read the [documentation on NCrontab formatting](https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-timer?tabs=python-v2%2Cisolated-process%2Cnodejs-v4&pivots=programming-language-typescript#ncrontab-expressions) and use a [tester](https://ncrontab.swimburger.net/) to verify your expression runs as you'd expect. | `0 0 0 * * 1` Runs at 12AM UTC on every Monday. |
+| TIMER_REMOVE_UNRESOLVED_INVITATIONS | The NCronTab expression that sets the schedule for the `removeUnresolvedInvitations` function (`./src/functions/removeUnresolvedInvitations`). | Read the [documentation on NCrontab formatting](https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-timer?tabs=python-v2%2Cisolated-process%2Cnodejs-v4&pivots=programming-language-typescript#ncrontab-expressions) and use a [tester](https://ncrontab.swimburger.net/) to verify your expression runs as you'd expect. | `0 0 0 1 * *` Runs at 12AM UTC on the first day of every month. |
 | DATABASE_DIRECTORIES_HOST | The directories database hostname/URL. | Retrieve from KeyVault or other database connections. | `""`
 | DATABASE_DIRECTORIES_NAME | The directories database name | Retrieve from KeyVault or other database connections. | `""`
 | DATABASE_DIRECTORIES_USERNAME | SQL username for connecting to the directories database. | Use your own username or retrieve from KeyVault. | `""`
