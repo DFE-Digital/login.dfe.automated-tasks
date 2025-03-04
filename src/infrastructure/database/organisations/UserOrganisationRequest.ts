@@ -24,17 +24,18 @@ export class UserOrganisationRequest extends Model<InferAttributes<UserOrganisat
 export function initialiseUserOrganisationRequest(connection: Sequelize): void {
   UserOrganisationRequest.init({
     id: {
-      type: DataTypes.UUIDV4,
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
       allowNull: false,
     },
     userId: {
-      type: DataTypes.UUIDV4,
+      type: DataTypes.UUID,
       field: "user_id",
       allowNull: false,
     },
     organisationId: {
-      type: DataTypes.UUIDV4,
+      type: DataTypes.UUID,
       field: "organisation_id",
       allowNull: false,
     },
@@ -50,7 +51,7 @@ export function initialiseUserOrganisationRequest(connection: Sequelize): void {
       field: "actioned_at",
     },
     actionedBy: {
-      type: DataTypes.UUIDV4,
+      type: DataTypes.UUID,
       field: "actioned_by",
     },
     actionedReason: {

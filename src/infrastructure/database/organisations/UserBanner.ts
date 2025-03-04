@@ -20,12 +20,13 @@ export class UserBanner extends Model<InferAttributes<UserBanner>, InferCreation
 export function initialiseUserBanner(connection: Sequelize): void {
   UserBanner.init({
     id: {
-      type: DataTypes.UUIDV4,
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
       allowNull: false,
     },
     userId: {
-      type: DataTypes.UUIDV4,
+      type: DataTypes.UUID,
       allowNull: false,
     },
     bannerId: {

@@ -14,17 +14,18 @@ describe("UserOrganisationRequest database model", () => {
       expect(model.init).toHaveBeenCalled();
       expect(model.init).toHaveBeenCalledWith({
         id: {
-          type: DataTypes.UUIDV4,
+          type: DataTypes.UUID,
+          defaultValue: DataTypes.UUIDV4,
           primaryKey: true,
           allowNull: false,
         },
         userId: {
-          type: DataTypes.UUIDV4,
+          type: DataTypes.UUID,
           field: "user_id",
           allowNull: false,
         },
         organisationId: {
-          type: DataTypes.UUIDV4,
+          type: DataTypes.UUID,
           field: "organisation_id",
           allowNull: false,
         },
@@ -40,7 +41,7 @@ describe("UserOrganisationRequest database model", () => {
           field: "actioned_at",
         },
         actionedBy: {
-          type: DataTypes.UUIDV4,
+          type: DataTypes.UUID,
           field: "actioned_by",
         },
         actionedReason: {

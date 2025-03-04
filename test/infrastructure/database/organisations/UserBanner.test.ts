@@ -14,12 +14,13 @@ describe("UserBanner database model", () => {
       expect(model.init).toHaveBeenCalled();
       expect(model.init).toHaveBeenCalledWith({
         id: {
-          type: DataTypes.UUIDV4,
+          type: DataTypes.UUID,
+          defaultValue: DataTypes.UUIDV4,
           primaryKey: true,
           allowNull: false,
         },
         userId: {
-          type: DataTypes.UUIDV4,
+          type: DataTypes.UUID,
           allowNull: false,
         },
         bannerId: {
