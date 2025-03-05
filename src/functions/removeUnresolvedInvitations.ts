@@ -6,14 +6,7 @@ import { connection, DatabaseName } from "../infrastructure/database/common/conn
 import { initialiseAllInvitationModels } from "../infrastructure/database/common/utils";
 import { Invitation } from "../infrastructure/database/directories/Invitation";
 import { InvitationCallback } from "../infrastructure/database/directories/InvitationCallback";
-
-/**
- * Result of removing API records from an invitation.
- */
-type apiRemovalResult = {
-  id: string,
-  apiRecordsRemoved: boolean,
-};
+import { actionResult, filterResults } from "./utils/filterResults";
 
 /**
  * API clients used throughout this function.
@@ -73,7 +66,7 @@ async function getInvitationApiRecords(apis: apiClients, invitationId: string, c
   const rejectedRecordsResults = [serviceRecordsResult, organisationRecordsResult]
     .filter((promise): promise is PromiseRejectedResult => promise.status === "rejected");
   if (rejectedRecordsResults.length > 0) {
-    return Promise.reject([...new Set(rejectedRecordsResults.map((promise) => promise.reason.message))]);
+    return Promise.reject(rejectedRecordsResults.map((promise) => promise.reason));
   }
 
   return {
@@ -89,9 +82,9 @@ async function getInvitationApiRecords(apis: apiClients, invitationId: string, c
  * @param invitationId - Invitation ID to delete API records for.
  * @param apiRecords - Invitation API records to be deleted.
  * @param correlationId - Correlation ID to be passed with API requests.
- * @returns A promise containing the results of the API removals {@link apiRemovalResult}.
+ * @returns A promise containing the results of the API removals {@link actionResult}.
  */
-async function deleteInvitationApiRecords(apis: apiClients, invitationId: string, apiRecords: invitationApiRecords, correlationId: string): Promise<apiRemovalResult> {
+async function deleteInvitationApiRecords(apis: apiClients, invitationId: string, apiRecords: invitationApiRecords, correlationId: string): Promise<actionResult<string>> {
   const { services, organisations } = apiRecords;
   const servicesDeletedResults = await Promise.allSettled(services.map(async (record) =>
     apis.access.deleteInvitationService(invitationId, record.serviceId, record.organisationId, correlationId)
@@ -102,15 +95,15 @@ async function deleteInvitationApiRecords(apis: apiClients, invitationId: string
 
   const serviceErrors = servicesDeletedResults
     .filter((record): record is PromiseRejectedResult => record.status === "rejected")
-    .map((record) => record.reason.message);
+    .map((record) => record.reason);
   const organisationErrors = organisationsDeletedResults
     .filter((record): record is PromiseRejectedResult => record.status === "rejected")
-    .map((record) => record.reason.message);
-  const errors = [...new Set(serviceErrors.concat(organisationErrors))];
+    .map((record) => record.reason);
+  const errors = serviceErrors.concat(organisationErrors);
 
   return (errors.length === 0) ? Promise.resolve({
-    id: invitationId,
-    apiRecordsRemoved: servicesDeletedResults.every((result) => result.status === "fulfilled" && result.value)
+    object: invitationId,
+    success: servicesDeletedResults.every((result) => result.status === "fulfilled" && result.value)
       && organisationsDeletedResults.every((result) => result.status === "fulfilled" && result.value),
   }) : Promise.reject(errors);
 };
@@ -132,54 +125,6 @@ async function deleteInvitationDbRecords(invitationIds: string[]): Promise<void>
       id: invitationIds,
     },
   });
-};
-
-/**
- * Filters settled promise results into successful, failed, and errored states.
- *
- * @param results - Settled promise results, to be filtered into different statuses.
- * @returns An object containing the count/values for success/failed results, and the count/errors for errored results.
- */
-function filterResults(results: PromiseSettledResult<apiRemovalResult>[]): {
-  successful: {
-    count: number,
-    values: apiRemovalResult[],
-  },
-  failed: {
-    count: number,
-    values: apiRemovalResult[],
-  },
-  errored: {
-    count: number,
-    errors: string[],
-  },
-} {
-  const successfulPromises = results.filter((result): result is PromiseFulfilledResult<apiRemovalResult> =>
-    result.status === "fulfilled"
-    && result.value.apiRecordsRemoved === true
-  );
-  const failedPromises = results.filter((result): result is PromiseFulfilledResult<apiRemovalResult> =>
-    result.status === "fulfilled"
-    && result.value.apiRecordsRemoved === false
-  );
-  const erroredPromises = results.filter((result): result is PromiseRejectedResult =>
-    result.status === "rejected"
-  );
-
-  return {
-    successful: {
-      count: successfulPromises.length,
-      values: successfulPromises.map((result) => result.value),
-    },
-    failed: {
-      count: failedPromises.length,
-      values: failedPromises.map((result) => result.value),
-    },
-    errored: {
-      count: erroredPromises.length,
-      errors: [...new Set(erroredPromises.flatMap((result) => result.reason as string[]))],
-    },
-  };
 };
 
 /**
@@ -226,7 +171,7 @@ export async function removeUnresolvedInvitations(_: Timer, context: InvocationC
         context.info(
           `removeUnresolvedInvitations: Removing database records for the ${successful.count} invitations with successful API record removals`
         );
-        await deleteInvitationDbRecords(successful.values.map((value) => value.id));
+        await deleteInvitationDbRecords(successful.objects);
       }
     }
   } catch (error) {
