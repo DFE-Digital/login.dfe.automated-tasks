@@ -4,8 +4,9 @@ import { Access, type invitationServiceRecord, type userServiceRecord } from "..
 import { Directories } from "../infrastructure/api/dsiInternal/Directories";
 import { Organisations, type invitationOrganisationRecord, type userOrganisationRecord } from "../infrastructure/api/dsiInternal/Organisations";
 import { connection, DatabaseName } from "../infrastructure/database/common/connection";
-import { initialiseAllUserModels } from "../infrastructure/database/common/utils";
-import { initialiseInvitation, Invitation } from "../infrastructure/database/directories/Invitation";
+import { initialiseAllInvitationModels, initialiseAllUserModels } from "../infrastructure/database/common/utils";
+import { Invitation } from "../infrastructure/database/directories/Invitation";
+import { InvitationCallback } from "../infrastructure/database/directories/InvitationCallback";
 import { User } from "../infrastructure/database/directories/User";
 import { UserPasswordPolicy } from "../infrastructure/database/directories/UserPasswordPolicy";
 import { UserBanner } from "../infrastructure/database/organisations/UserBanner";
@@ -49,7 +50,7 @@ async function getTestAccountIds(): Promise<{
 }> {
   const directoriesDb = connection(DatabaseName.Directories);
   initialiseAllUserModels(directoriesDb, connection(DatabaseName.Organisations));
-  initialiseInvitation(directoriesDb);
+  initialiseAllInvitationModels(directoriesDb);
 
   const query = {
     attributes: ["id"],
@@ -233,6 +234,12 @@ async function deleteInvitationApiRecords(apis: apiClients, invitationId: string
  * @param invitationIds - IDs of invitations to delete database records for.
  */
 async function deleteInvitationDbRecords(invitationIds: string[]): Promise<void> {
+  await InvitationCallback.destroy({
+    where: {
+      invitationId: invitationIds,
+    },
+  });
+  
   await Invitation.destroy({
     where: {
       id: invitationIds,

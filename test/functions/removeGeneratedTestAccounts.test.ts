@@ -5,8 +5,9 @@ import { Access, type invitationServiceRecord, type userServiceRecord } from "..
 import { Directories } from "../../src/infrastructure/api/dsiInternal/Directories";
 import { Organisations, type invitationOrganisationRecord, type userOrganisationRecord } from "../../src/infrastructure/api/dsiInternal/Organisations";
 import { connection, DatabaseName } from "../../src/infrastructure/database/common/connection";
-import { initialiseAllUserModels } from "../../src/infrastructure/database/common/utils";
-import { initialiseInvitation, Invitation } from "../../src/infrastructure/database/directories/Invitation";
+import { initialiseAllInvitationModels, initialiseAllUserModels } from "../../src/infrastructure/database/common/utils";
+import { Invitation } from "../../src/infrastructure/database/directories/Invitation";
+import { InvitationCallback } from "../../src/infrastructure/database/directories/InvitationCallback";
 import { User } from "../../src/infrastructure/database/directories/User";
 import { UserPasswordPolicy } from "../../src/infrastructure/database/directories/UserPasswordPolicy";
 import { UserBanner } from "../../src/infrastructure/database/organisations/UserBanner";
@@ -21,6 +22,7 @@ jest.mock("../../src/infrastructure/api/dsiInternal/Organisations");
 jest.mock("../../src/infrastructure/database/common/connection");
 jest.mock("../../src/infrastructure/database/common/utils");
 jest.mock("../../src/infrastructure/database/directories/Invitation");
+jest.mock("../../src/infrastructure/database/directories/InvitationCallback");
 jest.mock("../../src/infrastructure/database/directories/User");
 jest.mock("../../src/infrastructure/database/directories/UserPasswordPolicy");
 jest.mock("../../src/infrastructure/database/organisations/UserBanner");
@@ -34,6 +36,7 @@ describe("Remove generated test accounts automated task", () => {
   const organisationsMock = jest.mocked(Organisations);
   const connectionMock = jest.mocked(connection);
   const invitationMock = jest.mocked(Invitation);
+  const invitationCallbackMock = jest.mocked(InvitationCallback);
   const userMock = jest.mocked(User);
   const userPasswordPolicyMock = jest.mocked(UserPasswordPolicy);
   const userBannerMock = jest.mocked(UserBanner);
@@ -168,11 +171,11 @@ describe("Remove generated test accounts automated task", () => {
     );
   });
 
-  it("it attempts to initialise the Invitation model with a connection to the directories DB", async () => {
+  it("it attempts to initialise all invitation related model with a connection to the directories DB", async () => {
     await removeGeneratedTestAccounts({} as Timer, new InvocationContext());
 
-    expect(initialiseInvitation).toHaveBeenCalled();
-    expect(initialiseInvitation).toHaveBeenCalledWith(connection(DatabaseName.Directories));
+    expect(initialiseAllInvitationModels).toHaveBeenCalled();
+    expect(initialiseAllInvitationModels).toHaveBeenCalledWith(connection(DatabaseName.Directories));
   });
 
   it.each([
@@ -820,11 +823,14 @@ describe("Remove generated test accounts automated task", () => {
       );
     });
 
-    it("it throws an error if the invitation DB deletion query throws an error", async () => {
-      const errorMessage = `Test Error Query Invitation`;
+    it.each([
+      ["InvitationCallback", invitationCallbackMock],
+      ["Invitation", invitationMock],
+    ])("it throws an error if any of the DB deletion queries throw an error (%p)", async (name, mock) => {
+      const errorMessage = `Test Error Query ${name}`;
       const invitations = generateQueryResult<Invitation>(100);
       invitationMock.findAll.mockResolvedValue(invitations);
-      invitationMock.destroy.mockImplementation(() => {
+      mock.destroy.mockImplementation(() => {
         throw new Error(errorMessage);
       });
 
@@ -842,6 +848,11 @@ describe("Remove generated test accounts automated task", () => {
       ]);
       await removeGeneratedTestAccounts({} as Timer, new InvocationContext());
 
+      expect(invitationCallbackMock.destroy).toHaveBeenCalledWith({
+        where: {
+          invitationId: invitations.map((invitation) => invitation.id),
+        },
+      });
       expect(invitationMock.destroy).toHaveBeenCalledWith({
         where: {
           id: invitations.map((invitation) => invitation.id),
