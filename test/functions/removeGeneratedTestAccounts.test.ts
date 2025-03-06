@@ -1,9 +1,9 @@
 import { InvocationContext, Timer } from "@azure/functions";
 import { Op } from "sequelize";
 import { removeGeneratedTestAccounts } from "../../src/functions/removeGeneratedTestAccounts";
-import { Access, type invitationServiceRecord, type userServiceRecord } from "../../src/infrastructure/api/dsiInternal/Access";
+import { Access} from "../../src/infrastructure/api/dsiInternal/Access";
 import { Directories } from "../../src/infrastructure/api/dsiInternal/Directories";
-import { Organisations, type invitationOrganisationRecord, type userOrganisationRecord } from "../../src/infrastructure/api/dsiInternal/Organisations";
+import { Organisations } from "../../src/infrastructure/api/dsiInternal/Organisations";
 import { connection, DatabaseName } from "../../src/infrastructure/database/common/connection";
 import { initialiseAllInvitationModels, initialiseAllUserModels } from "../../src/infrastructure/database/common/utils";
 import { Invitation } from "../../src/infrastructure/database/directories/Invitation";
@@ -13,6 +13,7 @@ import { UserPasswordPolicy } from "../../src/infrastructure/database/directorie
 import { UserBanner } from "../../src/infrastructure/database/organisations/UserBanner";
 import { UserOrganisationRequest } from "../../src/infrastructure/database/organisations/UserOrganisationRequest";
 import { UserServiceRequest } from "../../src/infrastructure/database/organisations/UserServiceRequest";
+import { generateInvitationOrganisations, generateInvitations, generateInvitationServices, generateUserOrganisations, generateUsers, generateUserServices } from "../testUtils";
 
 jest.mock("@azure/functions");
 jest.mock("sequelize");
@@ -42,84 +43,6 @@ describe("Remove generated test accounts automated task", () => {
   const userBannerMock = jest.mocked(UserBanner);
   const userOrgRequestMock = jest.mocked(UserOrganisationRequest);
   const userServiceRequestMock = jest.mocked(UserServiceRequest);
-  const generateQueryResult: <T>(count: number) => T[] = (count: number) => Array(count).fill({
-    id: "test",
-  });
-  const generateUserServiceResult: (id: number) => userServiceRecord = (id: number) => ({
-    userId: "",
-    serviceId: `svc-${id}`,
-    organisationId: `org-${id}`,
-    roles: [],
-    identifiers: [],
-    accessGrantedOn: "",
-  });
-  const generateUserOrganisationResult: (id: number) => userOrganisationRecord = (id: number) => ({
-    organisation: {
-      id: `org-${id}`,
-      name: `org-${id}`,
-      category: {
-        id: "",
-        name: "",
-      },
-      LegalName: null,
-      urn: null,
-      uid: null,
-      upin: null,
-      ukprn: null,
-      establishmentNumber: null,
-      closedOn: null,
-      address: null,
-      telephone: null,
-      statutoryLowAge: null,
-      statutoryHighAge: null,
-      legacyId: null,
-      companyRegistrationNumber: null,
-      SourceSystem: null,
-      providerTypeName: null,
-      ProviderTypeCode: null,
-      GIASProviderType: null,
-      PIMSProviderType: null,
-      PIMSProviderTypeCode: null,
-      PIMSStatusName: null,
-      pimsStatus: null,
-      GIASStatusName: null,
-      GIASStatus: null,
-      MasterProviderStatusName: null,
-      MasterProviderStatusCode: null,
-      OpenedOn: null,
-      DistrictAdministrativeName: null,
-      DistrictAdministrativeCode: null,
-      DistrictAdministrative_code: null,
-      IsOnAPAR: null
-    },
-    role: {
-      id: 0,
-      name: "",
-    },
-    approvers: [],
-    endUsers: [],
-  });
-  const generateInvitationServiceResult: (id: number) => invitationServiceRecord = (id: number) => ({
-    invitationId: "",
-    serviceId: `svc-${id}`,
-    organisationId: `org-${id}`,
-    roles: [],
-    identifiers: [],
-    accessGrantedOn: "",
-  });
-  const generateInvitationOrganisationResult: (id: number) => invitationOrganisationRecord = (id: number) => ({
-    invitationId: "",
-    organisation: {
-      id: `org-${id}`,
-      name: `org-${id}`,
-    },
-    role: {
-      id: 0,
-      name: "",
-    },
-    approvers: [],
-    services: [],
-  });
 
   beforeEach(() => {
     accessMock.prototype.getInvitationServices.mockResolvedValue([]);
@@ -220,8 +143,8 @@ describe("Remove generated test accounts automated task", () => {
   it("it logs the number of users and invitations found by the queries", async () => {
     const userCount = 25;
     const invitationCount = 42;
-    userMock.findAll.mockResolvedValue(generateQueryResult<User>(userCount));
-    invitationMock.findAll.mockResolvedValue(generateQueryResult<Invitation>(invitationCount));
+    userMock.findAll.mockResolvedValue(generateUsers(userCount));
+    invitationMock.findAll.mockResolvedValue(generateInvitations(invitationCount));
     await removeGeneratedTestAccounts({} as Timer, new InvocationContext());
 
     expect(contextMock.prototype.info).toHaveBeenCalled();
@@ -232,7 +155,7 @@ describe("Remove generated test accounts automated task", () => {
 
   describe("User removal", () => {
     it("it logs the current range of users being removed in the current batch", async () => {
-      userMock.findAll.mockResolvedValue(generateQueryResult<User>(300));
+      userMock.findAll.mockResolvedValue(generateUsers(300));
       await removeGeneratedTestAccounts({} as Timer, new InvocationContext());
 
       expect(contextMock.prototype.info).toHaveBeenCalled();
@@ -241,12 +164,8 @@ describe("Remove generated test accounts automated task", () => {
 
     it("it attempts to retrieve the service records for each user", async () => {
       const invocationId = "TestId";
-      const queryResult = [{
-        id: "test1",
-      }, {
-        id: "test2",
-      }];
-      userMock.findAll.mockResolvedValue(queryResult as User[]);
+      const queryResult = generateUsers(2);
+      userMock.findAll.mockResolvedValue(queryResult);
       contextMock.prototype.invocationId = invocationId;
       await removeGeneratedTestAccounts({} as Timer, new InvocationContext());
 
@@ -257,12 +176,8 @@ describe("Remove generated test accounts automated task", () => {
 
     it("it attempts to retrieve the organisation records for each user", async () => {
       const invocationId = "TestId";
-      const queryResult = [{
-        id: "test1",
-      }, {
-        id: "test2",
-      }];
-      userMock.findAll.mockResolvedValue(queryResult as User[]);
+      const queryResult = generateUsers(2);
+      userMock.findAll.mockResolvedValue(queryResult);
       contextMock.prototype.invocationId = invocationId;
       await removeGeneratedTestAccounts({} as Timer, new InvocationContext());
 
@@ -279,12 +194,8 @@ describe("Remove generated test accounts automated task", () => {
 
     it("it attempts to delete any present code for each user", async () => {
       const invocationId = "TestId";
-      const queryResult = [{
-        id: "test1",
-      }, {
-        id: "test2",
-      }];
-      userMock.findAll.mockResolvedValue(queryResult as User[]);
+      const queryResult = generateUsers(2);
+      userMock.findAll.mockResolvedValue(queryResult);
       contextMock.prototype.invocationId = invocationId;
       await removeGeneratedTestAccounts({} as Timer, new InvocationContext());
 
@@ -340,11 +251,8 @@ describe("Remove generated test accounts automated task", () => {
 
     it("it will attempt to delete service records, if the service & organisation records requests resolve and there are service records", async () => {
       const invocationId = "TestId";
-      const users = generateQueryResult<User>(1);
-      const serviceRecords = [
-        generateUserServiceResult(1),
-        generateUserServiceResult(1),
-      ];
+      const users = generateUsers(1);
+      const serviceRecords = generateUserServices(2, users[0].id);
       userMock.findAll.mockResolvedValue(users);
       accessMock.prototype.getUserServices.mockResolvedValue(serviceRecords);
       contextMock.prototype.invocationId = invocationId;
@@ -367,11 +275,8 @@ describe("Remove generated test accounts automated task", () => {
 
     it("it will attempt to delete organisation records, if the service & organisation records requests resolve and there are organisation records", async () => {
       const invocationId = "TestId";
-      const users = generateQueryResult<User>(1);
-      const orgRecords = [
-        generateUserOrganisationResult(1),
-        generateUserOrganisationResult(2),
-      ];
+      const users = generateUsers(1);
+      const orgRecords = generateUserOrganisations(2, users[0].id);
       userMock.findAll.mockResolvedValue(users);
       organisationsMock.prototype.getUserOrganisations.mockResolvedValue(orgRecords);
       contextMock.prototype.invocationId = invocationId;
@@ -391,10 +296,10 @@ describe("Remove generated test accounts automated task", () => {
     });
 
     it("it logs the correct number of successful, failed, and errored users in a batch", async () => {
-      userMock.findAll.mockResolvedValue(generateQueryResult<User>(7));
+      userMock.findAll.mockResolvedValue(generateUsers(7));
       accessMock.prototype.getUserServices
         .mockRejectedValueOnce(new Error(""))
-        .mockResolvedValue([generateUserServiceResult(1)]);
+        .mockResolvedValue(generateUserServices(1));
       accessMock.prototype.deleteUserService
         .mockResolvedValueOnce(false)
         .mockResolvedValueOnce(false)
@@ -416,7 +321,7 @@ describe("Remove generated test accounts automated task", () => {
       const error1 = new Error("Test Error 1");
       const error2 = new Error("Test Error 2");
       const error3 = new Error("Test Error 3");
-      userMock.findAll.mockResolvedValue(generateQueryResult<User>(5));
+      userMock.findAll.mockResolvedValue(generateUsers(5));
       accessMock.prototype.getUserServices
         .mockRejectedValueOnce(error1)
         .mockRejectedValueOnce(error2)
@@ -437,7 +342,7 @@ describe("Remove generated test accounts automated task", () => {
 
     it("it includes deleteUserCode errors in the logged unique errors if there are any for a batch", async () => {
       const errorMessage = "Test Error deleteUserCode";
-      userMock.findAll.mockResolvedValue(generateQueryResult<User>(5));
+      userMock.findAll.mockResolvedValue(generateUsers(5));
       directoriesMock.prototype.deleteUserCode
         .mockRejectedValueOnce(new Error(errorMessage))
         .mockRejectedValueOnce(new Error(errorMessage))
@@ -452,9 +357,9 @@ describe("Remove generated test accounts automated task", () => {
       const error1 = new Error("Test Error 1");
       const error2 = new Error("Test Error 2");
       const error3 = new Error("Test Error 3");
-      userMock.findAll.mockResolvedValue(generateQueryResult<User>(5));
-      accessMock.prototype.getUserServices.mockResolvedValue([generateUserServiceResult(1)]);
-      organisationsMock.prototype.getUserOrganisations.mockResolvedValue([generateUserOrganisationResult(1)]);
+      userMock.findAll.mockResolvedValue(generateUsers(5));
+      accessMock.prototype.getUserServices.mockResolvedValue(generateUserServices(1));
+      organisationsMock.prototype.getUserOrganisations.mockResolvedValue(generateUserOrganisations(1));
       directoriesMock.prototype.deleteUserCode.mockResolvedValue(true);
       accessMock.prototype.deleteUserService
         .mockRejectedValueOnce(error3)
@@ -480,7 +385,7 @@ describe("Remove generated test accounts automated task", () => {
     });
 
     it("it throws an error if the entire batch errored", async () => {
-      userMock.findAll.mockResolvedValue(generateQueryResult<User>(10));
+      userMock.findAll.mockResolvedValue(generateUsers(10));
       accessMock.prototype.getUserServices.mockRejectedValue(new Error(""));
 
       expect(removeGeneratedTestAccounts({} as Timer, new InvocationContext()))
@@ -489,15 +394,15 @@ describe("Remove generated test accounts automated task", () => {
     });
 
     it("it doesn't throw an error if not all users in the batch error", async () => {
-      userMock.findAll.mockResolvedValue(generateQueryResult<User>(10));
+      userMock.findAll.mockResolvedValue(generateUsers(10));
       accessMock.prototype.getUserServices.mockRejectedValueOnce(new Error("")).mockResolvedValue([]);
 
       expect(removeGeneratedTestAccounts({} as Timer, new InvocationContext())).resolves.not.toThrow();
     });
 
     it("it doesn't log the number of successful users or delete DB records, if none of their API records are successfully removed", async () => {
-      userMock.findAll.mockResolvedValue(generateQueryResult<User>(5));
-      accessMock.prototype.getUserServices.mockResolvedValue([generateUserServiceResult(1)]);
+      userMock.findAll.mockResolvedValue(generateUsers(5));
+      accessMock.prototype.getUserServices.mockResolvedValue(generateUserServices(1));
       accessMock.prototype.deleteUserService.mockResolvedValue(false);
       await removeGeneratedTestAccounts({} as Timer, new InvocationContext());
 
@@ -513,10 +418,10 @@ describe("Remove generated test accounts automated task", () => {
     });
 
     it("it logs the number of users with successful API record deletions, if some are successful", async () => {
-      userMock.findAll.mockResolvedValue(generateQueryResult<User>(5));
+      userMock.findAll.mockResolvedValue(generateUsers(5));
       accessMock.prototype.getUserServices
         .mockRejectedValueOnce(new Error(""))
-        .mockResolvedValue([generateUserServiceResult(1)]);
+        .mockResolvedValue(generateUserServices(1));
       accessMock.prototype.deleteUserService
         .mockResolvedValueOnce(false)
         .mockResolvedValueOnce(false)
@@ -537,7 +442,7 @@ describe("Remove generated test accounts automated task", () => {
       ["User", userMock],
     ])("it throws an error if any of the DB deletion queries throw an error (%p)", async (name, mock) => {
       const errorMessage = `Test Error Query ${name}`;
-      const users = generateQueryResult<User>(100);
+      const users = generateUsers(100);
       userMock.findAll.mockResolvedValue(users);
       mock.destroy.mockImplementation(() => {
         throw new Error(errorMessage);
@@ -549,15 +454,15 @@ describe("Remove generated test accounts automated task", () => {
     });
 
     it("it deletes all DB records for all users with successful API record deletions", async () => {
-      const users = generateQueryResult<User>(100);
+      const users = generateUsers(100);
       const destroyQuery = {
         where: {
           userId: users.map((user) => user.id),
         },
       };
       userMock.findAll.mockResolvedValue(users);
-      accessMock.prototype.getUserServices.mockResolvedValue([generateUserServiceResult(1)]);
-      organisationsMock.prototype.getUserOrganisations.mockResolvedValue([generateUserOrganisationResult(1)]);
+      accessMock.prototype.getUserServices.mockResolvedValue(generateUserServices(1));
+      organisationsMock.prototype.getUserOrganisations.mockResolvedValue(generateUserOrganisations(1));
       await removeGeneratedTestAccounts({} as Timer, new InvocationContext());
 
       expect(userBannerMock.destroy).toHaveBeenCalledWith(destroyQuery);
@@ -574,7 +479,7 @@ describe("Remove generated test accounts automated task", () => {
 
   describe("Invitation removal", () => {
     it("it logs the current range of invitations being removed in the current batch", async () => {
-      invitationMock.findAll.mockResolvedValue(generateQueryResult<Invitation>(300));
+      invitationMock.findAll.mockResolvedValue(generateInvitations(300));
       await removeGeneratedTestAccounts({} as Timer, new InvocationContext());
 
       expect(contextMock.prototype.info).toHaveBeenCalled();
@@ -583,12 +488,8 @@ describe("Remove generated test accounts automated task", () => {
 
     it("it attempts to retrieve the service records for each invitation", async () => {
       const invocationId = "TestId";
-      const queryResult = [{
-        id: "test1",
-      }, {
-        id: "test2",
-      }];
-      invitationMock.findAll.mockResolvedValue(queryResult as Invitation[]);
+      const queryResult = generateInvitations(2);
+      invitationMock.findAll.mockResolvedValue(queryResult);
       contextMock.prototype.invocationId = invocationId;
       await removeGeneratedTestAccounts({} as Timer, new InvocationContext());
 
@@ -599,12 +500,8 @@ describe("Remove generated test accounts automated task", () => {
 
     it("it attempts to retrieve the organisation records for each invitation", async () => {
       const invocationId = "TestId";
-      const queryResult = [{
-        id: "test1",
-      }, {
-        id: "test2",
-      }];
-      invitationMock.findAll.mockResolvedValue(queryResult as Invitation[]);
+      const queryResult = generateInvitations(2);
+      invitationMock.findAll.mockResolvedValue(queryResult);
       contextMock.prototype.invocationId = invocationId;
       await removeGeneratedTestAccounts({} as Timer, new InvocationContext());
 
@@ -660,11 +557,8 @@ describe("Remove generated test accounts automated task", () => {
 
     it("it will attempt to delete service records, if the service & organisation records requests resolve and there are service records", async () => {
       const invocationId = "TestId";
-      const invitations = generateQueryResult<Invitation>(1);
-      const serviceRecords = [
-        generateInvitationServiceResult(1),
-        generateInvitationServiceResult(1),
-      ];
+      const invitations = generateInvitations(1);
+      const serviceRecords = generateInvitationServices(2, invitations[0].id);
       invitationMock.findAll.mockResolvedValue(invitations);
       accessMock.prototype.getInvitationServices.mockResolvedValue(serviceRecords);
       contextMock.prototype.invocationId = invocationId;
@@ -687,11 +581,8 @@ describe("Remove generated test accounts automated task", () => {
 
     it("it will attempt to delete organisation records, if the service & organisation records requests resolve and there are organisation records", async () => {
       const invocationId = "TestId";
-      const invitations = generateQueryResult<Invitation>(1);
-      const orgRecords = [
-        generateInvitationOrganisationResult(1),
-        generateInvitationOrganisationResult(2),
-      ];
+      const invitations = generateInvitations(1);
+      const orgRecords = generateInvitationOrganisations(2, invitations[0].id);
       invitationMock.findAll.mockResolvedValue(invitations);
       organisationsMock.prototype.getInvitationOrganisations.mockResolvedValue(orgRecords);
       contextMock.prototype.invocationId = invocationId;
@@ -711,10 +602,10 @@ describe("Remove generated test accounts automated task", () => {
     });
 
     it("it logs the correct number of successful, failed, and errored invitations in a batch", async () => {
-      invitationMock.findAll.mockResolvedValue(generateQueryResult<Invitation>(6));
+      invitationMock.findAll.mockResolvedValue(generateInvitations(6));
       accessMock.prototype.getInvitationServices
         .mockRejectedValueOnce(new Error(""))
-        .mockResolvedValue([generateInvitationServiceResult(1)]);
+        .mockResolvedValue(generateInvitationServices(1));
       accessMock.prototype.deleteInvitationService
         .mockResolvedValueOnce(false)
         .mockResolvedValueOnce(false)
@@ -731,7 +622,7 @@ describe("Remove generated test accounts automated task", () => {
       const error1 = new Error("Test Error 1");
       const error2 = new Error("Test Error 2");
       const error3 = new Error("Test Error 3");
-      invitationMock.findAll.mockResolvedValue(generateQueryResult<Invitation>(5));
+      invitationMock.findAll.mockResolvedValue(generateInvitations(5));
       accessMock.prototype.getInvitationServices
         .mockRejectedValueOnce(error1)
         .mockRejectedValueOnce(error2)
@@ -754,11 +645,9 @@ describe("Remove generated test accounts automated task", () => {
       const error1 = new Error("Test Error 1");
       const error2 = new Error("Test Error 2");
       const error3 = new Error("Test Error 3");
-      invitationMock.findAll.mockResolvedValue(generateQueryResult<Invitation>(5));
-      accessMock.prototype.getInvitationServices.mockResolvedValue([generateInvitationServiceResult(1)]);
-      organisationsMock.prototype.getInvitationOrganisations.mockResolvedValue([
-        generateInvitationOrganisationResult(1),
-      ]);
+      invitationMock.findAll.mockResolvedValue(generateInvitations(5));
+      accessMock.prototype.getInvitationServices.mockResolvedValue(generateInvitationServices(1));
+      organisationsMock.prototype.getInvitationOrganisations.mockResolvedValue(generateInvitationOrganisations(1));
       accessMock.prototype.deleteInvitationService
         .mockRejectedValueOnce(error3)
         .mockRejectedValueOnce(error2)
@@ -778,7 +667,7 @@ describe("Remove generated test accounts automated task", () => {
     });
 
     it("it throws an error if the entire batch errored", async () => {
-      invitationMock.findAll.mockResolvedValue(generateQueryResult<Invitation>(10));
+      invitationMock.findAll.mockResolvedValue(generateInvitations(10));
       accessMock.prototype.getInvitationServices.mockRejectedValue(new Error(""));
 
       expect(removeGeneratedTestAccounts({} as Timer, new InvocationContext()))
@@ -787,15 +676,15 @@ describe("Remove generated test accounts automated task", () => {
     });
 
     it("it doesn't throw an error if not all invitations in the batch error", async () => {
-      invitationMock.findAll.mockResolvedValue(generateQueryResult<Invitation>(10));
+      invitationMock.findAll.mockResolvedValue(generateInvitations(10));
       accessMock.prototype.getInvitationServices.mockRejectedValueOnce(new Error("")).mockResolvedValue([]);
 
       expect(removeGeneratedTestAccounts({} as Timer, new InvocationContext())).resolves.not.toThrow();
     });
 
     it("it doesn't log the number of successful invitations or delete DB records, if none of their API records are successfully removed", async () => {
-      invitationMock.findAll.mockResolvedValue(generateQueryResult<Invitation>(5));
-      accessMock.prototype.getInvitationServices.mockResolvedValue([generateInvitationServiceResult(1)]);
+      invitationMock.findAll.mockResolvedValue(generateInvitations(5));
+      accessMock.prototype.getInvitationServices.mockResolvedValue(generateInvitationServices(1));
       accessMock.prototype.deleteInvitationService.mockResolvedValue(false);
       await removeGeneratedTestAccounts({} as Timer, new InvocationContext());
 
@@ -807,10 +696,10 @@ describe("Remove generated test accounts automated task", () => {
     });
 
     it("it logs the number of invitations with successful API record deletions, if some are successful", async () => {
-      invitationMock.findAll.mockResolvedValue(generateQueryResult<Invitation>(5));
+      invitationMock.findAll.mockResolvedValue(generateInvitations(5));
       accessMock.prototype.getInvitationServices
         .mockRejectedValueOnce(new Error(""))
-        .mockResolvedValue([generateInvitationServiceResult(1)]);
+        .mockResolvedValue(generateInvitationServices(1));
       accessMock.prototype.deleteInvitationService
         .mockResolvedValueOnce(false)
         .mockResolvedValueOnce(false)
@@ -828,7 +717,7 @@ describe("Remove generated test accounts automated task", () => {
       ["Invitation", invitationMock],
     ])("it throws an error if any of the DB deletion queries throw an error (%p)", async (name, mock) => {
       const errorMessage = `Test Error Query ${name}`;
-      const invitations = generateQueryResult<Invitation>(100);
+      const invitations = generateInvitations(100);
       invitationMock.findAll.mockResolvedValue(invitations);
       mock.destroy.mockImplementation(() => {
         throw new Error(errorMessage);
@@ -840,12 +729,10 @@ describe("Remove generated test accounts automated task", () => {
     });
 
     it("it deletes all DB records for all invitations with successful API record deletions", async () => {
-      const invitations = generateQueryResult<Invitation>(100);
+      const invitations = generateInvitations(100);
       invitationMock.findAll.mockResolvedValue(invitations);
-      accessMock.prototype.getInvitationServices.mockResolvedValue([generateInvitationServiceResult(1)]);
-      organisationsMock.prototype.getInvitationOrganisations.mockResolvedValue([
-        generateInvitationOrganisationResult(1)
-      ]);
+      accessMock.prototype.getInvitationServices.mockResolvedValue(generateInvitationServices(1));
+      organisationsMock.prototype.getInvitationOrganisations.mockResolvedValue(generateInvitationOrganisations(1));
       await removeGeneratedTestAccounts({} as Timer, new InvocationContext());
 
       expect(invitationCallbackMock.destroy).toHaveBeenCalledWith({

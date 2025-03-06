@@ -1,12 +1,13 @@
 import { InvocationContext, Timer } from "@azure/functions";
 import { Op, Sequelize } from "sequelize";
 import { removeUnresolvedInvitations } from "../../src/functions/removeUnresolvedInvitations";
-import { Access, invitationServiceRecord } from "../../src/infrastructure/api/dsiInternal/Access";
-import { invitationOrganisationRecord, Organisations } from "../../src/infrastructure/api/dsiInternal/Organisations";
+import { Access } from "../../src/infrastructure/api/dsiInternal/Access";
+import { Organisations } from "../../src/infrastructure/api/dsiInternal/Organisations";
 import { connection, DatabaseName } from "../../src/infrastructure/database/common/connection";
 import { initialiseAllInvitationModels } from "../../src/infrastructure/database/common/utils";
 import { Invitation } from "../../src/infrastructure/database/directories/Invitation";
 import { InvitationCallback } from "../../src/infrastructure/database/directories/InvitationCallback";
+import { generateInvitationOrganisations, generateInvitations, generateInvitationServices } from "../testUtils";
 
 jest.mock("@azure/functions");
 jest.mock("sequelize");
@@ -24,30 +25,6 @@ describe("Remove unresolved invitations automated task", () => {
   const connectionMock = jest.mocked(connection);
   const invitationMock = jest.mocked(Invitation);
   const invitationCallbackMock = jest.mocked(InvitationCallback);
-  const generateQueryResult: <T>(count: number) => T[] = (count: number) => Array(count).fill({
-    id: "test",
-  });
-  const generateInvitationServiceResult: (id: number) => invitationServiceRecord = (id: number) => ({
-    invitationId: "",
-    serviceId: `svc-${id}`,
-    organisationId: `org-${id}`,
-    roles: [],
-    identifiers: [],
-    accessGrantedOn: "",
-  });
-  const generateInvitationOrganisationResult: (id: number) => invitationOrganisationRecord = (id: number) => ({
-    invitationId: "",
-    organisation: {
-      id: `org-${id}`,
-      name: `org-${id}`,
-    },
-    role: {
-      id: 0,
-      name: "",
-    },
-    approvers: [],
-    services: [],
-  });
 
   beforeEach(() => {
     accessMock.prototype.getInvitationServices.mockResolvedValue([]);
@@ -124,7 +101,7 @@ describe("Remove unresolved invitations automated task", () => {
 
   it("it logs the number of invitations found by the query", async () => {
     const invitationCount = 42;
-    invitationMock.findAll.mockResolvedValue(generateQueryResult<Invitation>(invitationCount));
+    invitationMock.findAll.mockResolvedValue(generateInvitations(invitationCount));
     await removeUnresolvedInvitations({} as Timer, new InvocationContext());
 
     expect(contextMock.prototype.info).toHaveBeenCalled();
@@ -135,7 +112,7 @@ describe("Remove unresolved invitations automated task", () => {
 
   describe("Invitation removal", () => {
     it("it logs the current range of invitations being removed in the current batch", async () => {
-      invitationMock.findAll.mockResolvedValue(generateQueryResult<Invitation>(300));
+      invitationMock.findAll.mockResolvedValue(generateInvitations(300));
       await removeUnresolvedInvitations({} as Timer, new InvocationContext());
 
       expect(contextMock.prototype.info).toHaveBeenCalled();
@@ -144,12 +121,8 @@ describe("Remove unresolved invitations automated task", () => {
 
     it("it attempts to retrieve the service records for each invitation", async () => {
       const invocationId = "TestId";
-      const queryResult = [{
-        id: "test1",
-      }, {
-        id: "test2",
-      }];
-      invitationMock.findAll.mockResolvedValue(queryResult as Invitation[]);
+      const queryResult = generateInvitations(2);
+      invitationMock.findAll.mockResolvedValue(queryResult);
       contextMock.prototype.invocationId = invocationId;
       await removeUnresolvedInvitations({} as Timer, new InvocationContext());
 
@@ -160,12 +133,8 @@ describe("Remove unresolved invitations automated task", () => {
 
     it("it attempts to retrieve the organisation records for each invitation", async () => {
       const invocationId = "TestId";
-      const queryResult = [{
-        id: "test1",
-      }, {
-        id: "test2",
-      }];
-      invitationMock.findAll.mockResolvedValue(queryResult as Invitation[]);
+      const queryResult = generateInvitations(2);
+      invitationMock.findAll.mockResolvedValue(queryResult);
       contextMock.prototype.invocationId = invocationId;
       await removeUnresolvedInvitations({} as Timer, new InvocationContext());
 
@@ -221,11 +190,8 @@ describe("Remove unresolved invitations automated task", () => {
 
     it("it will attempt to delete service records, if the service & organisation records requests resolve and there are service records", async () => {
       const invocationId = "TestId";
-      const invitations = generateQueryResult<Invitation>(1);
-      const serviceRecords = [
-        generateInvitationServiceResult(1),
-        generateInvitationServiceResult(1),
-      ];
+      const invitations = generateInvitations(1);
+      const serviceRecords = generateInvitationServices(2, invitations[0].id);
       invitationMock.findAll.mockResolvedValue(invitations);
       accessMock.prototype.getInvitationServices.mockResolvedValue(serviceRecords);
       contextMock.prototype.invocationId = invocationId;
@@ -248,11 +214,8 @@ describe("Remove unresolved invitations automated task", () => {
 
     it("it will attempt to delete organisation records, if the service & organisation records requests resolve and there are organisation records", async () => {
       const invocationId = "TestId";
-      const invitations = generateQueryResult<Invitation>(1);
-      const orgRecords = [
-        generateInvitationOrganisationResult(1),
-        generateInvitationOrganisationResult(2),
-      ];
+      const invitations = generateInvitations(1);
+      const orgRecords = generateInvitationOrganisations(2, invitations[0].id);
       invitationMock.findAll.mockResolvedValue(invitations);
       organisationsMock.prototype.getInvitationOrganisations.mockResolvedValue(orgRecords);
       contextMock.prototype.invocationId = invocationId;
@@ -272,10 +235,10 @@ describe("Remove unresolved invitations automated task", () => {
     });
 
     it("it logs the correct number of successful, failed, and errored invitations in a batch", async () => {
-      invitationMock.findAll.mockResolvedValue(generateQueryResult<Invitation>(6));
+      invitationMock.findAll.mockResolvedValue(generateInvitations(6));
       accessMock.prototype.getInvitationServices
         .mockRejectedValueOnce(new Error(""))
-        .mockResolvedValue([generateInvitationServiceResult(1)]);
+        .mockResolvedValue(generateInvitationServices(1));
       accessMock.prototype.deleteInvitationService
         .mockResolvedValueOnce(false)
         .mockResolvedValueOnce(false)
@@ -292,7 +255,7 @@ describe("Remove unresolved invitations automated task", () => {
       const error1 = new Error("Test Error 1");
       const error2 = new Error("Test Error 2");
       const error3 = new Error("Test Error 3");
-      invitationMock.findAll.mockResolvedValue(generateQueryResult<Invitation>(5));
+      invitationMock.findAll.mockResolvedValue(generateInvitations(5));
       accessMock.prototype.getInvitationServices
         .mockRejectedValueOnce(error1)
         .mockRejectedValueOnce(error2)
@@ -315,11 +278,9 @@ describe("Remove unresolved invitations automated task", () => {
       const error1 = new Error("Test Error 1");
       const error2 = new Error("Test Error 2");
       const error3 = new Error("Test Error 3");
-      invitationMock.findAll.mockResolvedValue(generateQueryResult<Invitation>(5));
-      accessMock.prototype.getInvitationServices.mockResolvedValue([generateInvitationServiceResult(1)]);
-      organisationsMock.prototype.getInvitationOrganisations.mockResolvedValue([
-        generateInvitationOrganisationResult(1),
-      ]);
+      invitationMock.findAll.mockResolvedValue(generateInvitations(5));
+      accessMock.prototype.getInvitationServices.mockResolvedValue(generateInvitationServices(1));
+      organisationsMock.prototype.getInvitationOrganisations.mockResolvedValue(generateInvitationOrganisations(1));
       accessMock.prototype.deleteInvitationService
         .mockRejectedValueOnce(error3)
         .mockRejectedValueOnce(error2)
@@ -339,7 +300,7 @@ describe("Remove unresolved invitations automated task", () => {
     });
 
     it("it throws an error if the entire batch errored", async () => {
-      invitationMock.findAll.mockResolvedValue(generateQueryResult<Invitation>(10));
+      invitationMock.findAll.mockResolvedValue(generateInvitations(10));
       accessMock.prototype.getInvitationServices.mockRejectedValue(new Error(""));
 
       expect(removeUnresolvedInvitations({} as Timer, new InvocationContext()))
@@ -348,15 +309,15 @@ describe("Remove unresolved invitations automated task", () => {
     });
 
     it("it doesn't throw an error if not all invitations in the batch error", async () => {
-      invitationMock.findAll.mockResolvedValue(generateQueryResult<Invitation>(10));
+      invitationMock.findAll.mockResolvedValue(generateInvitations(10));
       accessMock.prototype.getInvitationServices.mockRejectedValueOnce(new Error("")).mockResolvedValue([]);
 
       expect(removeUnresolvedInvitations({} as Timer, new InvocationContext())).resolves.not.toThrow();
     });
 
     it("it doesn't log the number of successful invitations or delete DB records, if none of their API records are successfully removed", async () => {
-      invitationMock.findAll.mockResolvedValue(generateQueryResult<Invitation>(5));
-      accessMock.prototype.getInvitationServices.mockResolvedValue([generateInvitationServiceResult(1)]);
+      invitationMock.findAll.mockResolvedValue(generateInvitations(5));
+      accessMock.prototype.getInvitationServices.mockResolvedValue(generateInvitationServices(1));
       accessMock.prototype.deleteInvitationService.mockResolvedValue(false);
       await removeUnresolvedInvitations({} as Timer, new InvocationContext());
 
@@ -368,10 +329,10 @@ describe("Remove unresolved invitations automated task", () => {
     });
 
     it("it logs the number of invitations with successful API record deletions, if some are successful", async () => {
-      invitationMock.findAll.mockResolvedValue(generateQueryResult<Invitation>(5));
+      invitationMock.findAll.mockResolvedValue(generateInvitations(5));
       accessMock.prototype.getInvitationServices
         .mockRejectedValueOnce(new Error(""))
-        .mockResolvedValue([generateInvitationServiceResult(1)]);
+        .mockResolvedValue(generateInvitationServices(1));
       accessMock.prototype.deleteInvitationService
         .mockResolvedValueOnce(false)
         .mockResolvedValueOnce(false)
@@ -389,7 +350,7 @@ describe("Remove unresolved invitations automated task", () => {
       ["Invitation", invitationMock],
     ])("it throws an error if any of the DB deletion queries throw an error (%p)", async (name, mock) => {
       const errorMessage = `Test Error Query ${name}`;
-      const invitations = generateQueryResult<Invitation>(100);
+      const invitations = generateInvitations(100);
       invitationMock.findAll.mockResolvedValue(invitations);
       mock.destroy.mockImplementation(() => {
         throw new Error(errorMessage);
@@ -401,12 +362,10 @@ describe("Remove unresolved invitations automated task", () => {
     });
 
     it("it deletes all DB records for all invitations with successful API record deletions", async () => {
-      const invitations = generateQueryResult<Invitation>(100);
+      const invitations = generateInvitations(100);
       invitationMock.findAll.mockResolvedValue(invitations);
-      accessMock.prototype.getInvitationServices.mockResolvedValue([generateInvitationServiceResult(1)]);
-      organisationsMock.prototype.getInvitationOrganisations.mockResolvedValue([
-        generateInvitationOrganisationResult(1)
-      ]);
+      accessMock.prototype.getInvitationServices.mockResolvedValue(generateInvitationServices(1));
+      organisationsMock.prototype.getInvitationOrganisations.mockResolvedValue(generateInvitationOrganisations(1));
       await removeUnresolvedInvitations({} as Timer, new InvocationContext());
 
       expect(invitationCallbackMock.destroy).toHaveBeenCalledWith({
