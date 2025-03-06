@@ -68,7 +68,7 @@ describe("Remove generated test accounts automated task", () => {
       throw new Error(errorMessage);
     });
 
-    expect(removeGeneratedTestAccounts({} as Timer, new InvocationContext()))
+    await expect(removeGeneratedTestAccounts({} as Timer, new InvocationContext()))
       .rejects
       .toThrow(`removeGeneratedTestAccounts: ${errorMessage}`);
   });
@@ -79,7 +79,7 @@ describe("Remove generated test accounts automated task", () => {
       throw new Error(errorMessage);
     });
 
-    expect(removeGeneratedTestAccounts({} as Timer, new InvocationContext()))
+    await expect(removeGeneratedTestAccounts({} as Timer, new InvocationContext()))
       .rejects
       .toThrow(`removeGeneratedTestAccounts: ${errorMessage}`);
   });
@@ -110,7 +110,7 @@ describe("Remove generated test accounts automated task", () => {
       throw new Error(errorMessage);
     });
 
-    expect(removeGeneratedTestAccounts({} as Timer, new InvocationContext()))
+    await expect(removeGeneratedTestAccounts({} as Timer, new InvocationContext()))
       .rejects
       .toThrow(`removeGeneratedTestAccounts: ${errorMessage}`);
   });
@@ -388,7 +388,7 @@ describe("Remove generated test accounts automated task", () => {
       userMock.findAll.mockResolvedValue(generateUsers(10));
       accessMock.prototype.getUserServices.mockRejectedValue(new Error(""));
 
-      expect(removeGeneratedTestAccounts({} as Timer, new InvocationContext()))
+      await expect(removeGeneratedTestAccounts({} as Timer, new InvocationContext()))
         .rejects
         .toThrow("Entire batch had an error, failing execution so it can retry.");
     });
@@ -397,7 +397,7 @@ describe("Remove generated test accounts automated task", () => {
       userMock.findAll.mockResolvedValue(generateUsers(10));
       accessMock.prototype.getUserServices.mockRejectedValueOnce(new Error("")).mockResolvedValue([]);
 
-      expect(removeGeneratedTestAccounts({} as Timer, new InvocationContext())).resolves.not.toThrow();
+      await expect(removeGeneratedTestAccounts({} as Timer, new InvocationContext())).resolves.not.toThrow();
     });
 
     it("it doesn't log the number of successful users or delete DB records, if none of their API records are successfully removed", async () => {
@@ -448,7 +448,7 @@ describe("Remove generated test accounts automated task", () => {
         throw new Error(errorMessage);
       });
 
-      expect(removeGeneratedTestAccounts({} as Timer, new InvocationContext()))
+      await expect(removeGeneratedTestAccounts({} as Timer, new InvocationContext()))
         .rejects
         .toThrow(`removeGeneratedTestAccounts: ${errorMessage}`);
     });
@@ -670,7 +670,7 @@ describe("Remove generated test accounts automated task", () => {
       invitationMock.findAll.mockResolvedValue(generateInvitations(10));
       accessMock.prototype.getInvitationServices.mockRejectedValue(new Error(""));
 
-      expect(removeGeneratedTestAccounts({} as Timer, new InvocationContext()))
+      await expect(removeGeneratedTestAccounts({} as Timer, new InvocationContext()))
         .rejects
         .toThrow("Entire batch had an error, failing execution so it can retry.");
     });
@@ -679,7 +679,7 @@ describe("Remove generated test accounts automated task", () => {
       invitationMock.findAll.mockResolvedValue(generateInvitations(10));
       accessMock.prototype.getInvitationServices.mockRejectedValueOnce(new Error("")).mockResolvedValue([]);
 
-      expect(removeGeneratedTestAccounts({} as Timer, new InvocationContext())).resolves.not.toThrow();
+      await expect(removeGeneratedTestAccounts({} as Timer, new InvocationContext())).resolves.not.toThrow();
     });
 
     it("it doesn't log the number of successful invitations or delete DB records, if none of their API records are successfully removed", async () => {
@@ -723,7 +723,7 @@ describe("Remove generated test accounts automated task", () => {
         throw new Error(errorMessage);
       });
 
-      expect(removeGeneratedTestAccounts({} as Timer, new InvocationContext()))
+      await expect(removeGeneratedTestAccounts({} as Timer, new InvocationContext()))
         .rejects
         .toThrow(`removeGeneratedTestAccounts: ${errorMessage}`);
     });

@@ -31,7 +31,7 @@ describe("Deactivate unused accounts automated task", () => {
       throw new Error(errorMessage);
     });
 
-    expect(deactivateUnusedAccounts({} as Timer, new InvocationContext())).rejects.toThrow(`deactivateUnusedAccounts: ${errorMessage}`);
+    await expect(deactivateUnusedAccounts({} as Timer, new InvocationContext())).rejects.toThrow(`deactivateUnusedAccounts: ${errorMessage}`);
   });
 
   it("it throws an error if the audit logger throws an error on instantiation", async () => {
@@ -40,7 +40,7 @@ describe("Deactivate unused accounts automated task", () => {
       throw new Error(errorMessage);
     });
 
-    expect(deactivateUnusedAccounts({} as Timer, new InvocationContext())).rejects.toThrow(`deactivateUnusedAccounts: ${errorMessage}`);
+    await expect(deactivateUnusedAccounts({} as Timer, new InvocationContext())).rejects.toThrow(`deactivateUnusedAccounts: ${errorMessage}`);
   });
 
   it("it throws an error if the database connection for the User model throws an error", async () => {
@@ -50,7 +50,7 @@ describe("Deactivate unused accounts automated task", () => {
       throw new Error(errorMessage);
     });
 
-    expect(deactivateUnusedAccounts({} as Timer, new InvocationContext())).rejects.toThrow(`deactivateUnusedAccounts: ${errorMessage}`);
+    await expect(deactivateUnusedAccounts({} as Timer, new InvocationContext())).rejects.toThrow(`deactivateUnusedAccounts: ${errorMessage}`);
   });
 
   it("it attempts to initialise the User model with a connection to the directories DB", async () => {
@@ -66,7 +66,7 @@ describe("Deactivate unused accounts automated task", () => {
       throw new Error(errorMessage);
     });
 
-    expect(deactivateUnusedAccounts({} as Timer, new InvocationContext())).rejects.toThrow(`deactivateUnusedAccounts: ${errorMessage}`);
+    await expect(deactivateUnusedAccounts({} as Timer, new InvocationContext())).rejects.toThrow(`deactivateUnusedAccounts: ${errorMessage}`);
   });
 
   it("it performs the correct query to retrieve users who've been inactive for 2 years or more", async () => {
@@ -171,7 +171,7 @@ describe("Deactivate unused accounts automated task", () => {
     userMock.findAll.mockResolvedValue(generateUsers(5));
     directoriesMock.prototype.deactivateUser.mockRejectedValueOnce(new Error("Testing")).mockResolvedValue(true);
 
-    expect(deactivateUnusedAccounts({} as Timer, new InvocationContext())).resolves.not.toThrow();
+    await expect(deactivateUnusedAccounts({} as Timer, new InvocationContext())).resolves.not.toThrow();
   });
 
   it("it doesn't log the number of successful users or send audit messages, if none were successfully deactivated", async () => {

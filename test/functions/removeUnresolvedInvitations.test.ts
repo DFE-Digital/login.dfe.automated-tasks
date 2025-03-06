@@ -43,7 +43,7 @@ describe("Remove unresolved invitations automated task", () => {
       throw new Error(errorMessage);
     });
 
-    expect(removeUnresolvedInvitations({} as Timer, new InvocationContext()))
+    await expect(removeUnresolvedInvitations({} as Timer, new InvocationContext()))
       .rejects
       .toThrow(`removeUnresolvedInvitations: ${errorMessage}`);
   });
@@ -54,7 +54,7 @@ describe("Remove unresolved invitations automated task", () => {
       throw new Error(errorMessage);
     });
 
-    expect(removeUnresolvedInvitations({} as Timer, new InvocationContext()))
+    await expect(removeUnresolvedInvitations({} as Timer, new InvocationContext()))
       .rejects
       .toThrow(`removeUnresolvedInvitations: ${errorMessage}`);
   });
@@ -72,7 +72,7 @@ describe("Remove unresolved invitations automated task", () => {
       throw new Error(errorMessage);
     });
 
-    expect(removeUnresolvedInvitations({} as Timer, new InvocationContext()))
+    await expect(removeUnresolvedInvitations({} as Timer, new InvocationContext()))
       .rejects
       .toThrow(`removeUnresolvedInvitations: ${errorMessage}`);
   });
@@ -303,7 +303,7 @@ describe("Remove unresolved invitations automated task", () => {
       invitationMock.findAll.mockResolvedValue(generateInvitations(10));
       accessMock.prototype.getInvitationServices.mockRejectedValue(new Error(""));
 
-      expect(removeUnresolvedInvitations({} as Timer, new InvocationContext()))
+      await expect(removeUnresolvedInvitations({} as Timer, new InvocationContext()))
         .rejects
         .toThrow("Entire batch had an error, failing execution so it can retry.");
     });
@@ -312,7 +312,7 @@ describe("Remove unresolved invitations automated task", () => {
       invitationMock.findAll.mockResolvedValue(generateInvitations(10));
       accessMock.prototype.getInvitationServices.mockRejectedValueOnce(new Error("")).mockResolvedValue([]);
 
-      expect(removeUnresolvedInvitations({} as Timer, new InvocationContext())).resolves.not.toThrow();
+      await expect(removeUnresolvedInvitations({} as Timer, new InvocationContext())).resolves.not.toThrow();
     });
 
     it("it doesn't log the number of successful invitations or delete DB records, if none of their API records are successfully removed", async () => {
@@ -356,7 +356,7 @@ describe("Remove unresolved invitations automated task", () => {
         throw new Error(errorMessage);
       });
 
-      expect(removeUnresolvedInvitations({} as Timer, new InvocationContext()))
+      await expect(removeUnresolvedInvitations({} as Timer, new InvocationContext()))
         .rejects
         .toThrow(`removeUnresolvedInvitations: ${errorMessage}`);
     });

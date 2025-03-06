@@ -184,7 +184,7 @@ describe("Service bus audit logger", () => {
           throw new Error(errorMessage);
         });
 
-        expect(auditLogger.batchedLog([minimumLog])).rejects.toThrow(
+        await expect(auditLogger.batchedLog([minimumLog])).rejects.toThrow(
           `Audit service bus message failed to send with error "${errorMessage}"`
         );
       });
@@ -255,7 +255,7 @@ describe("Service bus audit logger", () => {
           throw new Error(errorMessage);
         });
 
-        expect(auditLogger.log(minimumLog)).rejects.toThrow(
+        await expect(auditLogger.log(minimumLog)).rejects.toThrow(
           `Audit service bus message failed to send with error "${errorMessage}"`
         );
       });
