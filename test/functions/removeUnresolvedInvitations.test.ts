@@ -153,17 +153,22 @@ describe("Remove unresolved invitations automated task", () => {
 
     it("it attempts to delete service/organisation records with any records found, if the retrieval resolves", async () => {
       const invocationId = "TestId";
-      const invitations = generateInvitations(1);
-      const records = {
+      const invitations = generateInvitations(2);
+      const records1 = {
         services: [],
         organisations: generateInvitationOrganisations(2, invitations[0].id),
       };
+      const records2 = {
+        services: generateInvitationServices(2, invitations[1].id),
+        organisations: [],
+      };
       invitationMock.findAll.mockResolvedValue(invitations);
-      getInvitationApiRecordsMock.mockResolvedValue(records);
+      getInvitationApiRecordsMock.mockResolvedValueOnce(records1).mockResolvedValueOnce(records2);
       await removeUnresolvedInvitations({} as Timer, new InvocationContext());
 
-      expect(deleteInvitationApiRecords).toHaveBeenCalled();
-      expect(deleteInvitationApiRecords).toHaveBeenCalledWith(apiClients, invitations[0].id, records, invocationId);
+      expect(deleteInvitationApiRecords).toHaveBeenCalledTimes(2);
+      expect(deleteInvitationApiRecords).toHaveBeenCalledWith(apiClients, invitations[0].id, records1, invocationId);
+      expect(deleteInvitationApiRecords).toHaveBeenCalledWith(apiClients, invitations[1].id, records2, invocationId);
     });
 
     it("it logs the correct number of successful, failed, and errored invitation service/organisation retrievals/removals in a batch", async () => {
