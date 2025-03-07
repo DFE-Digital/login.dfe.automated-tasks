@@ -1,18 +1,18 @@
 import { InvocationContext, Timer } from "@azure/functions";
 import { Op } from "sequelize";
-import { Access, type invitationServiceRecord, type userServiceRecord } from "../infrastructure/api/dsiInternal/Access";
+import { deleteInvitationApiRecords, deleteInvitationDbRecords, getInvitationApiRecords } from "./services/invitations";
+import { actionResult, filterResults } from "./utils/filterResults";
+import { Access, type userServiceRecord } from "../infrastructure/api/dsiInternal/Access";
 import { Directories } from "../infrastructure/api/dsiInternal/Directories";
-import { Organisations, type invitationOrganisationRecord, type userOrganisationRecord } from "../infrastructure/api/dsiInternal/Organisations";
+import { Organisations, type userOrganisationRecord } from "../infrastructure/api/dsiInternal/Organisations";
 import { connection, DatabaseName } from "../infrastructure/database/common/connection";
 import { initialiseAllInvitationModels, initialiseAllUserModels } from "../infrastructure/database/common/utils";
 import { Invitation } from "../infrastructure/database/directories/Invitation";
-import { InvitationCallback } from "../infrastructure/database/directories/InvitationCallback";
 import { User } from "../infrastructure/database/directories/User";
 import { UserPasswordPolicy } from "../infrastructure/database/directories/UserPasswordPolicy";
 import { UserBanner } from "../infrastructure/database/organisations/UserBanner";
 import { UserOrganisationRequest } from "../infrastructure/database/organisations/UserOrganisationRequest";
 import { UserServiceRequest } from "../infrastructure/database/organisations/UserServiceRequest";
-import { actionResult, filterResults } from "./utils/filterResults";
 
 /**
  * API clients used throughout this function.
@@ -21,14 +21,6 @@ type apiClients = {
   access: Access,
   directories: Directories,
   organisations: Organisations,
-};
-
-/**
- * Records returned for an invitation from our APIs.
- */
-type invitationApiRecords = {
-  services: invitationServiceRecord[],
-  organisations: invitationOrganisationRecord[],
 };
 
 /**
@@ -165,84 +157,6 @@ async function deleteUserDbRecords(userIds: string[]): Promise<void> {
   await User.destroy({
     where: {
       id: userIds,
-    },
-  });
-};
-
-/**
- * Gets the API records for a specified invitation, so they can be used for deletions.
- *
- * @param apis - API clients to be used to get required invitation API records.
- * @param invitationId - Invitation ID to retrieve API records for.
- * @param correlationId - Correlation ID to be passed with API requests.
- * @returns A promise containing the API records for the requested invitation {@link invitationApiRecords}.
- */
-async function getInvitationApiRecords(apis: apiClients, invitationId: string, correlationId: string): Promise<invitationApiRecords> {
-  const [serviceRecordsResult, organisationRecordsResult] = await Promise.allSettled([
-    apis.access.getInvitationServices(invitationId, correlationId),
-    apis.organisations.getInvitationOrganisations(invitationId, correlationId),
-  ]);
-
-  const rejectedRecordsResults = [serviceRecordsResult, organisationRecordsResult]
-    .filter((promise): promise is PromiseRejectedResult => promise.status === "rejected");
-  if (rejectedRecordsResults.length > 0) {
-    return Promise.reject(rejectedRecordsResults.map((promise) => promise.reason));
-  }
-
-  return {
-    services: (serviceRecordsResult as PromiseFulfilledResult<invitationServiceRecord[]>).value,
-    organisations: (organisationRecordsResult as PromiseFulfilledResult<invitationOrganisationRecord[]>).value,
-  }
-};
-
-/**
- * Deletes the API records for a specified invitation, so the database records can be deleted.
- *
- * @param apis - API clients to be used to delete invitation API records.
- * @param invitationId - Invitation ID to delete API records for.
- * @param apiRecords - Invitation API records to be deleted.
- * @param correlationId - Correlation ID to be passed with API requests.
- * @returns A promise containing the results of the API removals {@link actionResult}.
- */
-async function deleteInvitationApiRecords(apis: apiClients, invitationId: string, apiRecords: invitationApiRecords, correlationId: string): Promise<actionResult<string>> {
-  const { services, organisations } = apiRecords;
-  const servicesDeletedResults = await Promise.allSettled(services.map(async (record) =>
-    apis.access.deleteInvitationService(invitationId, record.serviceId, record.organisationId, correlationId)
-  ));
-  const organisationsDeletedResults = await Promise.allSettled(organisations.map(async (record) =>
-    apis.organisations.deleteInvitationOrganisation(invitationId, record.organisation.id, correlationId)
-  ));
-
-  const serviceErrors = servicesDeletedResults
-    .filter((record): record is PromiseRejectedResult => record.status === "rejected")
-    .map((record) => record.reason);
-  const organisationErrors = organisationsDeletedResults
-    .filter((record): record is PromiseRejectedResult => record.status === "rejected")
-    .map((record) => record.reason);
-  const errors = serviceErrors.concat(organisationErrors);
-
-  return (errors.length === 0) ? Promise.resolve({
-    object: invitationId,
-    success: servicesDeletedResults.every((result) => result.status === "fulfilled" && result.value)
-      && organisationsDeletedResults.every((result) => result.status === "fulfilled" && result.value),
-  }) : Promise.reject(errors);
-};
-
-/**
- * Deletes database records for the requested invitations.
- *
- * @param invitationIds - IDs of invitations to delete database records for.
- */
-async function deleteInvitationDbRecords(invitationIds: string[]): Promise<void> {
-  await InvitationCallback.destroy({
-    where: {
-      invitationId: invitationIds,
-    },
-  });
-  
-  await Invitation.destroy({
-    where: {
-      id: invitationIds,
     },
   });
 };
