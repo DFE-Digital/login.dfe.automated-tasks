@@ -11,9 +11,9 @@ import { Invitation } from "../infrastructure/database/directories/Invitation";
 /**
  * Gets the invitation IDs from the database that match the requirements for unresolved deletions.
  *
- * @returns A promise containing the test invitation IDs.
+ * @returns A promise containing the unresolved invitation IDs to be removed.
  */
-async function getInvitationIds(): Promise<string[]> {
+async function getUnresolvedInvitationIds(): Promise<string[]> {
   initialiseAllInvitationModels(connection(DatabaseName.Directories));
 
   return (await Invitation.findAll({
@@ -48,7 +48,7 @@ export async function removeUnresolvedInvitations(_: Timer, context: InvocationC
       organisations: new Organisations(),
     };
 
-    const invitationIds = await getInvitationIds();
+    const invitationIds = await getUnresolvedInvitationIds();
 
     context.info(`removeUnresolvedInvitations: ${invitationIds.length} invitations found`);
 
