@@ -1,6 +1,7 @@
 import { app, type RetryOptions } from "@azure/functions";
 import { deactivateUnusedAccounts } from "./functions/deactivateUnusedAccounts";
 import { removeGeneratedTestAccounts } from "./functions/removeGeneratedTestAccounts";
+import { removeUnresolvedInvitations } from "./functions/removeUnresolvedInvitations";
 
 app.setup({
   enableHttpStream: true,
@@ -22,5 +23,11 @@ app.timer("deactivateUnusedAccounts", {
 app.timer("removeGeneratedTestAccounts", {
   schedule: "%TIMER_REMOVE_GENERATED_TEST_ACCOUNTS%",
   handler: removeGeneratedTestAccounts,
+  retry: defaultRetryStrategy,
+});
+
+app.timer("removeUnresolvedInvitations", {
+  schedule: "%TIMER_REMOVE_UNRESOLVED_INVITATIONS%",
+  handler: removeUnresolvedInvitations,
   retry: defaultRetryStrategy,
 });

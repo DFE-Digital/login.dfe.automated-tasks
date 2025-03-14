@@ -1,4 +1,5 @@
-import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional, Sequelize } from "sequelize";
+import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional, Sequelize, NonAttribute } from "sequelize";
+import { InvitationCallback } from "./InvitationCallback";
 
 /**
  * Invitation schema model for CRUD operations the API doesn't currently support.
@@ -28,6 +29,7 @@ export class Invitation extends Model<InferAttributes<Invitation>, InferCreation
   declare approverEmail: string | null;
   declare orgName: string | null;
   declare codeMetaData: string | null;
+  declare callbacks?: NonAttribute<InvitationCallback[]>;
 };
 
 /**
@@ -38,7 +40,8 @@ export class Invitation extends Model<InferAttributes<Invitation>, InferCreation
 export function initialiseInvitation(connection: Sequelize): void {
   Invitation.init({
     id: {
-      type: DataTypes.UUIDV4,
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
       unique: true,
       allowNull: false,
@@ -96,7 +99,7 @@ export function initialiseInvitation(connection: Sequelize): void {
       allowNull: false,
     },
     userId: {
-      type: DataTypes.UUIDV4,
+      type: DataTypes.UUID,
       field: "uid",
     },
     createdAt: {

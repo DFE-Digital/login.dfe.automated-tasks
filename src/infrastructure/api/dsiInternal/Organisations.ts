@@ -60,7 +60,7 @@ export type userOrganisationRecord = {
     DistrictAdministrativeCode: string | null,
     DistrictAdministrative_code: string | null,
     IsOnAPAR: "YES" | "NO" | null,
-  } | null,
+  },
   role: {
     id: number,
     name: string,

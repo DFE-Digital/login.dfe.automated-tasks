@@ -1,30 +1,30 @@
 import { DataTypes, Model, Sequelize } from "sequelize";
-import { initialiseUserBanner } from "../../../../src/infrastructure/database/organisations/UserBanner";
+import { initialiseInvitationCallback } from "../../../../src/infrastructure/database/directories/InvitationCallback";
 
 jest.mock("sequelize");
 
-describe("UserBanner database model", () => {
+describe("InvitationCallback database model", () => {
   const model = jest.mocked(Model);
 
-  describe("initialiseUserBanner", () => {
-    it("it initialises the user banner model with the expected attributes and passed sequelize connection", () => {
+  describe("initialiseInvitationCallback", () => {
+    it("it initialises the invitation callback model with the expected attributes and passed sequelize connection", () => {
       const connection = new Sequelize();
-      initialiseUserBanner(connection);
+      initialiseInvitationCallback(connection);
 
       expect(model.init).toHaveBeenCalled();
       expect(model.init).toHaveBeenCalledWith({
-        id: {
+        invitationId: {
           type: DataTypes.UUID,
-          defaultValue: DataTypes.UUIDV4,
           primaryKey: true,
           allowNull: false,
         },
-        userId: {
-          type: DataTypes.UUID,
+        sourceId: {
+          type: DataTypes.STRING(255),
+          primaryKey: true,
           allowNull: false,
         },
-        bannerId: {
-          type: DataTypes.INTEGER,
+        callbackUrl: {
+          type: DataTypes.STRING(1024),
           allowNull: false,
         },
         createdAt: {
@@ -35,11 +35,11 @@ describe("UserBanner database model", () => {
           type: DataTypes.DATE,
           allowNull: false,
         },
-        bannerData: {
-          type: DataTypes.STRING(1000),
+        clientId: {
+          type: DataTypes.STRING(50),
         },
       }, {
-        tableName: "user_banners",
+        tableName: "invitation_callback",
         sequelize: connection,
       });
     });

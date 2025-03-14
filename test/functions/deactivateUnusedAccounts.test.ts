@@ -5,6 +5,7 @@ import { AuditLogger } from "../../src/infrastructure/AuditLogger";
 import { initialiseUser, User } from "../../src/infrastructure/database/directories/User";
 import { deactivateUnusedAccounts } from "../../src/functions/deactivateUnusedAccounts";
 import { connection, DatabaseName } from "../../src/infrastructure/database/common/connection";
+import { generateUsers } from "../testUtils";
 
 jest.mock("@azure/functions");
 jest.mock("sequelize");
@@ -18,10 +19,6 @@ describe("Deactivate unused accounts automated task", () => {
   const directoriesMock = jest.mocked(Directories);
   const auditLoggerMock = jest.mocked(AuditLogger);
   const userMock = jest.mocked(User);
-  const queryResult: (count:number) => User[] = (count: number) => Array(count).fill({
-    id: "test",
-    email: "test@test.com",
-  });
 
   beforeEach(() => {
     userMock.findAll.mockResolvedValue([]);
@@ -34,7 +31,7 @@ describe("Deactivate unused accounts automated task", () => {
       throw new Error(errorMessage);
     });
 
-    expect(deactivateUnusedAccounts({} as Timer, new InvocationContext())).rejects.toThrow(`deactivateUnusedAccounts: ${errorMessage}`);
+    await expect(deactivateUnusedAccounts({} as Timer, new InvocationContext())).rejects.toThrow(`deactivateUnusedAccounts: ${errorMessage}`);
   });
 
   it("it throws an error if the audit logger throws an error on instantiation", async () => {
@@ -43,7 +40,7 @@ describe("Deactivate unused accounts automated task", () => {
       throw new Error(errorMessage);
     });
 
-    expect(deactivateUnusedAccounts({} as Timer, new InvocationContext())).rejects.toThrow(`deactivateUnusedAccounts: ${errorMessage}`);
+    await expect(deactivateUnusedAccounts({} as Timer, new InvocationContext())).rejects.toThrow(`deactivateUnusedAccounts: ${errorMessage}`);
   });
 
   it("it throws an error if the database connection for the User model throws an error", async () => {
@@ -53,7 +50,7 @@ describe("Deactivate unused accounts automated task", () => {
       throw new Error(errorMessage);
     });
 
-    expect(deactivateUnusedAccounts({} as Timer, new InvocationContext())).rejects.toThrow(`deactivateUnusedAccounts: ${errorMessage}`);
+    await expect(deactivateUnusedAccounts({} as Timer, new InvocationContext())).rejects.toThrow(`deactivateUnusedAccounts: ${errorMessage}`);
   });
 
   it("it attempts to initialise the User model with a connection to the directories DB", async () => {
@@ -69,7 +66,7 @@ describe("Deactivate unused accounts automated task", () => {
       throw new Error(errorMessage);
     });
 
-    expect(deactivateUnusedAccounts({} as Timer, new InvocationContext())).rejects.toThrow(`deactivateUnusedAccounts: ${errorMessage}`);
+    await expect(deactivateUnusedAccounts({} as Timer, new InvocationContext())).rejects.toThrow(`deactivateUnusedAccounts: ${errorMessage}`);
   });
 
   it("it performs the correct query to retrieve users who've been inactive for 2 years or more", async () => {
@@ -100,7 +97,7 @@ describe("Deactivate unused accounts automated task", () => {
 
   it("it logs the number of users found by the query", async () => {
     const count = 97;
-    userMock.findAll.mockResolvedValue(queryResult(count));
+    userMock.findAll.mockResolvedValue(generateUsers(count));
     await deactivateUnusedAccounts({} as Timer, new InvocationContext());
 
     expect(contextMock.prototype.info).toHaveBeenCalled();
@@ -108,7 +105,7 @@ describe("Deactivate unused accounts automated task", () => {
   });
 
   it("it logs the correct range of users being deactivated in the current batch", async () => {
-    userMock.findAll.mockResolvedValue(queryResult(150));
+    userMock.findAll.mockResolvedValue(generateUsers(150));
     await deactivateUnusedAccounts({} as Timer, new InvocationContext());
 
     expect(contextMock.prototype.info).toHaveBeenCalled();
@@ -117,13 +114,7 @@ describe("Deactivate unused accounts automated task", () => {
 
   it("it calls deactivateUser with each user's ID and the invocation ID", async () => {
     const invocationId = "TestId";
-    const queryResult: Pick<User, "id" | "email">[] = [{
-      id: "user1",
-      email: "test@test.com",
-    }, {
-      id: "user2",
-      email: "test2@test.com",
-    }];
+    const queryResult: Pick<User, "id" | "email">[] = generateUsers(2);
     userMock.findAll.mockResolvedValue(queryResult as User[]);
     contextMock.prototype.invocationId = invocationId;
     await deactivateUnusedAccounts({} as Timer, new InvocationContext());
@@ -134,7 +125,7 @@ describe("Deactivate unused accounts automated task", () => {
   });
 
   it("it logs the correct number of successful, failed, and errored users in a batch", async () => {
-    userMock.findAll.mockResolvedValue(queryResult(25));
+    userMock.findAll.mockResolvedValue(generateUsers(25));
     directoriesMock.prototype.deactivateUser
       .mockRejectedValueOnce(new Error("Testing"))
       .mockRejectedValueOnce(new Error("Testing"))
@@ -151,7 +142,7 @@ describe("Deactivate unused accounts automated task", () => {
     const message1 = "Test 1";
     const message2 = "Test 2";
     const message3 = "Test 3";
-    userMock.findAll.mockResolvedValue(queryResult(10));
+    userMock.findAll.mockResolvedValue(generateUsers(10));
     directoriesMock.prototype.deactivateUser
       .mockRejectedValueOnce(new Error(message1))
       .mockRejectedValueOnce(new Error(message1))
@@ -168,7 +159,7 @@ describe("Deactivate unused accounts automated task", () => {
   });
 
   it("it throws an error if the entire batch errored (deactivateUser threw for all users)", async () => {
-    userMock.findAll.mockResolvedValue(queryResult(150));
+    userMock.findAll.mockResolvedValue(generateUsers(150));
     directoriesMock.prototype.deactivateUser.mockRejectedValue(new Error (""));
 
     expect(deactivateUnusedAccounts({} as Timer, new InvocationContext()))
@@ -177,14 +168,14 @@ describe("Deactivate unused accounts automated task", () => {
   });
 
   it("it doesn't throw an error if the deactivateUser call doesn't throw for all users in a batch", async () => {
-    userMock.findAll.mockResolvedValue(queryResult(5));
+    userMock.findAll.mockResolvedValue(generateUsers(5));
     directoriesMock.prototype.deactivateUser.mockRejectedValueOnce(new Error("Testing")).mockResolvedValue(true);
 
-    expect(deactivateUnusedAccounts({} as Timer, new InvocationContext())).resolves.not.toThrow();
+    await expect(deactivateUnusedAccounts({} as Timer, new InvocationContext())).resolves.not.toThrow();
   });
 
   it("it doesn't log the number of successful users or send audit messages, if none were successfully deactivated", async () => {
-    userMock.findAll.mockResolvedValue(queryResult(5));
+    userMock.findAll.mockResolvedValue(generateUsers(5));
     directoriesMock.prototype.deactivateUser.mockRejectedValueOnce(new Error("")).mockResolvedValue(false);
     await deactivateUnusedAccounts({} as Timer, new InvocationContext());
 
@@ -194,7 +185,7 @@ describe("Deactivate unused accounts automated task", () => {
   });
 
   it("it logs the number of successful users having audit messages sent, if some were successfully deactivated", async () => {
-    userMock.findAll.mockResolvedValue(queryResult(5));
+    userMock.findAll.mockResolvedValue(generateUsers(5));
     directoriesMock.prototype.deactivateUser
       .mockRejectedValueOnce(new Error(""))
       .mockResolvedValueOnce(false)
@@ -207,7 +198,7 @@ describe("Deactivate unused accounts automated task", () => {
 
   it("it throws an error if the audit logger throws an error when sending a message batch", async () => {
     const errorMessage = "Testing Audit Logger Send";
-    userMock.findAll.mockResolvedValue(queryResult(5));
+    userMock.findAll.mockResolvedValue(generateUsers(5));
     auditLoggerMock.prototype.batchedLog.mockImplementation(() => {
       throw new Error(errorMessage)
     });
@@ -216,7 +207,7 @@ describe("Deactivate unused accounts automated task", () => {
   });
 
   it("it sends a batch of correct logs to the audit service bus for all the successful deactivations", async () => {
-    const users = queryResult(10);
+    const users = generateUsers(10);
     userMock.findAll.mockResolvedValue(users);
     await deactivateUnusedAccounts({} as Timer, new InvocationContext());
 

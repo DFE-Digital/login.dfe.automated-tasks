@@ -22,9 +22,15 @@ export class UserPasswordPolicy extends Model<InferAttributes<UserPasswordPolicy
 export function initialiseUserPasswordPolicy(connection: Sequelize): void {
   UserPasswordPolicy.init({
     id: {
-      type: DataTypes.UUIDV4,
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
       unique: true,
+      allowNull: false,
+    },
+    userId: {
+      type: DataTypes.UUID,
+      field: "uid",
       allowNull: false,
     },
     policyCode: {

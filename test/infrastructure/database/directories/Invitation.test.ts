@@ -14,7 +14,8 @@ describe("Invitation database model", () => {
       expect(model.init).toHaveBeenCalled();
       expect(model.init).toHaveBeenCalledWith({
         id: {
-          type: DataTypes.UUIDV4,
+          type: DataTypes.UUID,
+          defaultValue: DataTypes.UUIDV4,
           primaryKey: true,
           unique: true,
           allowNull: false,
@@ -72,7 +73,7 @@ describe("Invitation database model", () => {
           allowNull: false,
         },
         userId: {
-          type: DataTypes.UUIDV4,
+          type: DataTypes.UUID,
           field: "uid",
         },
         createdAt: {
