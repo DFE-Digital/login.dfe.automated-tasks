@@ -48,12 +48,13 @@ export async function deactivateUnusedAccounts(_: Timer, context: InvocationCont
     for (let index = 0; index < users.length; index += batchSize) {
       const batch = users.slice(index, index + batchSize);
       const userRange = `${index + 1} to ${index + batch.length}`;
+      const deactivationReason = "Automated task - Deactivate accounts with 2 years of inactivity.";
       context.info(`deactivateUnusedAccounts: Deactivating users ${userRange}`);
 
       const { successful, failed, errored } = filterResults<Pick<User, "id" | "email">>(
         await Promise.allSettled(batch.map(async (user) => ({
           object: user,
-          success: await directoriesApi.deactivateUser(user.id, "Automatically deactivated as inactive for 2+ years", context.invocationId),
+          success: await directoriesApi.deactivateUser(user.id, deactivationReason, context.invocationId),
         })))
       );
 
@@ -73,7 +74,7 @@ export async function deactivateUnusedAccounts(_: Timer, context: InvocationCont
           type: "support",
           subType: "user-edit",
           meta: {
-            reason: "Automated task - Deactivate accounts with 2 years of inactivity.",
+            reason: deactivationReason,
             editedUser: user.id.toUpperCase(),
             editedFields: [{
               name: "status",

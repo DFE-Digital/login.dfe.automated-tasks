@@ -120,8 +120,8 @@ describe("Deactivate unused accounts automated task", () => {
     await deactivateUnusedAccounts({} as Timer, new InvocationContext());
 
     expect(directoriesMock.prototype.deactivateUser).toHaveBeenCalledTimes(2);
-    expect(directoriesMock.prototype.deactivateUser).toHaveBeenCalledWith(queryResult[0].id, "Automatically deactivated as inactive for 2+ years", invocationId);
-    expect(directoriesMock.prototype.deactivateUser).toHaveBeenCalledWith(queryResult[1].id, "Automatically deactivated as inactive for 2+ years", invocationId);
+    expect(directoriesMock.prototype.deactivateUser).toHaveBeenCalledWith(queryResult[0].id, "Automated task - Deactivate accounts with 2 years of inactivity.", invocationId);
+    expect(directoriesMock.prototype.deactivateUser).toHaveBeenCalledWith(queryResult[1].id, "Automated task - Deactivate accounts with 2 years of inactivity.", invocationId);
   });
 
   it("it logs the correct number of successful, failed, and errored users in a batch", async () => {
