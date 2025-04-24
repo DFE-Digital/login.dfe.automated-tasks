@@ -20,12 +20,16 @@ export class Directories {
    * Deactivates a user account.
    *
    * @param id - The ID of the user to be deactivated.
+   * @param reason - The reason for the deactivation
    * @param correlationId - Correlation ID to be passed with the request.
    * @returns true if the user was deactivated, false otherwise.
    */
-  async deactivateUser(id: string, correlationId: string): Promise<boolean> {
+  async deactivateUser(id: string, reason: string, correlationId: string): Promise<boolean> {
     const response = await this.client.requestRaw(ApiRequestMethod.POST, `/users/${id}/deactivate`, {
       correlationId,
+      body: {
+        reason
+      }
     });
 
     try {

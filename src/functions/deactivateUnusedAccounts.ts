@@ -53,7 +53,7 @@ export async function deactivateUnusedAccounts(_: Timer, context: InvocationCont
       const { successful, failed, errored } = filterResults<Pick<User, "id" | "email">>(
         await Promise.allSettled(batch.map(async (user) => ({
           object: user,
-          success: await directoriesApi.deactivateUser(user.id, context.invocationId),
+          success: await directoriesApi.deactivateUser(user.id, "Automatically deactivated as inactive for 2+ years", context.invocationId),
         })))
       );
 
