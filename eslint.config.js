@@ -44,7 +44,7 @@ module.exports = [
   },
 
   {
-    files: ["src/**/*.test.ts"],
+    files: ["test/**/*.test.ts", "src/**/*.test.ts"],
     languageOptions: {
       globals: {
         ...pluginJest.environments.globals.globals,
