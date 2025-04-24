@@ -26,12 +26,12 @@ describe("Access API wrapper", () => {
   });
 
   describe("Access API functions", () => {
-    const setRequestRawResponse = (status: Number = 200) => {
+    const setRequestRawResponse = (status: number = 200) => {
       internalClient.prototype.requestRaw.mockResolvedValue({
         status,
       } as Response);
     };
-    const setRequestResponse = (object: Object | null) => {
+    const setRequestResponse = (object: object | null) => {
       internalClient.prototype.request.mockResolvedValue(object);
     };
     let access: Access;
