@@ -155,7 +155,7 @@ stages:
               deploymentLocation: ${{location}}
               gitCheck: ${{parameters.gitCheck}}
               tier: backend
-              tierPlan: backend-g2
+              tierPlan: backend-g1
               shaUse: ${{parameters.shaUse}}
               slotDeploy: ${{parameters.slotDeploy}}
               existTag: ${{parameters.existTag}}
