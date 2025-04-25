@@ -33,9 +33,7 @@ describe("Remove unresolved invitations automated task", () => {
     });
     deleteInvitationApiRecordsMock.mockImplementation((
       _apis,
-      invitationId,
-      _records,
-      _correlationId
+      invitationId
     ) => Promise.resolve({
       object: invitationId,
       success: true,

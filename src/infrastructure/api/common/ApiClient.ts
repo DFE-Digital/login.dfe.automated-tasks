@@ -63,7 +63,7 @@ export class ApiClient {
    * @returns The HTTP request headers object.
    */
   private buildHeaders(method: ApiRequestMethod, options?: ApiRequestOptions): Headers {
-    let headers = options?.headers ?? new Headers();
+    const headers = options?.headers ?? new Headers();
 
     if (typeof options?.correlationId === "string") {
       headers.set("x-correlation-id", options.correlationId);

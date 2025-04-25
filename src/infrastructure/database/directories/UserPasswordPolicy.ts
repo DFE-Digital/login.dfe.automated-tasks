@@ -10,7 +10,7 @@ export class UserPasswordPolicy extends Model<InferAttributes<UserPasswordPolicy
   declare policyCode: string;
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
-  declare passwordHistoryLimit: Number;
+  declare passwordHistoryLimit: number;
   declare user?: NonAttribute<User>;
 };
 

@@ -25,7 +25,7 @@ export interface AuditLog {
   subType?: string,
   userId?: string,
   organisationid?: string,
-  meta?: Record<string, any>,
+  meta?: Record<string, object | number | string>,
 };
 
 /**

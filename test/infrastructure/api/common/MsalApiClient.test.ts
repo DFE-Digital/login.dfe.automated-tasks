@@ -46,7 +46,7 @@ describe("MSAL API client", () => {
         },
         system: {
           loggerOptions: {
-            loggerCallback(loglevel, message, _containsPii) {
+            loggerCallback(loglevel, message) {
               if (loglevel === LogLevel.Error) {
                 console.error(message);
               } else {
