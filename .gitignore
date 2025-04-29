@@ -98,3 +98,7 @@ AzuriteConfig
 __blobstorage__
 __queuestorage__
 __azurite_db*__.json
+
+# JUnit reports for ESlint and Jest
+eslint-results.xml
+junit.xml

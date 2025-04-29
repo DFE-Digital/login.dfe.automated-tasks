@@ -13,7 +13,6 @@ trigger:
     include:
     - feature/*
     - main
-    - release/*
 
 pr: 
   branches:
@@ -30,11 +29,15 @@ parameters:
 - name: shaUse
   type: boolean
   displayName: 'Use Self Host agent'
-  default: true
+  default: true  
+- name: existTag
+  type: string
+  displayName: "Deploy existing tag"
+  default: " "
 - name: slotDeploy
   type: boolean
   displayName: 'Slot Deployment'
-  default: false
+  default: true
 - name: InfrDeploy
   type: boolean
   displayName: 'Infrastructure Deployment only'
@@ -78,9 +81,11 @@ variables:
   - name: test
     value: ${{ or(eq(parameters.test, 'true'), contains(variables['Build.SourceBranch'],'feature')) }}
   - name: pp
-    value: ${{ and(or(eq(parameters.pp, 'true'), contains(variables['Build.SourceBranch'],'main')), not(contains(variables['Build.SourceVersionMessage'],'Upgrade to version'))) }}
+    value: ${{ or(eq(parameters.pp, 'true'), contains(variables['Build.SourceBranch'],'main')) }}
   - name: pr
-    value: ${{ or(eq(parameters.pr, 'true'), contains(variables['Build.SourceBranch'],'release')) }}
+    value: ${{ or(and(parameters.pr, ne(parameters.existTag, ' ')),eq(variables.pp, 'true')) }}
+  - name: ContRegServerTran
+    value: ${{ eq(variables.tran, 'true') }}
   - name: northeurope
     value: 'tran,pp,pr'
   - name: westeurope
@@ -89,42 +94,44 @@ variables:
 
 stages:
 
-  # Code Scans & Build the artifact for deployment
-  - stage: scanBuildApp
-    displayName: "Scan tools & Build"
-    jobs:
+  - ${{ if eq(parameters.existTag, ' ') }}:
+    # Code Scans & Build the artifact for deployment
+    - stage: scanBuildApp
+      displayName: "Pre Deploy jobs"
+      jobs:
 
-    - template:  pipeline/scanTools.yml@devopsTemplates
-      parameters:
-        AppDeploy: ${{ not(parameters.InfrDeploy) }}
-
-    - ${{ if not(eq(parameters.InfrDeploy, 'true')) }}:
-      - template: pipeline/buildAzureFunctions.yml@devopsTemplates
+      - template: pipeline/components/checks/checks.yml@devopsTemplates
         parameters:
-          applicationName: ${{variables.applicationFullName}}
+          AppDeploy: ${{ not(parameters.InfrDeploy) }}
           custRegAuth: $(custRegAuth)
-          nodeVersionSpec: '20.18.1'
-          buildFlow: true
+
+      - ${{ if not(eq(parameters.InfrDeploy, 'true')) }}:
+        - template: pipeline/components/build/buildAppFunctionsNodeJs.yml@devopsTemplates
+          parameters:
+            applicationName: ${{variables.applicationFullName}}
+            custRegAuth: $(custRegAuth)
+            ContRegServers:
+              - ${{ if eq(variables.ContRegServerTran, 'true') }}:
+                - name: '$(platformGlobalIdentifier)$(tranShaCode)$(platformGlobalName)shdcr.azurecr.io'
+                  servCon: $(devServiceConnection)
+              - name: '$(platformGlobalIdentifier)$(prShaCode)$(platformGlobalName)shdcr.azurecr.io'
+                servCon: $(prodServiceConnection)
+            nodeVersionSpec: '20.18.1'
+            buildFlow: true
 
   - ${{ each location in parameters.location }}:           
     - ${{each env in split(variables[location],',') }}:
       - ${{ if eq(variables[env], 'true') }}:
         - stage: Deployment_${{env}}_${{location}}
           displayName: "Deployment [${{env}}] ${{location}}"
-          ${{ if eq(location,'westeurope') }}:
+          ${{ if eq(env, 'pr') }}:
+            dependsOn: 
+            - Deployment_pp_westeurope
+            condition: in(dependencies.scanBuildApp.result, 'Succeeded', 'Skipped')
+          ${{ elseif eq(parameters.existTag, ' ') }}:
             dependsOn: 
             - scanBuildApp
             condition: in(dependencies.scanBuildApp.result, 'Succeeded', 'Skipped')
-          ${{ if eq(location,'northeurope') }}:
-            ${{ if eq(length(parameters.location), 2) }}:
-              dependsOn:
-              - scanBuildApp
-              - Deployment_${{env}}_westeurope
-              condition: in(dependencies.scanBuildApp.result, 'Succeeded', 'Skipped')
-            ${{ else }}:
-              dependsOn:
-              - scanBuildApp
-              condition: in(dependencies.scanBuildApp.result, 'Succeeded', 'Skipped')
           variables:
             - name: secRegionId
               value: $(${{ format('{0}{1}', location, 'Id') }})
@@ -135,7 +142,7 @@ stages:
             - name: ShaCodeName
               value: ${{ format('{0}{1}', env, 'ShaCode') }}
           jobs:
-          - template: pipeline/deployAzureFunctions.yml@devopsTemplates
+          - template: pipeline/components/deploy/deployAppFunctionsNodeJs.yml@devopsTemplates
             parameters:
               serviceConnection: $(${{variables.ServConName}})
               shaPool: $[variables['${{env}}ShaPool']]
@@ -144,32 +151,15 @@ stages:
               environmentName: ${{env}}
               applicationShortName: ${{variables.applicationShortName}}
               applicationFullName: ${{variables.applicationFullName}}
-              releaseArtifactName: ${{variables.applicationFullName}}-$(Build.BuildId)-release
               InfrDeploy: ${{parameters.InfrDeploy}}
               deploymentLocation: ${{location}}
-              runtimeStack: NODE|20-lts
-              funRuntimeStack: ~20
               gitCheck: ${{parameters.gitCheck}}
-              tierPlan: backend-g3
+              tier: backend
+              tierPlan: backend-g1
               shaUse: ${{parameters.shaUse}}
               slotDeploy: ${{parameters.slotDeploy}}
-              appRepoName: ${{variables.applicationFullName}}
-              ipSecurityRestrictionsDefaultAction: Allow
-        
-        - ${{ if and(eq(env, 'pp'),eq(location, 'westeurope')) }}:
-          - stage: releasebranch
-            displayName: "GitHub Release Branch Creation"
-            dependsOn:
-              - Deployment_${{env}}_${{location}}
-            jobs:
-              - template: pipeline/releaseCreation.yml@devopsTemplates
-        
-        - ${{ if and(eq(env, 'pr'),eq(location, 'westeurope')) }}:
-          - stage: branchPrTag
-            displayName: "GitHub PR & Release Branch Tag"
-            dependsOn: 
-              - Deployment_${{env}}_${{location}}
-            jobs:
-              - template:  pipeline/tagCreation.yml@devopsTemplates
-                parameters:
-                  applicationName: ${{variables.applicationFullName}}
+              existTag: ${{parameters.existTag}}
+              ${{ if eq(env, 'tran') }}:
+                ContRegServerCode: $(tranShaCode)
+              ${{ else }}:
+                ContRegServerCode: $(prShaCode)
