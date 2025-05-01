@@ -1,0 +1,7 @@
+# Ignore artifacts:
+config
+build
+coverage
+
+# Ignore README:
+README.md
