@@ -12,99 +12,102 @@ describe("Invitation database model", () => {
       initialiseInvitation(connection);
 
       expect(model.init).toHaveBeenCalled();
-      expect(model.init).toHaveBeenCalledWith({
-        id: {
-          type: DataTypes.UUID,
-          defaultValue: DataTypes.UUIDV4,
-          primaryKey: true,
-          unique: true,
-          allowNull: false,
+      expect(model.init).toHaveBeenCalledWith(
+        {
+          id: {
+            type: DataTypes.UUID,
+            defaultValue: DataTypes.UUIDV4,
+            primaryKey: true,
+            unique: true,
+            allowNull: false,
+          },
+          email: {
+            type: DataTypes.STRING(255),
+            allowNull: false,
+          },
+          code: {
+            type: DataTypes.STRING(15),
+            allowNull: false,
+          },
+          firstName: {
+            type: DataTypes.STRING(255),
+            allowNull: false,
+          },
+          lastName: {
+            type: DataTypes.STRING(255),
+            allowNull: false,
+          },
+          originClientId: {
+            type: DataTypes.STRING(50),
+          },
+          originRedirectUri: {
+            type: DataTypes.STRING(1024),
+          },
+          selfStarted: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+          },
+          overrideSubject: {
+            type: DataTypes.STRING(255),
+          },
+          overrideBody: {
+            type: DataTypes.STRING("MAX"),
+          },
+          previousUsername: {
+            type: DataTypes.STRING(50),
+          },
+          previousPassword: {
+            type: DataTypes.STRING(255),
+          },
+          previousSalt: {
+            type: DataTypes.STRING(255),
+          },
+          deactivated: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+          },
+          reason: {
+            type: DataTypes.STRING("MAX"),
+          },
+          completed: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+          },
+          userId: {
+            type: DataTypes.UUID,
+            field: "uid",
+          },
+          createdAt: {
+            type: DataTypes.DATE,
+            allowNull: false,
+          },
+          updatedAt: {
+            type: DataTypes.DATE,
+            allowNull: false,
+          },
+          isMigrated: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+          },
+          isApprover: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+          },
+          approverEmail: {
+            type: DataTypes.STRING(255),
+          },
+          orgName: {
+            type: DataTypes.STRING(500),
+          },
+          codeMetaData: {
+            type: DataTypes.STRING(255),
+          },
         },
-        email: {
-          type: DataTypes.STRING(255),
-          allowNull: false,
+        {
+          tableName: "invitation",
+          sequelize: connection,
         },
-        code: {
-          type: DataTypes.STRING(15),
-          allowNull: false,
-        },
-        firstName: {
-          type: DataTypes.STRING(255),
-          allowNull: false,
-        },
-        lastName: {
-          type: DataTypes.STRING(255),
-          allowNull: false,
-        },
-        originClientId: {
-          type: DataTypes.STRING(50),
-        },
-        originRedirectUri: {
-          type: DataTypes.STRING(1024),
-        },
-        selfStarted: {
-          type: DataTypes.BOOLEAN,
-          allowNull: false,
-        },
-        overrideSubject: {
-          type: DataTypes.STRING(255),
-        },
-        overrideBody: {
-          type: DataTypes.STRING("MAX"),
-        },
-        previousUsername: {
-          type: DataTypes.STRING(50),
-        },
-        previousPassword: {
-          type: DataTypes.STRING(255),
-        },
-        previousSalt: {
-          type: DataTypes.STRING(255),
-        },
-        deactivated: {
-          type: DataTypes.BOOLEAN,
-          allowNull: false,
-        },
-        reason: {
-          type: DataTypes.STRING("MAX"),
-        },
-        completed: {
-          type: DataTypes.BOOLEAN,
-          allowNull: false,
-        },
-        userId: {
-          type: DataTypes.UUID,
-          field: "uid",
-        },
-        createdAt: {
-          type: DataTypes.DATE,
-          allowNull: false,
-        },
-        updatedAt: {
-          type: DataTypes.DATE,
-          allowNull: false,
-        },
-        isMigrated: {
-          type: DataTypes.BOOLEAN,
-          allowNull: false,
-        },
-        isApprover: {
-          type: DataTypes.BOOLEAN,
-          allowNull: false,
-        },
-        approverEmail: {
-          type: DataTypes.STRING(255),
-        },
-        orgName: {
-          type: DataTypes.STRING(500),
-        },
-        codeMetaData: {
-          type: DataTypes.STRING(255),
-        },
-      }, {
-        tableName: "invitation",
-        sequelize: connection,
-      });
+      );
     });
   });
 });

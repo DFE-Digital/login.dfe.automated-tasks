@@ -7,7 +7,7 @@ import { checkEnv } from "../../utils";
 export enum DatabaseName {
   Directories = "directories",
   Organisations = "organisations",
-};
+}
 
 /**
  * Creates a Sequelize instance for the specified database name, using environment variables for credentials.
@@ -20,12 +20,15 @@ export enum DatabaseName {
 export function connection(database: DatabaseName): Sequelize {
   const dbEnvName = database.toUpperCase();
 
-  checkEnv([
-    `DATABASE_${dbEnvName}_HOST`,
-    `DATABASE_${dbEnvName}_NAME`,
-    `DATABASE_${dbEnvName}_USERNAME`,
-    `DATABASE_${dbEnvName}_PASSWORD`,
-  ], "database");
+  checkEnv(
+    [
+      `DATABASE_${dbEnvName}_HOST`,
+      `DATABASE_${dbEnvName}_NAME`,
+      `DATABASE_${dbEnvName}_USERNAME`,
+      `DATABASE_${dbEnvName}_PASSWORD`,
+    ],
+    "database",
+  );
 
   return new Sequelize(
     process.env[`DATABASE_${dbEnvName}_NAME`],
@@ -37,7 +40,8 @@ export function connection(database: DatabaseName): Sequelize {
       dialectOptions: {
         encrypt: true,
       },
-      logging: process.env.DEBUG?.toLowerCase() === "true" ? console.log : false,
+      logging:
+        process.env.DEBUG?.toLowerCase() === "true" ? console.log : false,
       retry: {
         match: [
           /SequelizeConnectionError/,
@@ -56,4 +60,4 @@ export function connection(database: DatabaseName): Sequelize {
       },
     },
   );
-};
+}

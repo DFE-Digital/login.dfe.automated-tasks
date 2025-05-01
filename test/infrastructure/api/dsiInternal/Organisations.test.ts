@@ -1,8 +1,13 @@
 import { ApiRequestMethod } from "../../../../src/infrastructure/api/common/ApiClient";
-import { ApiName, DsiInternalApiClient } from "../../../../src/infrastructure/api/dsiInternal/DsiInternalApiClient";
+import {
+  ApiName,
+  DsiInternalApiClient,
+} from "../../../../src/infrastructure/api/dsiInternal/DsiInternalApiClient";
 import { Organisations } from "../../../../src/infrastructure/api/dsiInternal/Organisations";
 
-jest.mock("../../../../src/infrastructure/api/dsiInternal/DsiInternalApiClient");
+jest.mock(
+  "../../../../src/infrastructure/api/dsiInternal/DsiInternalApiClient",
+);
 
 describe("Organisations API wrapper", () => {
   const internalClient = jest.mocked(DsiInternalApiClient);
@@ -21,7 +26,7 @@ describe("Organisations API wrapper", () => {
         throw new Error(errorMessage);
       });
 
-      expect(() => new Organisations).toThrow(errorMessage);
+      expect(() => new Organisations()).toThrow(errorMessage);
     });
   });
 
@@ -47,7 +52,9 @@ describe("Organisations API wrapper", () => {
         await organisations.getInvitationOrganisations("inv-1", "correlation");
 
         expect(internalClient.prototype.request).toHaveBeenCalled();
-        expect(internalClient.prototype.request.mock.calls[0][0]).toEqual(ApiRequestMethod.GET);
+        expect(internalClient.prototype.request.mock.calls[0][0]).toEqual(
+          ApiRequestMethod.GET,
+        );
       });
 
       it("it calls request to the correct path with the passed invitation ID", async () => {
@@ -56,7 +63,7 @@ describe("Organisations API wrapper", () => {
 
         expect(internalClient.prototype.request).toHaveBeenCalled();
         expect(internalClient.prototype.request.mock.calls[0][1]).toEqual(
-          `/invitations/v2/${invId}`
+          `/invitations/v2/${invId}`,
         );
       });
 
@@ -73,12 +80,16 @@ describe("Organisations API wrapper", () => {
       it("it returns an empty array if request returns null", async () => {
         setRequestResponse(null);
 
-        expect(await organisations.getInvitationOrganisations("", "")).toEqual([]);
+        expect(await organisations.getInvitationOrganisations("", "")).toEqual(
+          [],
+        );
       });
 
       it("it rejects with request's error if request rejects", async () => {
         const errorMessage = "This is a test error";
-        internalClient.prototype.request.mockRejectedValue(new Error(errorMessage));
+        internalClient.prototype.request.mockRejectedValue(
+          new Error(errorMessage),
+        );
 
         try {
           await organisations.getInvitationOrganisations("", "");
@@ -94,7 +105,9 @@ describe("Organisations API wrapper", () => {
         await organisations.getUserOrganisations("user-1", "correlation");
 
         expect(internalClient.prototype.request).toHaveBeenCalled();
-        expect(internalClient.prototype.request.mock.calls[0][0]).toEqual(ApiRequestMethod.GET);
+        expect(internalClient.prototype.request.mock.calls[0][0]).toEqual(
+          ApiRequestMethod.GET,
+        );
       });
 
       it("it calls request to the correct path with the passed user ID", async () => {
@@ -103,7 +116,7 @@ describe("Organisations API wrapper", () => {
 
         expect(internalClient.prototype.request).toHaveBeenCalled();
         expect(internalClient.prototype.request.mock.calls[0][1]).toEqual(
-          `/organisations/v2/associated-with-user/${userId}`
+          `/organisations/v2/associated-with-user/${userId}`,
         );
       });
 
@@ -125,7 +138,9 @@ describe("Organisations API wrapper", () => {
 
       it("it rejects with request's error if request rejects", async () => {
         const errorMessage = "This is a test error";
-        internalClient.prototype.request.mockRejectedValue(new Error(errorMessage));
+        internalClient.prototype.request.mockRejectedValue(
+          new Error(errorMessage),
+        );
 
         try {
           await organisations.getUserOrganisations("", "");
@@ -138,10 +153,16 @@ describe("Organisations API wrapper", () => {
 
     describe("deleteInvitationOrganisation", () => {
       it("it calls requestRaw using the DELETE method", async () => {
-        await organisations.deleteInvitationOrganisation("inv-1", "org-1", "correlation");
+        await organisations.deleteInvitationOrganisation(
+          "inv-1",
+          "org-1",
+          "correlation",
+        );
 
         expect(internalClient.prototype.requestRaw).toHaveBeenCalled();
-        expect(internalClient.prototype.requestRaw.mock.calls[0][0]).toEqual(ApiRequestMethod.DELETE);
+        expect(internalClient.prototype.requestRaw.mock.calls[0][0]).toEqual(
+          ApiRequestMethod.DELETE,
+        );
       });
 
       it("it calls requestRaw to the correct path with the passed invitation & org IDs", async () => {
@@ -151,7 +172,7 @@ describe("Organisations API wrapper", () => {
 
         expect(internalClient.prototype.requestRaw).toHaveBeenCalled();
         expect(internalClient.prototype.requestRaw.mock.calls[0][1]).toEqual(
-          `/organisations/${orgId}/invitations/${invId}`
+          `/organisations/${orgId}/invitations/${invId}`,
         );
       });
 
@@ -168,23 +189,27 @@ describe("Organisations API wrapper", () => {
       it("it returns true if the response status is 204", async () => {
         setRequestRawResponse(204);
 
-        expect(await organisations.deleteInvitationOrganisation("", "", "")).toEqual(true);
+        expect(
+          await organisations.deleteInvitationOrganisation("", "", ""),
+        ).toEqual(true);
       });
 
-      it.each([
-        201,
-        202,
-        302,
-        304,
-      ])("it returns false if the response status is not 204 (%p)", async (status) => {
-        setRequestRawResponse(status);
+      it.each([201, 202, 302, 304])(
+        "it returns false if the response status is not 204 (%p)",
+        async (status) => {
+          setRequestRawResponse(status);
 
-        expect(await organisations.deleteInvitationOrganisation("", "", "")).toEqual(false);
-      });
+          expect(
+            await organisations.deleteInvitationOrganisation("", "", ""),
+          ).toEqual(false);
+        },
+      );
 
       it("it rejects with requestRaw's error if requestRaw rejects", async () => {
         const errorMessage = "This is a test error";
-        internalClient.prototype.requestRaw.mockRejectedValue(new Error(errorMessage));
+        internalClient.prototype.requestRaw.mockRejectedValue(
+          new Error(errorMessage),
+        );
 
         try {
           await organisations.deleteInvitationOrganisation("", "", "");
@@ -197,10 +222,16 @@ describe("Organisations API wrapper", () => {
 
     describe("deleteUserOrganisation", () => {
       it("it calls requestRaw using the DELETE method", async () => {
-        await organisations.deleteUserOrganisation("user-1", "org-1", "correlation");
+        await organisations.deleteUserOrganisation(
+          "user-1",
+          "org-1",
+          "correlation",
+        );
 
         expect(internalClient.prototype.requestRaw).toHaveBeenCalled();
-        expect(internalClient.prototype.requestRaw.mock.calls[0][0]).toEqual(ApiRequestMethod.DELETE);
+        expect(internalClient.prototype.requestRaw.mock.calls[0][0]).toEqual(
+          ApiRequestMethod.DELETE,
+        );
       });
 
       it("it calls requestRaw to the correct path with the passed user & org IDs", async () => {
@@ -210,7 +241,7 @@ describe("Organisations API wrapper", () => {
 
         expect(internalClient.prototype.requestRaw).toHaveBeenCalled();
         expect(internalClient.prototype.requestRaw.mock.calls[0][1]).toEqual(
-          `/organisations/${orgId}/users/${userId}`
+          `/organisations/${orgId}/users/${userId}`,
         );
       });
 
@@ -227,23 +258,27 @@ describe("Organisations API wrapper", () => {
       it("it returns true if the response status is 204", async () => {
         setRequestRawResponse(204);
 
-        expect(await organisations.deleteUserOrganisation("", "", "")).toEqual(true);
+        expect(await organisations.deleteUserOrganisation("", "", "")).toEqual(
+          true,
+        );
       });
 
-      it.each([
-        201,
-        202,
-        302,
-        304,
-      ])("it returns false if the response status is not 204 (%p)", async (status) => {
-        setRequestRawResponse(status);
+      it.each([201, 202, 302, 304])(
+        "it returns false if the response status is not 204 (%p)",
+        async (status) => {
+          setRequestRawResponse(status);
 
-        expect(await organisations.deleteUserOrganisation("", "", "")).toEqual(false);
-      });
+          expect(
+            await organisations.deleteUserOrganisation("", "", ""),
+          ).toEqual(false);
+        },
+      );
 
       it("it rejects with requestRaw's error if requestRaw rejects", async () => {
         const errorMessage = "This is a test error";
-        internalClient.prototype.requestRaw.mockRejectedValue(new Error(errorMessage));
+        internalClient.prototype.requestRaw.mockRejectedValue(
+          new Error(errorMessage),
+        );
 
         try {
           await organisations.deleteUserOrganisation("", "", "");

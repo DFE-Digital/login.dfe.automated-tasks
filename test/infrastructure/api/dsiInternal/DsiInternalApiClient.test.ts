@@ -1,5 +1,8 @@
 import { MsalApiClient } from "../../../../src/infrastructure/api/common/MsalApiClient";
-import { ApiName, DsiInternalApiClient } from "../../../../src/infrastructure/api/dsiInternal/DsiInternalApiClient";
+import {
+  ApiName,
+  DsiInternalApiClient,
+} from "../../../../src/infrastructure/api/dsiInternal/DsiInternalApiClient";
 import { checkEnv } from "../../../../src/infrastructure/utils";
 
 jest.mock("../../../../src/infrastructure/api/common/MsalApiClient");
@@ -25,14 +28,17 @@ describe("When creating a DSi internal API client", () => {
     new DsiInternalApiClient(apiName);
 
     expect(checkEnvMock).toHaveBeenCalled();
-    expect(checkEnvMock).toHaveBeenCalledWith([
-      `API_INTERNAL_${apiEnvName}_HOST`,
-      "API_INTERNAL_TENANT",
-      "API_INTERNAL_AUTHORITY_HOST",
-      "API_INTERNAL_CLIENT_ID",
-      "API_INTERNAL_CLIENT_SECRET",
-      "API_INTERNAL_RESOURCE",
-    ], "DSi internal API");
+    expect(checkEnvMock).toHaveBeenCalledWith(
+      [
+        `API_INTERNAL_${apiEnvName}_HOST`,
+        "API_INTERNAL_TENANT",
+        "API_INTERNAL_AUTHORITY_HOST",
+        "API_INTERNAL_CLIENT_ID",
+        "API_INTERNAL_CLIENT_SECRET",
+        "API_INTERNAL_RESOURCE",
+      ],
+      "DSi internal API",
+    );
   });
 
   it("it will throw an error if checkEnv throws an error when any required environment variables are not set", () => {
@@ -41,7 +47,9 @@ describe("When creating a DSi internal API client", () => {
       throw new Error(errorMessage);
     });
 
-    expect(() => new DsiInternalApiClient(ApiName.Directories)).toThrow(errorMessage);
+    expect(() => new DsiInternalApiClient(ApiName.Directories)).toThrow(
+      errorMessage,
+    );
   });
 
   it("it will call the MSAL API client constructor with the expected options", () => {
@@ -75,13 +83,16 @@ describe("When creating a DSi internal API client", () => {
     "hTtexample.com",
     "123testing.test",
     "testingtest.test",
-  ])("it will prepend https:// to the base URI if it doesn't start with http (case-insensitive) (%p)", (uri) => {
-    process.env.API_INTERNAL_DIRECTORIES_HOST = uri;
-    new DsiInternalApiClient(ApiName.Directories);
+  ])(
+    "it will prepend https:// to the base URI if it doesn't start with http (case-insensitive) (%p)",
+    (uri) => {
+      process.env.API_INTERNAL_DIRECTORIES_HOST = uri;
+      new DsiInternalApiClient(ApiName.Directories);
 
-    expect(parentClient).toHaveBeenCalled();
-    expect(parentClient.mock.calls[0][0].baseUri).toEqual(`https://${uri}`);
-  });
+      expect(parentClient).toHaveBeenCalled();
+      expect(parentClient.mock.calls[0][0].baseUri).toEqual(`https://${uri}`);
+    },
+  );
 
   it.each([
     "httpexample.com",
@@ -90,11 +101,14 @@ describe("When creating a DSi internal API client", () => {
     "HTTPSexample.com",
     "hTtPexample.com",
     "hTtPsexample.com",
-  ])("it won't prepend https:// to the base URI if it starts with http (case-insensitive) (%p)", (uri) => {
-    process.env.API_INTERNAL_DIRECTORIES_HOST = uri;
-    new DsiInternalApiClient(ApiName.Directories);
+  ])(
+    "it won't prepend https:// to the base URI if it starts with http (case-insensitive) (%p)",
+    (uri) => {
+      process.env.API_INTERNAL_DIRECTORIES_HOST = uri;
+      new DsiInternalApiClient(ApiName.Directories);
 
-    expect(parentClient).toHaveBeenCalled();
-    expect(parentClient.mock.calls[0][0].baseUri).toEqual(uri);
-  });
+      expect(parentClient).toHaveBeenCalled();
+      expect(parentClient.mock.calls[0][0].baseUri).toEqual(uri);
+    },
+  );
 });

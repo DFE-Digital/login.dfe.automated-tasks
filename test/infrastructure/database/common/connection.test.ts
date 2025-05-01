@@ -1,4 +1,7 @@
-import { connection, DatabaseName } from "../../../../src/infrastructure/database/common/connection";
+import {
+  connection,
+  DatabaseName,
+} from "../../../../src/infrastructure/database/common/connection";
 import { Sequelize } from "sequelize";
 import { checkEnv } from "../../../../src/infrastructure/utils";
 
@@ -26,12 +29,15 @@ describe("When building a sequelize connection", () => {
     connection(databaseName);
 
     expect(checkEnvMock).toHaveBeenCalled();
-    expect(checkEnvMock).toHaveBeenCalledWith([
-      `DATABASE_${databaseEnvName}_HOST`,
-      `DATABASE_${databaseEnvName}_NAME`,
-      `DATABASE_${databaseEnvName}_USERNAME`,
-      `DATABASE_${databaseEnvName}_PASSWORD`,
-    ], "database");
+    expect(checkEnvMock).toHaveBeenCalledWith(
+      [
+        `DATABASE_${databaseEnvName}_HOST`,
+        `DATABASE_${databaseEnvName}_NAME`,
+        `DATABASE_${databaseEnvName}_USERNAME`,
+        `DATABASE_${databaseEnvName}_PASSWORD`,
+      ],
+      "database",
+    );
   });
 
   it("it will throw an error if checkEnv throws an error when any required environment variables are not set", () => {
@@ -88,11 +94,14 @@ describe("When building a sequelize connection", () => {
     [console.log, "true"],
     [false, "false"],
     [false, undefined],
-  ])("it will set the logging option to %p when process.env.DEBUG is set to %p", (result, envValue) => {
-    process.env.DEBUG = envValue;
-    connection(DatabaseName.Directories);
+  ])(
+    "it will set the logging option to %p when process.env.DEBUG is set to %p",
+    (result, envValue) => {
+      process.env.DEBUG = envValue;
+      connection(DatabaseName.Directories);
 
-    expect(sequelizeConstructor).toHaveBeenCalled();
-    expect(sequelizeConstructor.mock.calls[0][3].logging).toEqual(result);
-  });
+      expect(sequelizeConstructor).toHaveBeenCalled();
+      expect(sequelizeConstructor.mock.calls[0][3].logging).toEqual(result);
+    },
+  );
 });

@@ -20,7 +20,7 @@ describe("checkEnv utility function", () => {
     const missingVariable = testVariableNames[0];
     delete process.env[missingVariable];
     expect(() => checkEnv(testVariableNames, connectionType)).toThrow(
-      `${missingVariable} is missing, cannot create ${connectionType} connection!`
+      `${missingVariable} is missing, cannot create ${connectionType} connection!`,
     );
   });
 
@@ -29,7 +29,7 @@ describe("checkEnv utility function", () => {
     missingVariables.forEach((name) => delete process.env[name]);
 
     expect(() => checkEnv(testVariableNames, connectionType)).toThrow(
-      `${missingVariables.join(", ")} are missing, cannot create ${connectionType} connection!`
+      `${missingVariables.join(", ")} are missing, cannot create ${connectionType} connection!`,
     );
   });
 
@@ -37,7 +37,7 @@ describe("checkEnv utility function", () => {
     testVariableNames.forEach((name) => delete process.env[name]);
 
     expect(() => checkEnv(testVariableNames, connectionType)).toThrow(
-      `${testVariableNames.join(", ")} are missing, cannot create ${connectionType} connection!`
+      `${testVariableNames.join(", ")} are missing, cannot create ${connectionType} connection!`,
     );
   });
 

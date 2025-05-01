@@ -1,40 +1,40 @@
 import { ApiRequestMethod } from "../common/ApiClient";
-import { ApiName, DsiInternalApiClient } from "./DsiInternalApiClient"
+import { ApiName, DsiInternalApiClient } from "./DsiInternalApiClient";
 
 type serviceRecord = {
-  serviceId: string,
-  organisationId: string,
+  serviceId: string;
+  organisationId: string;
   roles: {
-    id: string,
-    invitation_id: string,
-    organisation_id: string,
-    service_id: string,
-    role_id: string,
-    createdAt: string,
-    updatedAt: string,
+    id: string;
+    invitation_id: string;
+    organisation_id: string;
+    service_id: string;
+    role_id: string;
+    createdAt: string;
+    updatedAt: string;
     Role: {
-      id: string,
-      name: string,
-      code: string,
-      numericId: string,
+      id: string;
+      name: string;
+      code: string;
+      numericId: string;
       status: {
-        id: number,
-      },
-    },
-  }[],
+        id: number;
+      };
+    };
+  }[];
   identifiers: {
-    key: string,
-    value: string
-  }[],
-  accessGrantedOn: string,
-}
+    key: string;
+    value: string;
+  }[];
+  accessGrantedOn: string;
+};
 
 export type invitationServiceRecord = {
-  invitationId: string,
+  invitationId: string;
 } & serviceRecord;
 
 export type userServiceRecord = {
-  userId: string,
+  userId: string;
 } & serviceRecord;
 
 /**
@@ -50,7 +50,7 @@ export class Access {
    */
   constructor() {
     this.client = new DsiInternalApiClient(ApiName.Access);
-  };
+  }
 
   /**
    * Gets all service links for an invitation if any exist.
@@ -59,13 +59,20 @@ export class Access {
    * @param correlationId - Correlation ID to be passed with the request.
    * @returns An array of {@link invitationServiceRecord} elements, or an empty array if none exist.
    */
-  async getInvitationServices(invitationId: string, correlationId: string): Promise<invitationServiceRecord[]> {
-    return await this.client.request<invitationServiceRecord[]>(
-      ApiRequestMethod.GET,
-      `/invitations/${invitationId}/services`, {
-        correlationId,
-    }) ?? [];
-  };
+  async getInvitationServices(
+    invitationId: string,
+    correlationId: string,
+  ): Promise<invitationServiceRecord[]> {
+    return (
+      (await this.client.request<invitationServiceRecord[]>(
+        ApiRequestMethod.GET,
+        `/invitations/${invitationId}/services`,
+        {
+          correlationId,
+        },
+      )) ?? []
+    );
+  }
 
   /**
    * Gets all service links for a user if any exist.
@@ -74,13 +81,20 @@ export class Access {
    * @param correlationId - Correlation ID to be passed with the request.
    * @returns An array of {@link userServiceRecord} elements, or an empty array if none exist.
    */
-  async getUserServices(userId: string, correlationId: string): Promise<userServiceRecord[]> {
-    return await this.client.request<userServiceRecord[]>(
-      ApiRequestMethod.GET,
-      `/users/${userId}/services`, {
-        correlationId,
-    }) ?? [];
-  };
+  async getUserServices(
+    userId: string,
+    correlationId: string,
+  ): Promise<userServiceRecord[]> {
+    return (
+      (await this.client.request<userServiceRecord[]>(
+        ApiRequestMethod.GET,
+        `/users/${userId}/services`,
+        {
+          correlationId,
+        },
+      )) ?? []
+    );
+  }
 
   /**
    * Deletes a service link from an invitation in an organisation.
@@ -91,14 +105,21 @@ export class Access {
    * @param correlationId - Correlation ID to be passed with the request.
    * @returns true if the invitation's service link was successfully deleted, false otherwise.
    */
-  async deleteInvitationService(invitationId: string, serviceId: string, organisationId: string, correlationId: string): Promise<boolean> {
+  async deleteInvitationService(
+    invitationId: string,
+    serviceId: string,
+    organisationId: string,
+    correlationId: string,
+  ): Promise<boolean> {
     const response = await this.client.requestRaw(
       ApiRequestMethod.DELETE,
-      `/invitations/${invitationId}/services/${serviceId}/organisations/${organisationId}`, {
-      correlationId,
-    });
+      `/invitations/${invitationId}/services/${serviceId}/organisations/${organisationId}`,
+      {
+        correlationId,
+      },
+    );
     return response.status === 204;
-  };
+  }
 
   /**
    * Deletes a service link from a user in an organisation.
@@ -109,12 +130,19 @@ export class Access {
    * @param correlationId - Correlation ID to be passed with the request.
    * @returns true if the user's service link was successfully deleted, false otherwise.
    */
-  async deleteUserService(userId: string, serviceId: string, organisationId: string, correlationId: string): Promise<boolean> {
+  async deleteUserService(
+    userId: string,
+    serviceId: string,
+    organisationId: string,
+    correlationId: string,
+  ): Promise<boolean> {
     const response = await this.client.requestRaw(
       ApiRequestMethod.DELETE,
-      `/users/${userId}/services/${serviceId}/organisations/${organisationId}`, {
-      correlationId,
-    });
+      `/users/${userId}/services/${serviceId}/organisations/${organisationId}`,
+      {
+        correlationId,
+      },
+    );
     return response.status === 204;
-  };
-};
+  }
+}

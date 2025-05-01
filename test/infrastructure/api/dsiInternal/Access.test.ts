@@ -1,8 +1,13 @@
-import { ApiName, DsiInternalApiClient } from "../../../../src/infrastructure/api/dsiInternal/DsiInternalApiClient";
+import {
+  ApiName,
+  DsiInternalApiClient,
+} from "../../../../src/infrastructure/api/dsiInternal/DsiInternalApiClient";
 import { Access } from "../../../../src/infrastructure/api/dsiInternal/Access";
 import { ApiRequestMethod } from "../../../../src/infrastructure/api/common/ApiClient";
 
-jest.mock("../../../../src/infrastructure/api/dsiInternal/DsiInternalApiClient");
+jest.mock(
+  "../../../../src/infrastructure/api/dsiInternal/DsiInternalApiClient",
+);
 
 describe("Access API wrapper", () => {
   const internalClient = jest.mocked(DsiInternalApiClient);
@@ -21,7 +26,7 @@ describe("Access API wrapper", () => {
         throw new Error(errorMessage);
       });
 
-      expect(() => new Access).toThrow(errorMessage);
+      expect(() => new Access()).toThrow(errorMessage);
     });
   });
 
@@ -47,7 +52,9 @@ describe("Access API wrapper", () => {
         await access.getInvitationServices("inv-1", "correlation");
 
         expect(internalClient.prototype.request).toHaveBeenCalled();
-        expect(internalClient.prototype.request.mock.calls[0][0]).toEqual(ApiRequestMethod.GET);
+        expect(internalClient.prototype.request.mock.calls[0][0]).toEqual(
+          ApiRequestMethod.GET,
+        );
       });
 
       it("it calls request to the correct path with the passed invitation ID", async () => {
@@ -56,7 +63,7 @@ describe("Access API wrapper", () => {
 
         expect(internalClient.prototype.request).toHaveBeenCalled();
         expect(internalClient.prototype.request.mock.calls[0][1]).toEqual(
-          `/invitations/${invId}/services`
+          `/invitations/${invId}/services`,
         );
       });
 
@@ -78,7 +85,9 @@ describe("Access API wrapper", () => {
 
       it("it rejects with request's error if request rejects", async () => {
         const errorMessage = "This is a test error";
-        internalClient.prototype.request.mockRejectedValue(new Error(errorMessage));
+        internalClient.prototype.request.mockRejectedValue(
+          new Error(errorMessage),
+        );
 
         try {
           await access.getInvitationServices("", "");
@@ -94,7 +103,9 @@ describe("Access API wrapper", () => {
         await access.getUserServices("user-1", "correlation");
 
         expect(internalClient.prototype.request).toHaveBeenCalled();
-        expect(internalClient.prototype.request.mock.calls[0][0]).toEqual(ApiRequestMethod.GET);
+        expect(internalClient.prototype.request.mock.calls[0][0]).toEqual(
+          ApiRequestMethod.GET,
+        );
       });
 
       it("it calls request to the correct path with the passed user ID", async () => {
@@ -103,7 +114,7 @@ describe("Access API wrapper", () => {
 
         expect(internalClient.prototype.request).toHaveBeenCalled();
         expect(internalClient.prototype.request.mock.calls[0][1]).toEqual(
-          `/users/${userId}/services`
+          `/users/${userId}/services`,
         );
       });
 
@@ -125,7 +136,9 @@ describe("Access API wrapper", () => {
 
       it("it rejects with request's error if request rejects", async () => {
         const errorMessage = "This is a test error";
-        internalClient.prototype.request.mockRejectedValue(new Error(errorMessage));
+        internalClient.prototype.request.mockRejectedValue(
+          new Error(errorMessage),
+        );
 
         try {
           await access.getUserServices("", "");
@@ -138,10 +151,17 @@ describe("Access API wrapper", () => {
 
     describe("deleteInvitationService", () => {
       it("it calls requestRaw using the DELETE method", async () => {
-        await access.deleteInvitationService("inv-1", "svc-1", "org-1", "correlation");
+        await access.deleteInvitationService(
+          "inv-1",
+          "svc-1",
+          "org-1",
+          "correlation",
+        );
 
         expect(internalClient.prototype.requestRaw).toHaveBeenCalled();
-        expect(internalClient.prototype.requestRaw.mock.calls[0][0]).toEqual(ApiRequestMethod.DELETE);
+        expect(internalClient.prototype.requestRaw.mock.calls[0][0]).toEqual(
+          ApiRequestMethod.DELETE,
+        );
       });
 
       it("it calls requestRaw to the correct path with the passed invitation, service & org IDs", async () => {
@@ -152,7 +172,7 @@ describe("Access API wrapper", () => {
 
         expect(internalClient.prototype.requestRaw).toHaveBeenCalled();
         expect(internalClient.prototype.requestRaw.mock.calls[0][1]).toEqual(
-          `/invitations/${invId}/services/${svcId}/organisations/${orgId}`
+          `/invitations/${invId}/services/${svcId}/organisations/${orgId}`,
         );
       });
 
@@ -169,23 +189,27 @@ describe("Access API wrapper", () => {
       it("it returns true if the response status is 204", async () => {
         setRequestRawResponse(204);
 
-        expect(await access.deleteInvitationService("", "", "", "")).toEqual(true);
+        expect(await access.deleteInvitationService("", "", "", "")).toEqual(
+          true,
+        );
       });
 
-      it.each([
-        201,
-        202,
-        302,
-        304,
-      ])("it returns false if the response status is not 204 (%p)", async (status) => {
-        setRequestRawResponse(status);
+      it.each([201, 202, 302, 304])(
+        "it returns false if the response status is not 204 (%p)",
+        async (status) => {
+          setRequestRawResponse(status);
 
-        expect(await access.deleteInvitationService("", "", "", "")).toEqual(false);
-      });
+          expect(await access.deleteInvitationService("", "", "", "")).toEqual(
+            false,
+          );
+        },
+      );
 
       it("it rejects with requestRaw's error if requestRaw rejects", async () => {
         const errorMessage = "This is a test error";
-        internalClient.prototype.requestRaw.mockRejectedValue(new Error(errorMessage));
+        internalClient.prototype.requestRaw.mockRejectedValue(
+          new Error(errorMessage),
+        );
 
         try {
           await access.deleteInvitationService("", "", "", "");
@@ -198,10 +222,17 @@ describe("Access API wrapper", () => {
 
     describe("deleteUserService", () => {
       it("it calls requestRaw using the DELETE method", async () => {
-        await access.deleteUserService("user-1", "svc-1", "org-1", "correlation");
+        await access.deleteUserService(
+          "user-1",
+          "svc-1",
+          "org-1",
+          "correlation",
+        );
 
         expect(internalClient.prototype.requestRaw).toHaveBeenCalled();
-        expect(internalClient.prototype.requestRaw.mock.calls[0][0]).toEqual(ApiRequestMethod.DELETE);
+        expect(internalClient.prototype.requestRaw.mock.calls[0][0]).toEqual(
+          ApiRequestMethod.DELETE,
+        );
       });
 
       it("it calls requestRaw to the correct path with the passed user, service & org IDs", async () => {
@@ -212,7 +243,7 @@ describe("Access API wrapper", () => {
 
         expect(internalClient.prototype.requestRaw).toHaveBeenCalled();
         expect(internalClient.prototype.requestRaw.mock.calls[0][1]).toEqual(
-          `/users/${userId}/services/${svcId}/organisations/${orgId}`
+          `/users/${userId}/services/${svcId}/organisations/${orgId}`,
         );
       });
 
@@ -232,20 +263,20 @@ describe("Access API wrapper", () => {
         expect(await access.deleteUserService("", "", "", "")).toEqual(true);
       });
 
-      it.each([
-        201,
-        202,
-        302,
-        304,
-      ])("it returns false if the response status is not 204 (%p)", async (status) => {
-        setRequestRawResponse(status);
+      it.each([201, 202, 302, 304])(
+        "it returns false if the response status is not 204 (%p)",
+        async (status) => {
+          setRequestRawResponse(status);
 
-        expect(await access.deleteUserService("", "", "", "")).toEqual(false);
-      });
+          expect(await access.deleteUserService("", "", "", "")).toEqual(false);
+        },
+      );
 
       it("it rejects with requestRaw's error if requestRaw rejects", async () => {
         const errorMessage = "This is a test error";
-        internalClient.prototype.requestRaw.mockRejectedValue(new Error(errorMessage));
+        internalClient.prototype.requestRaw.mockRejectedValue(
+          new Error(errorMessage),
+        );
 
         try {
           await access.deleteUserService("", "", "", "");

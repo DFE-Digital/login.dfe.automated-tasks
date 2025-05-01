@@ -12,36 +12,39 @@ describe("UserBanner database model", () => {
       initialiseUserBanner(connection);
 
       expect(model.init).toHaveBeenCalled();
-      expect(model.init).toHaveBeenCalledWith({
-        id: {
-          type: DataTypes.UUID,
-          defaultValue: DataTypes.UUIDV4,
-          primaryKey: true,
-          allowNull: false,
+      expect(model.init).toHaveBeenCalledWith(
+        {
+          id: {
+            type: DataTypes.UUID,
+            defaultValue: DataTypes.UUIDV4,
+            primaryKey: true,
+            allowNull: false,
+          },
+          userId: {
+            type: DataTypes.UUID,
+            allowNull: false,
+          },
+          bannerId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+          },
+          createdAt: {
+            type: DataTypes.DATE,
+            allowNull: false,
+          },
+          updatedAt: {
+            type: DataTypes.DATE,
+            allowNull: false,
+          },
+          bannerData: {
+            type: DataTypes.STRING(1000),
+          },
         },
-        userId: {
-          type: DataTypes.UUID,
-          allowNull: false,
+        {
+          tableName: "user_banners",
+          sequelize: connection,
         },
-        bannerId: {
-          type: DataTypes.INTEGER,
-          allowNull: false,
-        },
-        createdAt: {
-          type: DataTypes.DATE,
-          allowNull: false,
-        },
-        updatedAt: {
-          type: DataTypes.DATE,
-          allowNull: false,
-        },
-        bannerData: {
-          type: DataTypes.STRING(1000),
-        },
-      }, {
-        tableName: "user_banners",
-        sequelize: connection,
-      });
+      );
     });
   });
 });
