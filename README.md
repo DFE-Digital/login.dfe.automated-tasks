@@ -4,7 +4,6 @@ Automated tasks run on schedules or triggered manually to carry out BAU activiti
 
 - [login.dfe.automated-tasks](#logindfeautomated-tasks)
   - [DevOps Requirements](#devops-requirements)
-  - [What is that weird prepare code in package.json?](#what-is-that-weird-prepare-code-in-packagejson)
   - [Automated Tasks](#automated-tasks)
   - [Local Debugging](#local-debugging)
     - [First time setup](#first-time-setup)
@@ -17,28 +16,6 @@ Automated tasks run on schedules or triggered manually to carry out BAU activiti
 
 - The app service for this repo, and the pipeline should be in the backend tier, as it's an automated function that isn't used by anything else.
 - In `DevOps/pipeline/azure-pipeline.yml` make sure that `buildFlow: true` is set for the `pipeline/buildAzureFunctions.yml@devopsTemplates` template, this ensures the TypeScript code is transpiled into JavaScript so it will function correctly.
-
-## What is that weird prepare code in package.json?
-
-The `@azure/service-bus` package uses a package names `long` which as of writing hasn't been updated since April 16th 2023. The `long` package does not like the following newer compiler options for typescript `"module": "Node16"` and `"moduleResolution": "node16"`, due to the way it exports one of its types. These compiler options (at least its currently matching option `nodenext`) are recommended by the [TypeScript documentation](https://www.typescriptlang.org/tsconfig/#module) "You very likely want `"nodenext"` for modern Node.js projects". Without it, some of our other dependencies fail to compile and the last thing we want to do is turn off dependency checking with TypeScript, as we lose some type safety protection.
-
-The `long` package has issues raised about this problem, [this one](https://github.com/dcodeIO/long.js/issues/125) in July 2023 found the problem and PRs have been made to fix it but never merged. I also personally tried:
-
-- Turning the compiler options back to their defaults, and attempting to see if other options fixed issues.
-- Installing `long` as a dependency.
-- Installing `@types/long` type definitions with/without the `long` package installed.
-- Attempting to overwrite the types manually with a mocked types file copied from the package (another workaround listed) but as it's a dependency of `@azure/service-bus` not us directly I couldn't get it working.
-
-So we are left with two choices, turn off the dependency checking in TypeScript, or use the workaround in the [GitHub issue](https://github.com/dcodeIO/long.js/issues/125#issuecomment-1897638682) which copies the correct version of the type definitions to replace the broken one. Ideally we want to turn off dependency checking as a last resort, so I slightly modified the workaround to only copy the file if both the original file and the destination exists:
-
-```js
-const fs = require('node:fs');
-if (fs.existsSync('./node_modules/@azure/service-bus/node_modules/long/index.d.ts') && fs.existsSync('./node_modules/@azure/service-bus/node_modules/long/umd/index.d.ts')) {
-  fs.copyFileSync('./node_modules/@azure/service-bus/node_modules/long/index.d.ts', './node_modules/@azure/service-bus/node_modules/long/umd/index.d.ts');
-}
-```
-
-**NOTE:** I am not overly happy with this solution, but as the fix PRs in the package haven't been merged, and there have been no updates since 2023, I believe this is the best way until the `@azure/service-bus` package does a fix on their imported version, or the original `long` package is fixed.
 
 ## Automated Tasks
 
@@ -63,6 +40,7 @@ To ease local running/debugging of these functions, please install the recommend
 
 1. Open the command palette (`F1` or `ctrl + shift + p`) in VSCode and run the "Azure Functions: Install or Update Azure Functions Core Tools" command to install the tools required to run the function locally.
 2. Create a `local.settings.json` file in the root directory (ignored by git) with the following default settings:
+
 ```json
 {
   "IsEncrypted": false,
@@ -103,8 +81,8 @@ To ease local running/debugging of these functions, please install the recommend
 2. Run the pipeline to whitelist your IP for the dev app services (or manually add yourself to the app service you need), and go to the `Networking` settings for the service bus of the environment to add your IP address there.
 3. Start the Azurite storage emulator using the "Azurite: Start" command from the command palette (`F1` or `ctrl + shift + p`) as the functions need somewhere to write their state that mimics Azure's storage when deployed.
 4. Open the "Run and Debug" menu in VSCode, select "Attach to Node functions" if it isn't selected by default, and click the start debugging button, this does the following:
-    - Start Typescript's watch mode to update the functions when changes are made.
-    - Start the local Azure Functions runtime, showing their output in the terminal. The functions will appear in the Azure tab of your VSCode, under "Workspace > Local Project > Functions" and allows you to manually kick off a run there by right clicking the function and choosing "Execute Function Now".
+   - Start Typescript's watch mode to update the functions when changes are made.
+   - Start the local Azure Functions runtime, showing their output in the terminal. The functions will appear in the Azure tab of your VSCode, under "Workspace > Local Project > Functions" and allows you to manually kick off a run there by right clicking the function and choosing "Execute Function Now".
 5. Do your testing/debugging!
 6. Once you're finished, you can stop the functions by either alt-clicking the detach/disconnect button in the debug bar that floats on your screen (or click the little drop-down beside it and click "Stop") or terminating the running terminals in VSCode and detaching the debugger.
 7. To stop Azurite, run "Azurite: Close" from the command palette. The files generated by Azurite are in the `.gitignore` file but if you would like to clean them, run "Azurite: Clean" which will attempt to clear the files it generated.
@@ -124,7 +102,7 @@ To ease local running/debugging of these functions, please install the recommend
 | DATABASE_ORGANISATIONS_NAME | The organisations database name | Retrieve from KeyVault (Key name: `platformGlobalOrganisationsDatabaseName`) or other database connections. | `""`
 | DATABASE_ORGANISATIONS_USERNAME | SQL username for connecting to the organisations database. | Use your own username or retrieve from KeyVault (Key name: `svcSigninOrg`). | `""`
 | DATABASE_ORGANISATIONS_PASSWORD | SQL password for connecting to the organisations database. | Use your own password or retrieve from KeyVault (Key name: `svcSigninOrgPassword`). | `""`
-| API_INTERNAL_ACCESS_HOST | Host URL for the internal access API. | Retrieve from KeyVault   (Key name: `standaloneAccessHostName`) or the "Domains" section of the app service's "Overview" page in the Azure portal. | `""`
+| API_INTERNAL_ACCESS_HOST | Host URL for the internal access API. | Retrieve from KeyVault (Key name: `standaloneAccessHostName`) or the "Domains" section of the app service's "Overview" page in the Azure portal. | `""`
 | API_INTERNAL_DIRECTORIES_HOST | Host URL for the internal directories API. | Retrieve from KeyVault (Key name: `standaloneDirectoriesHostName`) or the "Domains" section of the app service's "Overview" page in the Azure portal. | `""`
 | API_INTERNAL_ORGANISATIONS_HOST | Host URL for the internal organisations API. | Retrieve from KeyVault (Key name: `standaloneOrganisationsHostName`) or the "Domains" section of the app service's "Overview" page in the Azure portal. | `""`
 | API_INTERNAL_TENANT | Tenant ID of the internal API tenant. | Retrieve from KeyVault (Key name: `aadkeytenantId` ). | `""`
@@ -137,7 +115,7 @@ To ease local running/debugging of these functions, please install the recommend
 
 ## Adding New Azure Functions
 
-In the following steps we'll create a new handler for our new timer trigger  `functionName` Azure function, and register it with our function app.
+In the following steps we'll create a new handler for our new timer trigger `functionName` Azure function, and register it with our function app.
 
 1. Create a new TypeScript file in `src/functions` to house the handler for the Azure function, similar to the one below, and export it.
 
