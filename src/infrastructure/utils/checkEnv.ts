@@ -8,7 +8,10 @@ import assert from "assert";
  *
  * @throws Error if any required environment variables are not set, to abort the function from running.
  */
-export function checkEnv(variableNames: Array<string>, connectionType: string): void {
+export function checkEnv(
+  variableNames: Array<string>,
+  connectionType: string,
+): void {
   const missingVariableNames = variableNames.filter((name) => {
     const value = process.env[name];
     return !(typeof value === "string" && value.length > 0);
@@ -17,6 +20,6 @@ export function checkEnv(variableNames: Array<string>, connectionType: string): 
 
   assert(
     missingVariableNames.length === 0,
-    `${missingVariableNames.join(", ")} ${verb} missing, cannot create ${connectionType} connection!`
+    `${missingVariableNames.join(", ")} ${verb} missing, cannot create ${connectionType} connection!`,
   );
-};
+}

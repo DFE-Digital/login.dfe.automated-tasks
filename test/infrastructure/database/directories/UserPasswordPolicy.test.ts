@@ -12,40 +12,43 @@ describe("UserPasswordPolicy database model", () => {
       initialiseUserPasswordPolicy(connection);
 
       expect(model.init).toHaveBeenCalled();
-      expect(model.init).toHaveBeenCalledWith({
-        id: {
-          type: DataTypes.UUID,
-          defaultValue: DataTypes.UUIDV4,
-          primaryKey: true,
-          unique: true,
-          allowNull: false,
+      expect(model.init).toHaveBeenCalledWith(
+        {
+          id: {
+            type: DataTypes.UUID,
+            defaultValue: DataTypes.UUIDV4,
+            primaryKey: true,
+            unique: true,
+            allowNull: false,
+          },
+          userId: {
+            type: DataTypes.UUID,
+            field: "uid",
+            allowNull: false,
+          },
+          policyCode: {
+            type: DataTypes.STRING(50),
+            allowNull: false,
+          },
+          createdAt: {
+            type: DataTypes.DATE,
+            allowNull: false,
+          },
+          updatedAt: {
+            type: DataTypes.DATE,
+            allowNull: false,
+          },
+          passwordHistoryLimit: {
+            type: DataTypes.SMALLINT,
+            field: "password_history_limit",
+            allowNull: false,
+          },
         },
-        userId: {
-          type: DataTypes.UUID,
-          field: "uid",
-          allowNull: false,
+        {
+          tableName: "user_password_policy",
+          sequelize: connection,
         },
-        policyCode: {
-          type: DataTypes.STRING(50),
-          allowNull: false,
-        },
-        createdAt: {
-          type: DataTypes.DATE,
-          allowNull: false,
-        },
-        updatedAt: {
-          type: DataTypes.DATE,
-          allowNull: false,
-        },
-        passwordHistoryLimit: {
-          type: DataTypes.SMALLINT,
-          field: "password_history_limit",
-          allowNull: false,
-        },
-      }, {
-        tableName: "user_password_policy",
-        sequelize: connection,
-      });
+      );
     });
   });
 });

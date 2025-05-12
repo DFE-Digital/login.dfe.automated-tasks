@@ -2,9 +2,15 @@ import { InvocationContext, Timer } from "@azure/functions";
 import { Op, Sequelize } from "sequelize";
 import { Directories } from "../../src/infrastructure/api/dsiInternal/Directories";
 import { AuditLogger } from "../../src/infrastructure/AuditLogger";
-import { initialiseUser, User } from "../../src/infrastructure/database/directories/User";
+import {
+  initialiseUser,
+  User,
+} from "../../src/infrastructure/database/directories/User";
 import { deactivateUnusedAccounts } from "../../src/functions/deactivateUnusedAccounts";
-import { connection, DatabaseName } from "../../src/infrastructure/database/common/connection";
+import {
+  connection,
+  DatabaseName,
+} from "../../src/infrastructure/database/common/connection";
 import { generateUsers } from "../testUtils";
 
 jest.mock("@azure/functions");
@@ -31,7 +37,9 @@ describe("Deactivate unused accounts automated task", () => {
       throw new Error(errorMessage);
     });
 
-    await expect(deactivateUnusedAccounts({} as Timer, new InvocationContext())).rejects.toThrow(`deactivateUnusedAccounts: ${errorMessage}`);
+    await expect(
+      deactivateUnusedAccounts({} as Timer, new InvocationContext()),
+    ).rejects.toThrow(`deactivateUnusedAccounts: ${errorMessage}`);
   });
 
   it("it throws an error if the audit logger throws an error on instantiation", async () => {
@@ -40,7 +48,9 @@ describe("Deactivate unused accounts automated task", () => {
       throw new Error(errorMessage);
     });
 
-    await expect(deactivateUnusedAccounts({} as Timer, new InvocationContext())).rejects.toThrow(`deactivateUnusedAccounts: ${errorMessage}`);
+    await expect(
+      deactivateUnusedAccounts({} as Timer, new InvocationContext()),
+    ).rejects.toThrow(`deactivateUnusedAccounts: ${errorMessage}`);
   });
 
   it("it throws an error if the database connection for the User model throws an error", async () => {
@@ -50,14 +60,18 @@ describe("Deactivate unused accounts automated task", () => {
       throw new Error(errorMessage);
     });
 
-    await expect(deactivateUnusedAccounts({} as Timer, new InvocationContext())).rejects.toThrow(`deactivateUnusedAccounts: ${errorMessage}`);
+    await expect(
+      deactivateUnusedAccounts({} as Timer, new InvocationContext()),
+    ).rejects.toThrow(`deactivateUnusedAccounts: ${errorMessage}`);
   });
 
   it("it attempts to initialise the User model with a connection to the directories DB", async () => {
     await deactivateUnusedAccounts({} as Timer, new InvocationContext());
 
     expect(initialiseUser).toHaveBeenCalled();
-    expect(initialiseUser).toHaveBeenCalledWith(connection(DatabaseName.Directories));
+    expect(initialiseUser).toHaveBeenCalledWith(
+      connection(DatabaseName.Directories),
+    );
   });
 
   it("it throws an error if the user retrieval query throws an error", async () => {
@@ -66,11 +80,18 @@ describe("Deactivate unused accounts automated task", () => {
       throw new Error(errorMessage);
     });
 
-    await expect(deactivateUnusedAccounts({} as Timer, new InvocationContext())).rejects.toThrow(`deactivateUnusedAccounts: ${errorMessage}`);
+    await expect(
+      deactivateUnusedAccounts({} as Timer, new InvocationContext()),
+    ).rejects.toThrow(`deactivateUnusedAccounts: ${errorMessage}`);
   });
 
   it("it performs the correct query to retrieve users who've been inactive for 2 years or more", async () => {
-    const targetDate = Sequelize.fn("DATEADD", Sequelize.literal("YEAR"), -2, Sequelize.fn("GETDATE"));
+    const targetDate = Sequelize.fn(
+      "DATEADD",
+      Sequelize.literal("YEAR"),
+      -2,
+      Sequelize.fn("GETDATE"),
+    );
     await deactivateUnusedAccounts({} as Timer, new InvocationContext());
 
     expect(userMock.findAll).toHaveBeenCalled();
@@ -101,7 +122,9 @@ describe("Deactivate unused accounts automated task", () => {
     await deactivateUnusedAccounts({} as Timer, new InvocationContext());
 
     expect(contextMock.prototype.info).toHaveBeenCalled();
-    expect(contextMock.prototype.info).toHaveBeenCalledWith(`deactivateUnusedAccounts: ${count} users found`);
+    expect(contextMock.prototype.info).toHaveBeenCalledWith(
+      `deactivateUnusedAccounts: ${count} users found`,
+    );
   });
 
   it("it logs the correct range of users being deactivated in the current batch", async () => {
@@ -109,7 +132,9 @@ describe("Deactivate unused accounts automated task", () => {
     await deactivateUnusedAccounts({} as Timer, new InvocationContext());
 
     expect(contextMock.prototype.info).toHaveBeenCalled();
-    expect(contextMock.prototype.info).toHaveBeenCalledWith("deactivateUnusedAccounts: Deactivating users 1 to 100");
+    expect(contextMock.prototype.info).toHaveBeenCalledWith(
+      "deactivateUnusedAccounts: Deactivating users 1 to 100",
+    );
   });
 
   it("it calls deactivateUser with each user's ID and the invocation ID", async () => {
@@ -120,8 +145,16 @@ describe("Deactivate unused accounts automated task", () => {
     await deactivateUnusedAccounts({} as Timer, new InvocationContext());
 
     expect(directoriesMock.prototype.deactivateUser).toHaveBeenCalledTimes(2);
-    expect(directoriesMock.prototype.deactivateUser).toHaveBeenCalledWith(queryResult[0].id, "Automated task - Deactivate accounts with 2 years of inactivity.", invocationId);
-    expect(directoriesMock.prototype.deactivateUser).toHaveBeenCalledWith(queryResult[1].id, "Automated task - Deactivate accounts with 2 years of inactivity.", invocationId);
+    expect(directoriesMock.prototype.deactivateUser).toHaveBeenCalledWith(
+      queryResult[0].id,
+      "Automated task - Deactivate accounts with 2 years of inactivity.",
+      invocationId,
+    );
+    expect(directoriesMock.prototype.deactivateUser).toHaveBeenCalledWith(
+      queryResult[1].id,
+      "Automated task - Deactivate accounts with 2 years of inactivity.",
+      invocationId,
+    );
   });
 
   it("it logs the correct number of successful, failed, and errored users in a batch", async () => {
@@ -135,7 +168,9 @@ describe("Deactivate unused accounts automated task", () => {
     await deactivateUnusedAccounts({} as Timer, new InvocationContext());
 
     expect(contextMock.prototype.info).toHaveBeenCalled();
-    expect(contextMock.prototype.info).toHaveBeenCalledWith("deactivateUnusedAccounts: 21 successful, 2 failed, and 2 errored deactivations for users 1 to 25");
+    expect(contextMock.prototype.info).toHaveBeenCalledWith(
+      "deactivateUnusedAccounts: 21 successful, 2 failed, and 2 errored deactivations for users 1 to 25",
+    );
   });
 
   it("it logs unique errors from the deactivateUser call if there are any for a batch", async () => {
@@ -153,34 +188,50 @@ describe("Deactivate unused accounts automated task", () => {
     await deactivateUnusedAccounts({} as Timer, new InvocationContext());
 
     expect(contextMock.prototype.error).toHaveBeenCalledTimes(3);
-    expect(contextMock.prototype.error).toHaveBeenCalledWith(`deactivateUnusedAccounts: ${message1}`);
-    expect(contextMock.prototype.error).toHaveBeenCalledWith(`deactivateUnusedAccounts: ${message2}`);
-    expect(contextMock.prototype.error).toHaveBeenCalledWith(`deactivateUnusedAccounts: ${message3}`);
+    expect(contextMock.prototype.error).toHaveBeenCalledWith(
+      `deactivateUnusedAccounts: ${message1}`,
+    );
+    expect(contextMock.prototype.error).toHaveBeenCalledWith(
+      `deactivateUnusedAccounts: ${message2}`,
+    );
+    expect(contextMock.prototype.error).toHaveBeenCalledWith(
+      `deactivateUnusedAccounts: ${message3}`,
+    );
   });
 
   it("it throws an error if the entire batch errored (deactivateUser threw for all users)", async () => {
     userMock.findAll.mockResolvedValue(generateUsers(150));
-    directoriesMock.prototype.deactivateUser.mockRejectedValue(new Error (""));
+    directoriesMock.prototype.deactivateUser.mockRejectedValue(new Error(""));
 
-    expect(deactivateUnusedAccounts({} as Timer, new InvocationContext()))
-      .rejects
-      .toThrow("deactivateUnusedAccounts: Entire batch had an error, failing execution so it can retry.");
+    expect(
+      deactivateUnusedAccounts({} as Timer, new InvocationContext()),
+    ).rejects.toThrow(
+      "deactivateUnusedAccounts: Entire batch had an error, failing execution so it can retry.",
+    );
   });
 
   it("it doesn't throw an error if the deactivateUser call doesn't throw for all users in a batch", async () => {
     userMock.findAll.mockResolvedValue(generateUsers(5));
-    directoriesMock.prototype.deactivateUser.mockRejectedValueOnce(new Error("Testing")).mockResolvedValue(true);
+    directoriesMock.prototype.deactivateUser
+      .mockRejectedValueOnce(new Error("Testing"))
+      .mockResolvedValue(true);
 
-    await expect(deactivateUnusedAccounts({} as Timer, new InvocationContext())).resolves.not.toThrow();
+    await expect(
+      deactivateUnusedAccounts({} as Timer, new InvocationContext()),
+    ).resolves.not.toThrow();
   });
 
   it("it doesn't log the number of successful users or send audit messages, if none were successfully deactivated", async () => {
     userMock.findAll.mockResolvedValue(generateUsers(5));
-    directoriesMock.prototype.deactivateUser.mockRejectedValueOnce(new Error("")).mockResolvedValue(false);
+    directoriesMock.prototype.deactivateUser
+      .mockRejectedValueOnce(new Error(""))
+      .mockResolvedValue(false);
     await deactivateUnusedAccounts({} as Timer, new InvocationContext());
 
     expect(contextMock.prototype.info).toHaveBeenCalled();
-    expect(contextMock.prototype.info).not.toHaveBeenCalledWith("deactivateUnusedAccounts: Sending audit messages for the 5 successful deactivations");
+    expect(contextMock.prototype.info).not.toHaveBeenCalledWith(
+      "deactivateUnusedAccounts: Sending audit messages for the 5 successful deactivations",
+    );
     expect(auditLoggerMock.prototype.batchedLog).not.toHaveBeenCalled();
   });
 
@@ -193,17 +244,21 @@ describe("Deactivate unused accounts automated task", () => {
     await deactivateUnusedAccounts({} as Timer, new InvocationContext());
 
     expect(contextMock.prototype.info).toHaveBeenCalled();
-    expect(contextMock.prototype.info).toHaveBeenCalledWith("deactivateUnusedAccounts: Sending audit messages for the 3 successful deactivations");
+    expect(contextMock.prototype.info).toHaveBeenCalledWith(
+      "deactivateUnusedAccounts: Sending audit messages for the 3 successful deactivations",
+    );
   });
 
   it("it throws an error if the audit logger throws an error when sending a message batch", async () => {
     const errorMessage = "Testing Audit Logger Send";
     userMock.findAll.mockResolvedValue(generateUsers(5));
     auditLoggerMock.prototype.batchedLog.mockImplementation(() => {
-      throw new Error(errorMessage)
+      throw new Error(errorMessage);
     });
 
-    expect(deactivateUnusedAccounts({} as Timer, new InvocationContext())).rejects.toThrow(`deactivateUnusedAccounts: ${errorMessage}`);
+    expect(
+      deactivateUnusedAccounts({} as Timer, new InvocationContext()),
+    ).rejects.toThrow(`deactivateUnusedAccounts: ${errorMessage}`);
   });
 
   it("it sends a batch of correct logs to the audit service bus for all the successful deactivations", async () => {
@@ -212,19 +267,24 @@ describe("Deactivate unused accounts automated task", () => {
     await deactivateUnusedAccounts({} as Timer, new InvocationContext());
 
     expect(auditLoggerMock.prototype.batchedLog).toHaveBeenCalled();
-    expect(auditLoggerMock.prototype.batchedLog).toHaveBeenCalledWith(users.map((user) => ({
-      message: `Automated deactivation of user ${user.email} (id: ${user.id.toUpperCase()})`,
-      type: "support",
-      subType: "user-edit",
-      meta: {
-        reason: "Automated task - Deactivate accounts with 2 years of inactivity.",
-        editedUser: user.id.toUpperCase(),
-        editedFields: [{
-          name: "status",
-          oldValue: 1,
-          newValue: 0
-        }],
-      },
-    })));
+    expect(auditLoggerMock.prototype.batchedLog).toHaveBeenCalledWith(
+      users.map((user) => ({
+        message: `Automated deactivation of user ${user.email} (id: ${user.id.toUpperCase()})`,
+        type: "support",
+        subType: "user-edit",
+        meta: {
+          reason:
+            "Automated task - Deactivate accounts with 2 years of inactivity.",
+          editedUser: user.id.toUpperCase(),
+          editedFields: [
+            {
+              name: "status",
+              oldValue: 1,
+              newValue: 0,
+            },
+          ],
+        },
+      })),
+    );
   });
 });

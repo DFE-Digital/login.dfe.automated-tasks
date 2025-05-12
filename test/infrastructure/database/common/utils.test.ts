@@ -1,21 +1,44 @@
 import { DataTypes, Sequelize } from "sequelize";
-import { initialiseAllInvitationModels, initialiseAllUserModels } from "../../../../src/infrastructure/database/common/utils";
-import { initialiseUser, User } from "../../../../src/infrastructure/database/directories/User";
-import { initialiseUserPasswordPolicy, UserPasswordPolicy } from "../../../../src/infrastructure/database/directories/UserPasswordPolicy";
-import { initialiseInvitation, Invitation } from "../../../../src/infrastructure/database/directories/Invitation";
-import { initialiseInvitationCallback, InvitationCallback } from "../../../../src/infrastructure/database/directories/InvitationCallback";
+import {
+  initialiseAllInvitationModels,
+  initialiseAllUserModels,
+} from "../../../../src/infrastructure/database/common/utils";
+import {
+  initialiseUser,
+  User,
+} from "../../../../src/infrastructure/database/directories/User";
+import {
+  initialiseUserPasswordPolicy,
+  UserPasswordPolicy,
+} from "../../../../src/infrastructure/database/directories/UserPasswordPolicy";
+import {
+  initialiseInvitation,
+  Invitation,
+} from "../../../../src/infrastructure/database/directories/Invitation";
+import {
+  initialiseInvitationCallback,
+  InvitationCallback,
+} from "../../../../src/infrastructure/database/directories/InvitationCallback";
 import { initialiseUserBanner } from "../../../../src/infrastructure/database/organisations/UserBanner";
 import { initialiseUserOrganisationRequest } from "../../../../src/infrastructure/database/organisations/UserOrganisationRequest";
 import { initialiseUserServiceRequest } from "../../../../src/infrastructure/database/organisations/UserServiceRequest";
 
 jest.mock("sequelize");
 jest.mock("../../../../src/infrastructure/database/directories/User");
-jest.mock("../../../../src/infrastructure/database/directories/UserPasswordPolicy");
+jest.mock(
+  "../../../../src/infrastructure/database/directories/UserPasswordPolicy",
+);
 jest.mock("../../../../src/infrastructure/database/directories/Invitation");
-jest.mock("../../../../src/infrastructure/database/directories/InvitationCallback");
+jest.mock(
+  "../../../../src/infrastructure/database/directories/InvitationCallback",
+);
 jest.mock("../../../../src/infrastructure/database/organisations/UserBanner");
-jest.mock("../../../../src/infrastructure/database/organisations/UserOrganisationRequest");
-jest.mock("../../../../src/infrastructure/database/organisations/UserServiceRequest");
+jest.mock(
+  "../../../../src/infrastructure/database/organisations/UserOrganisationRequest",
+);
+jest.mock(
+  "../../../../src/infrastructure/database/organisations/UserServiceRequest",
+);
 
 describe("Cross-database utility functions", () => {
   describe("initialiseAllUserModels", () => {
@@ -28,8 +51,12 @@ describe("Cross-database utility functions", () => {
       expect(initialiseUser).toHaveBeenCalledWith(directoriesDb);
       expect(initialiseUserPasswordPolicy).toHaveBeenCalledWith(directoriesDb);
       expect(initialiseUserBanner).toHaveBeenCalledWith(organisationsDb);
-      expect(initialiseUserOrganisationRequest).toHaveBeenCalledWith(organisationsDb);
-      expect(initialiseUserServiceRequest).toHaveBeenCalledWith(organisationsDb);
+      expect(initialiseUserOrganisationRequest).toHaveBeenCalledWith(
+        organisationsDb,
+      );
+      expect(initialiseUserServiceRequest).toHaveBeenCalledWith(
+        organisationsDb,
+      );
     });
 
     it("it creates associations between models in the same database", () => {

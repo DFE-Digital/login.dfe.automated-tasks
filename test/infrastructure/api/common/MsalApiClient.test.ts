@@ -1,5 +1,12 @@
-import { AuthenticationResult, ConfidentialClientApplication, LogLevel } from "@azure/msal-node";
-import { ApiClient, ApiRequestMethod } from "../../../../src/infrastructure/api/common/ApiClient";
+import {
+  AuthenticationResult,
+  ConfidentialClientApplication,
+  LogLevel,
+} from "@azure/msal-node";
+import {
+  ApiClient,
+  ApiRequestMethod,
+} from "../../../../src/infrastructure/api/common/ApiClient";
 import { MsalApiClient } from "../../../../src/infrastructure/api/common/MsalApiClient";
 
 jest.mock("@azure/msal-node");
@@ -38,42 +45,49 @@ describe("MSAL API client", () => {
       new MsalApiClient(defaultOptions);
 
       expect(clientApp).toHaveBeenCalled();
-      expect(JSON.stringify(clientApp.mock.calls[0][0])).toEqual(JSON.stringify({
-        auth: {
-          authority: `${defaultOptions.auth.authorityHostUrl}/${defaultOptions.auth.tenant}`,
-          clientId: defaultOptions.auth.clientId,
-          clientSecret: defaultOptions.auth.clientSecret,
-        },
-        system: {
-          loggerOptions: {
-            loggerCallback(loglevel, message) {
-              if (loglevel === LogLevel.Error) {
-                console.error(message);
-              } else {
-                console.log(message);
-              }
-            },
-            piiLoggingEnabled: false,
-            logLevel: LogLevel.Error,
+      expect(JSON.stringify(clientApp.mock.calls[0][0])).toEqual(
+        JSON.stringify({
+          auth: {
+            authority: `${defaultOptions.auth.authorityHostUrl}/${defaultOptions.auth.tenant}`,
+            clientId: defaultOptions.auth.clientId,
+            clientSecret: defaultOptions.auth.clientSecret,
           },
-        },
-      }));
+          system: {
+            loggerOptions: {
+              loggerCallback(loglevel, message) {
+                if (loglevel === LogLevel.Error) {
+                  console.error(message);
+                } else {
+                  console.log(message);
+                }
+              },
+              piiLoggingEnabled: false,
+              logLevel: LogLevel.Error,
+            },
+          },
+        }),
+      );
     });
 
     it.each([
       [LogLevel.Info, "true"],
       [LogLevel.Error, "false"],
       [LogLevel.Error, undefined],
-    ])("it sets the logLevel option to %p when process.env.DEBUG is set to %p", (result, envValue) => {
-      const initialEnv = { ...process.env };
-      process.env.DEBUG = envValue;
-      new MsalApiClient(defaultOptions);
+    ])(
+      "it sets the logLevel option to %p when process.env.DEBUG is set to %p",
+      (result, envValue) => {
+        const initialEnv = { ...process.env };
+        process.env.DEBUG = envValue;
+        new MsalApiClient(defaultOptions);
 
-      expect(clientApp).toHaveBeenCalled();
-      expect(clientApp.mock.calls[0][0]!.system!.loggerOptions!.logLevel).toEqual(result);
+        expect(clientApp).toHaveBeenCalled();
+        expect(
+          clientApp.mock.calls[0][0]!.system!.loggerOptions!.logLevel,
+        ).toEqual(result);
 
-      process.env = initialEnv;
-    });
+        process.env = initialEnv;
+      },
+    );
   });
 
   describe("requestRaw", () => {
@@ -86,9 +100,13 @@ describe("MSAL API client", () => {
     it("it acquires a token using the MSAL client application with the default scope on the first request", async () => {
       await client.requestRaw(ApiRequestMethod.GET, "", {});
 
-      expect(clientApp.prototype.acquireTokenByClientCredential).toHaveBeenCalled();
-      expect(clientApp.prototype.acquireTokenByClientCredential).toHaveBeenCalledWith({
-        scopes: [ `${defaultOptions.auth.resource}/.default` ],
+      expect(
+        clientApp.prototype.acquireTokenByClientCredential,
+      ).toHaveBeenCalled();
+      expect(
+        clientApp.prototype.acquireTokenByClientCredential,
+      ).toHaveBeenCalledWith({
+        scopes: [`${defaultOptions.auth.resource}/.default`],
       });
     });
 
@@ -97,7 +115,9 @@ describe("MSAL API client", () => {
       await client.requestRaw(ApiRequestMethod.GET, "", {});
       await client.requestRaw(ApiRequestMethod.GET, "", {});
 
-      expect(clientApp.prototype.acquireTokenByClientCredential).toHaveBeenCalledTimes(1);
+      expect(
+        clientApp.prototype.acquireTokenByClientCredential,
+      ).toHaveBeenCalledTimes(1);
     });
 
     it("it acquires another token if the cached token exists and has expired", async () => {
@@ -105,13 +125,17 @@ describe("MSAL API client", () => {
       await client.requestRaw(ApiRequestMethod.GET, "", {});
       await client.requestRaw(ApiRequestMethod.GET, "", {});
 
-      expect(clientApp.prototype.acquireTokenByClientCredential).toHaveBeenCalledTimes(2);
+      expect(
+        clientApp.prototype.acquireTokenByClientCredential,
+      ).toHaveBeenCalledTimes(2);
     });
 
     it("it rejects with an Error with a correlation ID if the MSAL package fails to retrieve an access token, when one is provided", async () => {
       const correlationId = "test-id";
       const errorMessage = "MSAL Error Example";
-      clientApp.prototype.acquireTokenByClientCredential.mockRejectedValue(new Error(errorMessage));
+      clientApp.prototype.acquireTokenByClientCredential.mockRejectedValue(
+        new Error(errorMessage),
+      );
 
       try {
         await client.requestRaw(ApiRequestMethod.GET, "", {
@@ -121,14 +145,16 @@ describe("MSAL API client", () => {
         expect(error instanceof Error).toEqual(true);
         expect(error).toHaveProperty(
           "message",
-          `Error acquiring auth token "${errorMessage}" (baseUri: ${defaultOptions.baseUri}, correlationId: ${correlationId})`
+          `Error acquiring auth token "${errorMessage}" (baseUri: ${defaultOptions.baseUri}, correlationId: ${correlationId})`,
         );
       }
     });
 
     it("it rejects with an Error without a correlation ID if the MSAL package fails to retrieve an access token, when one isn't provided", async () => {
       const errorMessage = "MSAL Error Example";
-      clientApp.prototype.acquireTokenByClientCredential.mockRejectedValue(new Error(errorMessage));
+      clientApp.prototype.acquireTokenByClientCredential.mockRejectedValue(
+        new Error(errorMessage),
+      );
 
       try {
         await client.requestRaw(ApiRequestMethod.GET, "", {});
@@ -136,7 +162,7 @@ describe("MSAL API client", () => {
         expect(error instanceof Error).toEqual(true);
         expect(error).toHaveProperty(
           "message",
-          `Error acquiring auth token "${errorMessage}" (baseUri: ${defaultOptions.baseUri}, correlationId: Not provided)`
+          `Error acquiring auth token "${errorMessage}" (baseUri: ${defaultOptions.baseUri}, correlationId: Not provided)`,
         );
       }
     });
@@ -146,7 +172,9 @@ describe("MSAL API client", () => {
       await client.requestRaw(method, "", {});
 
       expect(parentClient.prototype.requestRaw).toHaveBeenCalled();
-      expect(parentClient.prototype.requestRaw.mock.calls[0][0]).toEqual(method);
+      expect(parentClient.prototype.requestRaw.mock.calls[0][0]).toEqual(
+        method,
+      );
     });
 
     it("it calls ApiClient requestRaw with the passed path", async () => {
@@ -228,7 +256,9 @@ describe("MSAL API client", () => {
       await client.requestRaw(ApiRequestMethod.GET, "", requestOptions);
 
       expect(parentClient.prototype.requestRaw).toHaveBeenCalled();
-      expect(parentClient.prototype.requestRaw.mock.calls[0][2]).toEqual(requestOptions);
+      expect(parentClient.prototype.requestRaw.mock.calls[0][2]).toEqual(
+        requestOptions,
+      );
     });
   });
 
@@ -242,9 +272,13 @@ describe("MSAL API client", () => {
     it("it acquires a token using the MSAL client application with the default scope on the first request", async () => {
       await client.request(ApiRequestMethod.GET, "", {});
 
-      expect(clientApp.prototype.acquireTokenByClientCredential).toHaveBeenCalled();
-      expect(clientApp.prototype.acquireTokenByClientCredential).toHaveBeenCalledWith({
-        scopes: [ `${defaultOptions.auth.resource}/.default` ],
+      expect(
+        clientApp.prototype.acquireTokenByClientCredential,
+      ).toHaveBeenCalled();
+      expect(
+        clientApp.prototype.acquireTokenByClientCredential,
+      ).toHaveBeenCalledWith({
+        scopes: [`${defaultOptions.auth.resource}/.default`],
       });
     });
 
@@ -253,7 +287,9 @@ describe("MSAL API client", () => {
       await client.request(ApiRequestMethod.GET, "", {});
       await client.request(ApiRequestMethod.GET, "", {});
 
-      expect(clientApp.prototype.acquireTokenByClientCredential).toHaveBeenCalledTimes(1);
+      expect(
+        clientApp.prototype.acquireTokenByClientCredential,
+      ).toHaveBeenCalledTimes(1);
     });
 
     it("it acquires another token if the cached token exists and has expired", async () => {
@@ -261,13 +297,17 @@ describe("MSAL API client", () => {
       await client.request(ApiRequestMethod.GET, "", {});
       await client.request(ApiRequestMethod.GET, "", {});
 
-      expect(clientApp.prototype.acquireTokenByClientCredential).toHaveBeenCalledTimes(2);
+      expect(
+        clientApp.prototype.acquireTokenByClientCredential,
+      ).toHaveBeenCalledTimes(2);
     });
 
     it("it rejects with an Error with a correlation ID if the MSAL package fails to retrieve an access token, when one is provided", async () => {
       const correlationId = "test-id";
       const errorMessage = "MSAL Error Example";
-      clientApp.prototype.acquireTokenByClientCredential.mockRejectedValue(new Error(errorMessage));
+      clientApp.prototype.acquireTokenByClientCredential.mockRejectedValue(
+        new Error(errorMessage),
+      );
 
       try {
         await client.request(ApiRequestMethod.GET, "", {
@@ -277,14 +317,16 @@ describe("MSAL API client", () => {
         expect(error instanceof Error).toEqual(true);
         expect(error).toHaveProperty(
           "message",
-          `Error acquiring auth token "${errorMessage}" (baseUri: ${defaultOptions.baseUri}, correlationId: ${correlationId})`
+          `Error acquiring auth token "${errorMessage}" (baseUri: ${defaultOptions.baseUri}, correlationId: ${correlationId})`,
         );
       }
     });
 
     it("it rejects with an Error without a correlation ID if the MSAL package fails to retrieve an access token, when one isn't provided", async () => {
       const errorMessage = "MSAL Error Example";
-      clientApp.prototype.acquireTokenByClientCredential.mockRejectedValue(new Error(errorMessage));
+      clientApp.prototype.acquireTokenByClientCredential.mockRejectedValue(
+        new Error(errorMessage),
+      );
 
       try {
         await client.request(ApiRequestMethod.GET, "", {});
@@ -292,7 +334,7 @@ describe("MSAL API client", () => {
         expect(error instanceof Error).toEqual(true);
         expect(error).toHaveProperty(
           "message",
-          `Error acquiring auth token "${errorMessage}" (baseUri: ${defaultOptions.baseUri}, correlationId: Not provided)`
+          `Error acquiring auth token "${errorMessage}" (baseUri: ${defaultOptions.baseUri}, correlationId: Not provided)`,
         );
       }
     });
@@ -384,7 +426,9 @@ describe("MSAL API client", () => {
       await client.request(ApiRequestMethod.GET, "", requestOptions);
 
       expect(parentClient.prototype.request).toHaveBeenCalled();
-      expect(parentClient.prototype.request.mock.calls[0][2]).toEqual(requestOptions);
+      expect(parentClient.prototype.request.mock.calls[0][2]).toEqual(
+        requestOptions,
+      );
     });
   });
 });

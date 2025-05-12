@@ -8,7 +8,7 @@ export enum ApiName {
   Access = "access",
   Directories = "directories",
   Organisations = "organisations",
-};
+}
 
 /**
  * An API client for the internal DSi APIs.
@@ -25,17 +25,22 @@ export class DsiInternalApiClient extends MsalApiClient {
     const apiEnvName = api.toUpperCase();
     const apiHostUrl = process.env[`API_INTERNAL_${apiEnvName}_HOST`];
 
-    checkEnv([
-      `API_INTERNAL_${apiEnvName}_HOST`,
-      "API_INTERNAL_TENANT",
-      "API_INTERNAL_AUTHORITY_HOST",
-      "API_INTERNAL_CLIENT_ID",
-      "API_INTERNAL_CLIENT_SECRET",
-      "API_INTERNAL_RESOURCE",
-    ], "DSi internal API");
+    checkEnv(
+      [
+        `API_INTERNAL_${apiEnvName}_HOST`,
+        "API_INTERNAL_TENANT",
+        "API_INTERNAL_AUTHORITY_HOST",
+        "API_INTERNAL_CLIENT_ID",
+        "API_INTERNAL_CLIENT_SECRET",
+        "API_INTERNAL_RESOURCE",
+      ],
+      "DSi internal API",
+    );
 
     super({
-      baseUri: (apiHostUrl.toLowerCase().startsWith("http")) ? apiHostUrl : `https://${apiHostUrl}`,
+      baseUri: apiHostUrl.toLowerCase().startsWith("http")
+        ? apiHostUrl
+        : `https://${apiHostUrl}`,
       auth: {
         tenant: process.env.API_INTERNAL_TENANT,
         authorityHostUrl: process.env.API_INTERNAL_AUTHORITY_HOST,
@@ -44,5 +49,5 @@ export class DsiInternalApiClient extends MsalApiClient {
         resource: process.env.API_INTERNAL_RESOURCE,
       },
     });
-  };
-};
+  }
+}

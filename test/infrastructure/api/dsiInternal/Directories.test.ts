@@ -1,8 +1,13 @@
 import { ApiRequestMethod } from "../../../../src/infrastructure/api/common/ApiClient";
-import { ApiName, DsiInternalApiClient } from "../../../../src/infrastructure/api/dsiInternal/DsiInternalApiClient";
+import {
+  ApiName,
+  DsiInternalApiClient,
+} from "../../../../src/infrastructure/api/dsiInternal/DsiInternalApiClient";
 import { Directories } from "../../../../src/infrastructure/api/dsiInternal/Directories";
 
-jest.mock("../../../../src/infrastructure/api/dsiInternal/DsiInternalApiClient");
+jest.mock(
+  "../../../../src/infrastructure/api/dsiInternal/DsiInternalApiClient",
+);
 
 describe("Directories API wrapper", () => {
   const internalClient = jest.mocked(DsiInternalApiClient);
@@ -21,7 +26,7 @@ describe("Directories API wrapper", () => {
         throw new Error(errorMessage);
       });
 
-      expect(() => new Directories).toThrow(errorMessage);
+      expect(() => new Directories()).toThrow(errorMessage);
     });
   });
 
@@ -47,7 +52,9 @@ describe("Directories API wrapper", () => {
         await directories.deactivateUser("user", "reason", "correlation");
 
         expect(internalClient.prototype.requestRaw).toHaveBeenCalled();
-        expect(internalClient.prototype.requestRaw.mock.calls[0][0]).toEqual(ApiRequestMethod.POST);
+        expect(internalClient.prototype.requestRaw.mock.calls[0][0]).toEqual(
+          ApiRequestMethod.POST,
+        );
       });
 
       it("it calls requestRaw to the /users/ID/deactivate path with the passed user ID", async () => {
@@ -55,7 +62,9 @@ describe("Directories API wrapper", () => {
         await directories.deactivateUser(userId, "reason", "");
 
         expect(internalClient.prototype.requestRaw).toHaveBeenCalled();
-        expect(internalClient.prototype.requestRaw.mock.calls[0][1]).toEqual(`/users/${userId}/deactivate`);
+        expect(internalClient.prototype.requestRaw.mock.calls[0][1]).toEqual(
+          `/users/${userId}/deactivate`,
+        );
       });
 
       it("it calls requestRaw with the passed correlation ID", async () => {
@@ -65,8 +74,8 @@ describe("Directories API wrapper", () => {
         expect(internalClient.prototype.requestRaw).toHaveBeenCalled();
         expect(internalClient.prototype.requestRaw.mock.calls[0][2]).toEqual({
           correlationId,
-          "body": {
-            "reason": "reason",
+          body: {
+            reason: "reason",
           },
         });
       });
@@ -83,7 +92,7 @@ describe("Directories API wrapper", () => {
           expect(error).toBeInstanceOf(Error);
           expect(error).toHaveProperty(
             "message",
-            `deactivateUser response body text parse failed "${errorMessage}"`
+            `deactivateUser response body text parse failed "${errorMessage}"`,
           );
         }
       });
@@ -91,27 +100,26 @@ describe("Directories API wrapper", () => {
       it("it returns true if the response body's text is 'true'", async () => {
         setRequestRawResponse("true");
 
-        expect(await directories.deactivateUser("","", "")).toEqual(true);
+        expect(await directories.deactivateUser("", "", "")).toEqual(true);
       });
 
-      it.each([
-        "false",
-        "",
-        "123",
-        null,
-        undefined
-      ])("it returns false if the response body's text is not 'true' (%p)", async (text) => {
-        setRequestRawResponse(text);
+      it.each(["false", "", "123", null, undefined])(
+        "it returns false if the response body's text is not 'true' (%p)",
+        async (text) => {
+          setRequestRawResponse(text);
 
-        expect(await directories.deactivateUser("", "", "")).toEqual(false);
-      });
+          expect(await directories.deactivateUser("", "", "")).toEqual(false);
+        },
+      );
 
       it("it rejects with requestRaw's error if requestRaw rejects", async () => {
         const errorMessage = "This is a test error";
-        internalClient.prototype.requestRaw.mockRejectedValue(new Error(errorMessage));
+        internalClient.prototype.requestRaw.mockRejectedValue(
+          new Error(errorMessage),
+        );
 
         try {
-          await directories.deactivateUser("","", "");
+          await directories.deactivateUser("", "", "");
         } catch (error) {
           expect(error).toBeInstanceOf(Error);
           expect(error).toHaveProperty("message", errorMessage);
@@ -124,7 +132,9 @@ describe("Directories API wrapper", () => {
         await directories.deleteUserCode("user", "correlation");
 
         expect(internalClient.prototype.requestRaw).toHaveBeenCalled();
-        expect(internalClient.prototype.requestRaw.mock.calls[0][0]).toEqual(ApiRequestMethod.DELETE);
+        expect(internalClient.prototype.requestRaw.mock.calls[0][0]).toEqual(
+          ApiRequestMethod.DELETE,
+        );
       });
 
       it("it calls requestRaw to the /userCodes/ID path with the passed user ID", async () => {
@@ -132,7 +142,9 @@ describe("Directories API wrapper", () => {
         await directories.deleteUserCode(userId, "");
 
         expect(internalClient.prototype.requestRaw).toHaveBeenCalled();
-        expect(internalClient.prototype.requestRaw.mock.calls[0][1]).toEqual(`/userCodes/${userId}`);
+        expect(internalClient.prototype.requestRaw.mock.calls[0][1]).toEqual(
+          `/userCodes/${userId}`,
+        );
       });
 
       it("it calls requestRaw with the passed correlation ID", async () => {
@@ -141,7 +153,7 @@ describe("Directories API wrapper", () => {
 
         expect(internalClient.prototype.requestRaw).toHaveBeenCalled();
         expect(internalClient.prototype.requestRaw.mock.calls[0][2]).toEqual({
-          correlationId
+          correlationId,
         });
       });
 
@@ -153,22 +165,22 @@ describe("Directories API wrapper", () => {
         expect(await directories.deleteUserCode("", "")).toEqual(true);
       });
 
-      it.each([
-        201,
-        202,
-        302,
-        304,
-      ])("it returns false if the response status is not 200 (%p)", async (status) => {
-        internalClient.prototype.requestRaw.mockResolvedValue({
-          status,
-        } as Response);
+      it.each([201, 202, 302, 304])(
+        "it returns false if the response status is not 200 (%p)",
+        async (status) => {
+          internalClient.prototype.requestRaw.mockResolvedValue({
+            status,
+          } as Response);
 
-        expect(await directories.deleteUserCode("", "")).toEqual(false);
-      });
+          expect(await directories.deleteUserCode("", "")).toEqual(false);
+        },
+      );
 
       it("it rejects with requestRaw's error if requestRaw rejects", async () => {
         const errorMessage = "This is a test error";
-        internalClient.prototype.requestRaw.mockRejectedValue(new Error(errorMessage));
+        internalClient.prototype.requestRaw.mockRejectedValue(
+          new Error(errorMessage),
+        );
 
         try {
           await directories.deleteUserCode("", "");

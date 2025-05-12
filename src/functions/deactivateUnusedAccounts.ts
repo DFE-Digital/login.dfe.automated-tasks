@@ -1,9 +1,15 @@
 import { InvocationContext, Timer } from "@azure/functions";
-import { initialiseUser, User } from "../infrastructure/database/directories/User";
+import {
+  initialiseUser,
+  User,
+} from "../infrastructure/database/directories/User";
 import { Op, Sequelize } from "sequelize";
 import { Directories } from "../infrastructure/api/dsiInternal/Directories";
 import { AuditLogger } from "../infrastructure/AuditLogger";
-import { connection, DatabaseName } from "../infrastructure/database/common/connection";
+import {
+  connection,
+  DatabaseName,
+} from "../infrastructure/database/common/connection";
 import { filterResults } from "./utils/filterResults";
 
 /**
@@ -14,12 +20,20 @@ import { filterResults } from "./utils/filterResults";
  *
  * @throws Error if any infrastructure connections fail, all user deactivations fail, or batched audit logging fails.
  */
-export async function deactivateUnusedAccounts(_: Timer, context: InvocationContext): Promise<void> {
+export async function deactivateUnusedAccounts(
+  _: Timer,
+  context: InvocationContext,
+): Promise<void> {
   try {
     const batchSize = 100;
     const directoriesApi = new Directories();
     const auditLogger = new AuditLogger();
-    const targetDate = Sequelize.fn("DATEADD", Sequelize.literal("YEAR"), -2, Sequelize.fn("GETDATE"));
+    const targetDate = Sequelize.fn(
+      "DATEADD",
+      Sequelize.literal("YEAR"),
+      -2,
+      Sequelize.fn("GETDATE"),
+    );
 
     initialiseUser(connection(DatabaseName.Directories));
 
@@ -48,44 +62,65 @@ export async function deactivateUnusedAccounts(_: Timer, context: InvocationCont
     for (let index = 0; index < users.length; index += batchSize) {
       const batch = users.slice(index, index + batchSize);
       const userRange = `${index + 1} to ${index + batch.length}`;
-      const deactivationReason = "Automated task - Deactivate accounts with 2 years of inactivity.";
+      const deactivationReason =
+        "Automated task - Deactivate accounts with 2 years of inactivity.";
       context.info(`deactivateUnusedAccounts: Deactivating users ${userRange}`);
 
-      const { successful, failed, errored } = filterResults<Pick<User, "id" | "email">>(
-        await Promise.allSettled(batch.map(async (user) => ({
-          object: user,
-          success: await directoriesApi.deactivateUser(user.id, deactivationReason, context.invocationId),
-        })))
+      const { successful, failed, errored } = filterResults<
+        Pick<User, "id" | "email">
+      >(
+        await Promise.allSettled(
+          batch.map(async (user) => ({
+            object: user,
+            success: await directoriesApi.deactivateUser(
+              user.id,
+              deactivationReason,
+              context.invocationId,
+            ),
+          })),
+        ),
       );
 
-      context.info(`deactivateUnusedAccounts: ${successful.count} successful, ${failed.count} failed, and ${errored.count} errored deactivations for users ${userRange}`);
+      context.info(
+        `deactivateUnusedAccounts: ${successful.count} successful, ${failed.count} failed, and ${errored.count} errored deactivations for users ${userRange}`,
+      );
 
       if (errored.count > 0) {
-        errored.errors.forEach((error) => context.error(`deactivateUnusedAccounts: ${error}`));
+        errored.errors.forEach((error) =>
+          context.error(`deactivateUnusedAccounts: ${error}`),
+        );
       }
       if (errored.count === batch.length) {
-        throw new Error("Entire batch had an error, failing execution so it can retry.");
+        throw new Error(
+          "Entire batch had an error, failing execution so it can retry.",
+        );
       }
 
       if (successful.count > 0) {
-        context.info(`deactivateUnusedAccounts: Sending audit messages for the ${successful.count} successful deactivations`);
-        await auditLogger.batchedLog(successful.objects.map((user) => ({
-          message: `Automated deactivation of user ${user.email} (id: ${user.id.toUpperCase()})`,
-          type: "support",
-          subType: "user-edit",
-          meta: {
-            reason: deactivationReason,
-            editedUser: user.id.toUpperCase(),
-            editedFields: [{
-              name: "status",
-              oldValue: 1,
-              newValue: 0,
-            }],
-          },
-        })));
+        context.info(
+          `deactivateUnusedAccounts: Sending audit messages for the ${successful.count} successful deactivations`,
+        );
+        await auditLogger.batchedLog(
+          successful.objects.map((user) => ({
+            message: `Automated deactivation of user ${user.email} (id: ${user.id.toUpperCase()})`,
+            type: "support",
+            subType: "user-edit",
+            meta: {
+              reason: deactivationReason,
+              editedUser: user.id.toUpperCase(),
+              editedFields: [
+                {
+                  name: "status",
+                  oldValue: 1,
+                  newValue: 0,
+                },
+              ],
+            },
+          })),
+        );
       }
     }
   } catch (error) {
     throw new Error(`deactivateUnusedAccounts: ${error.message}`);
   }
-};
+}

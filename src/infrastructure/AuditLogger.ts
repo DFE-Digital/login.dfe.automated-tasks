@@ -11,22 +11,22 @@ export enum AuditLevel {
   Audit = "audit",
   Warning = "warning",
   Error = "error",
-};
+}
 
 /**
  * Audit log fields.
  */
 export interface AuditLog {
-  level?: AuditLevel,
-  message: string,
-  application?: string,
-  env?: string,
-  type: string,
-  subType?: string,
-  userId?: string,
-  organisationid?: string,
-  meta?: Record<string, object | number | string>,
-};
+  level?: AuditLevel;
+  message: string;
+  application?: string;
+  env?: string;
+  type: string;
+  subType?: string;
+  userId?: string;
+  organisationid?: string;
+  meta?: Record<string, object | number | string>;
+}
 
 /**
  * A logger for auditing messages to the DSi audit tables via a service bus.
@@ -38,16 +38,25 @@ export class AuditLogger {
    * Instantiates a logger {@link AuditLogger} to log records to the DSi audit tables.
    */
   constructor() {
-    checkEnv(["AUDIT_CONNECTION_STRING", "AUDIT_TOPIC_NAME"], "audit service bus");
+    checkEnv(
+      ["AUDIT_CONNECTION_STRING", "AUDIT_TOPIC_NAME"],
+      "audit service bus",
+    );
 
-    const options = (process.env.DEBUG?.toLowerCase() === "true") ? {
-      webSocketOptions: {
-        webSocket: WebSocket,
-      },
-    } : {};
+    const options =
+      process.env.DEBUG?.toLowerCase() === "true"
+        ? {
+            webSocketOptions: {
+              webSocket: WebSocket,
+            },
+          }
+        : {};
 
-    this.serviceBus = new ServiceBusClient(process.env.AUDIT_CONNECTION_STRING, options);
-  };
+    this.serviceBus = new ServiceBusClient(
+      process.env.AUDIT_CONNECTION_STRING,
+      options,
+    );
+  }
 
   /**
    * Adds default values for optional audit log fields and turn into the service bus format.
@@ -73,7 +82,7 @@ export class AuditLogger {
     return {
       body: JSON.stringify([JSON.stringify(formattedRecord)]),
     };
-  };
+  }
 
   /**
    * Logs multiple records in batches to the service bus so it can go into the DSi audit tables.
@@ -90,14 +99,18 @@ export class AuditLogger {
       const batch = records.slice(index, index + batchSize);
 
       try {
-        await sender.sendMessages(batch.map(record => this.formatLog(record)));
+        await sender.sendMessages(
+          batch.map((record) => this.formatLog(record)),
+        );
       } catch (error) {
-        throw new Error(`Audit service bus message failed to send with error "${error.message}"`);
+        throw new Error(
+          `Audit service bus message failed to send with error "${error.message}"`,
+        );
       }
     }
 
     await sender.close();
-  };
+  }
 
   /**
    * Logs a record to the service bus so it can go into the DSi audit tables.
@@ -112,9 +125,11 @@ export class AuditLogger {
     try {
       await sender.sendMessages(this.formatLog(record));
     } catch (error) {
-      throw new Error(`Audit service bus message failed to send with error "${error.message}"`);
+      throw new Error(
+        `Audit service bus message failed to send with error "${error.message}"`,
+      );
     }
 
     await sender.close();
-  };
-};
+  }
+}

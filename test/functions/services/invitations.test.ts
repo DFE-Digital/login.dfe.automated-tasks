@@ -1,14 +1,23 @@
-import { deleteInvitationApiRecords, deleteInvitationDbRecords, getInvitationApiRecords } from "../../../src/functions/services/invitations";
+import {
+  deleteInvitationApiRecords,
+  deleteInvitationDbRecords,
+  getInvitationApiRecords,
+} from "../../../src/functions/services/invitations";
 import { Access } from "../../../src/infrastructure/api/dsiInternal/Access";
 import { Organisations } from "../../../src/infrastructure/api/dsiInternal/Organisations";
 import { Invitation } from "../../../src/infrastructure/database/directories/Invitation";
 import { InvitationCallback } from "../../../src/infrastructure/database/directories/InvitationCallback";
-import { generateInvitationOrganisations, generateInvitationServices } from "../../testUtils";
+import {
+  generateInvitationOrganisations,
+  generateInvitationServices,
+} from "../../testUtils";
 
 jest.mock("../../../src/infrastructure/api/dsiInternal/Access");
 jest.mock("../../../src/infrastructure/api/dsiInternal/Organisations");
 jest.mock("../../../src/infrastructure/database/directories/Invitation");
-jest.mock("../../../src/infrastructure/database/directories/InvitationCallback");
+jest.mock(
+  "../../../src/infrastructure/database/directories/InvitationCallback",
+);
 
 describe("Common invitation handling functions", () => {
   describe("getInvitationApiRecords", () => {
@@ -30,7 +39,10 @@ describe("Common invitation handling functions", () => {
       await getInvitationApiRecords(apiClients, invitationId, correlationId);
 
       expect(accessMock.getInvitationServices).toHaveBeenCalled();
-      expect(accessMock.getInvitationServices).toHaveBeenCalledWith(invitationId, correlationId);
+      expect(accessMock.getInvitationServices).toHaveBeenCalledWith(
+        invitationId,
+        correlationId,
+      );
     });
 
     it("it attempts to retrieve the invitation's organisations using the invitation and correlation IDs", async () => {
@@ -39,25 +51,35 @@ describe("Common invitation handling functions", () => {
       await getInvitationApiRecords(apiClients, invitationId, correlationId);
 
       expect(organisationsMock.getInvitationOrganisations).toHaveBeenCalled();
-      expect(organisationsMock.getInvitationOrganisations).toHaveBeenCalledWith(invitationId, correlationId);
+      expect(organisationsMock.getInvitationOrganisations).toHaveBeenCalledWith(
+        invitationId,
+        correlationId,
+      );
     });
 
     it.each([
       ["services", accessMock.getInvitationServices],
       ["organisations", organisationsMock.getInvitationOrganisations],
-    ])("it rejects with an array containing the error if the invitation %p API call rejects", async (name, method) => {
-      const error = new Error(`Test Error ${name} API call`);
-      method.mockRejectedValue(error);
+    ])(
+      "it rejects with an array containing the error if the invitation %p API call rejects",
+      async (name, method) => {
+        const error = new Error(`Test Error ${name} API call`);
+        method.mockRejectedValue(error);
 
-      await expect(getInvitationApiRecords(apiClients, "", "")).rejects.toEqual([error]);
-    });
+        await expect(
+          getInvitationApiRecords(apiClients, "", ""),
+        ).rejects.toEqual([error]);
+      },
+    );
 
     it("it rejects with an array containing both errors if the invitation services and organisations API calls reject", async () => {
       const error = new Error("Test Error API call");
       accessMock.getInvitationServices.mockRejectedValue(error);
       organisationsMock.getInvitationOrganisations.mockRejectedValue(error);
 
-      await expect(getInvitationApiRecords(apiClients, "", "")).rejects.toEqual([error, error]);
+      await expect(getInvitationApiRecords(apiClients, "", "")).rejects.toEqual(
+        [error, error],
+      );
     });
 
     it("it returns an empty array for invitation services, if none are found", async () => {
@@ -95,7 +117,9 @@ describe("Common invitation handling functions", () => {
 
     it("it returns the invitation organisations found without any modification, if some are found", async () => {
       const organisations = generateInvitationOrganisations(2);
-      organisationsMock.getInvitationOrganisations.mockResolvedValue(organisations);
+      organisationsMock.getInvitationOrganisations.mockResolvedValue(
+        organisations,
+      );
       const result = await getInvitationApiRecords(apiClients, "", "");
 
       expect(result.organisations).toEqual(organisations);
@@ -105,7 +129,9 @@ describe("Common invitation handling functions", () => {
       const services = generateInvitationServices(2);
       accessMock.getInvitationServices.mockResolvedValue(services);
       const organisations = generateInvitationOrganisations(2);
-      organisationsMock.getInvitationOrganisations.mockResolvedValue(organisations);
+      organisationsMock.getInvitationOrganisations.mockResolvedValue(
+        organisations,
+      );
       const result = await getInvitationApiRecords(apiClients, "", "");
 
       expect(result).toEqual({
@@ -132,31 +158,41 @@ describe("Common invitation handling functions", () => {
       const invitationId = "test-inv";
       const correlationId = "test-correlation";
       const services = generateInvitationServices(2);
-      await deleteInvitationApiRecords(apiClients, invitationId, {
-        services,
-        organisations: [],
-      }, correlationId);
+      await deleteInvitationApiRecords(
+        apiClients,
+        invitationId,
+        {
+          services,
+          organisations: [],
+        },
+        correlationId,
+      );
 
       expect(accessMock.deleteInvitationService).toHaveBeenCalledTimes(2);
       expect(accessMock.deleteInvitationService).toHaveBeenCalledWith(
         invitationId,
         services[0].serviceId,
         services[0].organisationId,
-        correlationId
+        correlationId,
       );
       expect(accessMock.deleteInvitationService).toHaveBeenCalledWith(
         invitationId,
         services[1].serviceId,
         services[1].organisationId,
-        correlationId
+        correlationId,
       );
     });
 
     it("it doesn't attempt to delete invitation services if no records are passed in", async () => {
-      await deleteInvitationApiRecords(apiClients, "", {
-        services: [],
-        organisations: [],
-      }, "");
+      await deleteInvitationApiRecords(
+        apiClients,
+        "",
+        {
+          services: [],
+          organisations: [],
+        },
+        "",
+      );
 
       expect(accessMock.deleteInvitationService).not.toHaveBeenCalled();
     });
@@ -165,39 +201,62 @@ describe("Common invitation handling functions", () => {
       const invitationId = "test-inv";
       const correlationId = "test-correlation";
       const organisations = generateInvitationOrganisations(2);
-      await deleteInvitationApiRecords(apiClients, invitationId, {
-        services: [],
-        organisations,
-      }, correlationId);
+      await deleteInvitationApiRecords(
+        apiClients,
+        invitationId,
+        {
+          services: [],
+          organisations,
+        },
+        correlationId,
+      );
 
-      expect(organisationsMock.deleteInvitationOrganisation).toHaveBeenCalledTimes(2);
-      expect(organisationsMock.deleteInvitationOrganisation).toHaveBeenCalledWith(
+      expect(
+        organisationsMock.deleteInvitationOrganisation,
+      ).toHaveBeenCalledTimes(2);
+      expect(
+        organisationsMock.deleteInvitationOrganisation,
+      ).toHaveBeenCalledWith(
         invitationId,
         organisations[0].organisation.id,
-        correlationId
+        correlationId,
       );
-      expect(organisationsMock.deleteInvitationOrganisation).toHaveBeenCalledWith(
+      expect(
+        organisationsMock.deleteInvitationOrganisation,
+      ).toHaveBeenCalledWith(
         invitationId,
         organisations[1].organisation.id,
-        correlationId
+        correlationId,
       );
     });
 
     it("it doesn't attempt to delete all invitation organisations if no records are passed in", async () => {
-      await deleteInvitationApiRecords(apiClients, "", {
-        services: [],
-        organisations: [],
-      }, "");
+      await deleteInvitationApiRecords(
+        apiClients,
+        "",
+        {
+          services: [],
+          organisations: [],
+        },
+        "",
+      );
 
-      expect(organisationsMock.deleteInvitationOrganisation).not.toHaveBeenCalled();
+      expect(
+        organisationsMock.deleteInvitationOrganisation,
+      ).not.toHaveBeenCalled();
     });
 
     it("it returns an object with the invitation ID and true for success if all deletion requests are successful", async () => {
       const invitationId = "test-inv";
-      const result = await deleteInvitationApiRecords(apiClients, invitationId, {
-        services: generateInvitationServices(2),
-        organisations: generateInvitationOrganisations(2),
-      }, "");
+      const result = await deleteInvitationApiRecords(
+        apiClients,
+        invitationId,
+        {
+          services: generateInvitationServices(2),
+          organisations: generateInvitationOrganisations(2),
+        },
+        "",
+      );
 
       expect(result).toEqual({
         object: invitationId,
@@ -207,10 +266,15 @@ describe("Common invitation handling functions", () => {
 
     it("it returns an object with the invitation ID and true for success if no service/organisation records are passed in", async () => {
       const invitationId = "test-inv";
-      const result = await deleteInvitationApiRecords(apiClients, invitationId, {
-        services: [],
-        organisations: [],
-      }, "");
+      const result = await deleteInvitationApiRecords(
+        apiClients,
+        invitationId,
+        {
+          services: [],
+          organisations: [],
+        },
+        "",
+      );
 
       expect(result).toEqual({
         object: invitationId,
@@ -223,10 +287,15 @@ describe("Common invitation handling functions", () => {
       accessMock.deleteInvitationService.mockResolvedValueOnce(false);
       accessMock.deleteInvitationService.mockResolvedValueOnce(false);
       accessMock.deleteInvitationService.mockResolvedValue(true);
-      const result = await deleteInvitationApiRecords(apiClients, invitationId, {
-        services: generateInvitationServices(4),
-        organisations: [],
-      }, "");
+      const result = await deleteInvitationApiRecords(
+        apiClients,
+        invitationId,
+        {
+          services: generateInvitationServices(4),
+          organisations: [],
+        },
+        "",
+      );
 
       expect(result).toEqual({
         object: invitationId,
@@ -236,13 +305,22 @@ describe("Common invitation handling functions", () => {
 
     it("it returns an object with the invitation ID and false for success if some organisation deletion requests fail", async () => {
       const invitationId = "test-inv";
-      organisationsMock.deleteInvitationOrganisation.mockResolvedValueOnce(false);
-      organisationsMock.deleteInvitationOrganisation.mockResolvedValueOnce(false);
+      organisationsMock.deleteInvitationOrganisation.mockResolvedValueOnce(
+        false,
+      );
+      organisationsMock.deleteInvitationOrganisation.mockResolvedValueOnce(
+        false,
+      );
       organisationsMock.deleteInvitationOrganisation.mockResolvedValue(true);
-      const result = await deleteInvitationApiRecords(apiClients, invitationId, {
-        services: [],
-        organisations: generateInvitationOrganisations(4),
-      }, "");
+      const result = await deleteInvitationApiRecords(
+        apiClients,
+        invitationId,
+        {
+          services: [],
+          organisations: generateInvitationOrganisations(4),
+        },
+        "",
+      );
 
       expect(result).toEqual({
         object: invitationId,
@@ -254,10 +332,15 @@ describe("Common invitation handling functions", () => {
       const invitationId = "test-inv";
       accessMock.deleteInvitationService.mockResolvedValue(true);
       organisationsMock.deleteInvitationOrganisation.mockResolvedValue(false);
-      const result = await deleteInvitationApiRecords(apiClients, invitationId, {
-        services: generateInvitationServices(4),
-        organisations: generateInvitationOrganisations(4),
-      }, "");
+      const result = await deleteInvitationApiRecords(
+        apiClients,
+        invitationId,
+        {
+          services: generateInvitationServices(4),
+          organisations: generateInvitationOrganisations(4),
+        },
+        "",
+      );
 
       expect(result).toEqual({
         object: invitationId,
@@ -271,22 +354,40 @@ describe("Common invitation handling functions", () => {
       accessMock.deleteInvitationService.mockRejectedValueOnce(error1);
       accessMock.deleteInvitationService.mockRejectedValueOnce(error2);
 
-      await expect(deleteInvitationApiRecords(apiClients, "", {
-        services: generateInvitationServices(2),
-        organisations: [],
-      }, "")).rejects.toEqual([error1, error2]);
+      await expect(
+        deleteInvitationApiRecords(
+          apiClients,
+          "",
+          {
+            services: generateInvitationServices(2),
+            organisations: [],
+          },
+          "",
+        ),
+      ).rejects.toEqual([error1, error2]);
     });
 
     it("it rejects with an array of returned errors from any rejected organisation deletion requests", async () => {
       const error1 = new Error("Test API Error 1");
       const error2 = new Error("Test API Error 2");
-      organisationsMock.deleteInvitationOrganisation.mockRejectedValueOnce(error1);
-      organisationsMock.deleteInvitationOrganisation.mockRejectedValueOnce(error2);
+      organisationsMock.deleteInvitationOrganisation.mockRejectedValueOnce(
+        error1,
+      );
+      organisationsMock.deleteInvitationOrganisation.mockRejectedValueOnce(
+        error2,
+      );
 
-      await expect(deleteInvitationApiRecords(apiClients, "", {
-        services: [],
-        organisations: generateInvitationOrganisations(2),
-      }, "")).rejects.toEqual([error1, error2]);
+      await expect(
+        deleteInvitationApiRecords(
+          apiClients,
+          "",
+          {
+            services: [],
+            organisations: generateInvitationOrganisations(2),
+          },
+          "",
+        ),
+      ).rejects.toEqual([error1, error2]);
     });
 
     it("it rejects with an array of all errors returned from any rejected deletion requests", async () => {
@@ -294,13 +395,24 @@ describe("Common invitation handling functions", () => {
       const error2 = new Error("Test API Error 2");
       accessMock.deleteInvitationService.mockRejectedValueOnce(error1);
       accessMock.deleteInvitationService.mockRejectedValueOnce(error2);
-      organisationsMock.deleteInvitationOrganisation.mockRejectedValueOnce(error1);
-      organisationsMock.deleteInvitationOrganisation.mockRejectedValueOnce(error2);
+      organisationsMock.deleteInvitationOrganisation.mockRejectedValueOnce(
+        error1,
+      );
+      organisationsMock.deleteInvitationOrganisation.mockRejectedValueOnce(
+        error2,
+      );
 
-      await expect(deleteInvitationApiRecords(apiClients, "", {
-        services: generateInvitationServices(2),
-        organisations: generateInvitationOrganisations(2),
-      }, "")).rejects.toEqual([error1, error2, error1, error2]);
+      await expect(
+        deleteInvitationApiRecords(
+          apiClients,
+          "",
+          {
+            services: generateInvitationServices(2),
+            organisations: generateInvitationOrganisations(2),
+          },
+          "",
+        ),
+      ).rejects.toEqual([error1, error2, error1, error2]);
     });
   });
 
@@ -327,15 +439,18 @@ describe("Common invitation handling functions", () => {
     it.each([
       ["InvitationCallback", invitationCallbackMock],
       ["Invitation", invitationMock],
-    ])("it rejects with an error if any of the DB deletion queries throw an error (%p)", async (name, mock) => {
-      const errorMessage = `Test Error Query ${name}`;
-      mock.destroy.mockImplementation(() => {
-        throw new Error(errorMessage);
-      });
+    ])(
+      "it rejects with an error if any of the DB deletion queries throw an error (%p)",
+      async (name, mock) => {
+        const errorMessage = `Test Error Query ${name}`;
+        mock.destroy.mockImplementation(() => {
+          throw new Error(errorMessage);
+        });
 
-      await expect(deleteInvitationDbRecords([]))
-        .rejects
-        .toEqual(new Error(errorMessage));
-    });
+        await expect(deleteInvitationDbRecords([])).rejects.toEqual(
+          new Error(errorMessage),
+        );
+      },
+    );
   });
 });

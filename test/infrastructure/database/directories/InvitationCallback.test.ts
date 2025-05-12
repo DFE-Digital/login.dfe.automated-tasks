@@ -12,36 +12,39 @@ describe("InvitationCallback database model", () => {
       initialiseInvitationCallback(connection);
 
       expect(model.init).toHaveBeenCalled();
-      expect(model.init).toHaveBeenCalledWith({
-        invitationId: {
-          type: DataTypes.UUID,
-          primaryKey: true,
-          allowNull: false,
+      expect(model.init).toHaveBeenCalledWith(
+        {
+          invitationId: {
+            type: DataTypes.UUID,
+            primaryKey: true,
+            allowNull: false,
+          },
+          sourceId: {
+            type: DataTypes.STRING(255),
+            primaryKey: true,
+            allowNull: false,
+          },
+          callbackUrl: {
+            type: DataTypes.STRING(1024),
+            allowNull: false,
+          },
+          createdAt: {
+            type: DataTypes.DATE,
+            allowNull: false,
+          },
+          updatedAt: {
+            type: DataTypes.DATE,
+            allowNull: false,
+          },
+          clientId: {
+            type: DataTypes.STRING(50),
+          },
         },
-        sourceId: {
-          type: DataTypes.STRING(255),
-          primaryKey: true,
-          allowNull: false,
+        {
+          tableName: "invitation_callback",
+          sequelize: connection,
         },
-        callbackUrl: {
-          type: DataTypes.STRING(1024),
-          allowNull: false,
-        },
-        createdAt: {
-          type: DataTypes.DATE,
-          allowNull: false,
-        },
-        updatedAt: {
-          type: DataTypes.DATE,
-          allowNull: false,
-        },
-        clientId: {
-          type: DataTypes.STRING(50),
-        },
-      }, {
-        tableName: "invitation_callback",
-        sequelize: connection,
-      });
+      );
     });
   });
 });

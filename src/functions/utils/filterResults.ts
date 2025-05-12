@@ -2,8 +2,8 @@
  * Result of performing actions on objects, usually through the API, with the object used and whether the action(s) were successful.
  */
 export type actionResult<T> = {
-  object: T,
-  success: boolean,
+  object: T;
+  success: boolean;
 };
 
 /**
@@ -12,30 +12,32 @@ export type actionResult<T> = {
  * @param results - Settled promise results, to be filtered into different statuses.
  * @returns An object containing the count/objects for success/failed results, and the count/errors for errored results.
  */
-export function filterResults<T>(results: PromiseSettledResult<actionResult<T>>[]): {
+export function filterResults<T>(
+  results: PromiseSettledResult<actionResult<T>>[],
+): {
   successful: {
-    count: number,
-    objects: T[],
-  },
+    count: number;
+    objects: T[];
+  };
   failed: {
-    count: number,
-    objects: T[],
-  },
+    count: number;
+    objects: T[];
+  };
   errored: {
-    count: number,
-    errors: string[],
-  },
+    count: number;
+    errors: string[];
+  };
 } {
-  const successfulPromises = results.filter((result): result is PromiseFulfilledResult<actionResult<T>> =>
-    result.status === "fulfilled"
-    && result.value.success === true
+  const successfulPromises = results.filter(
+    (result): result is PromiseFulfilledResult<actionResult<T>> =>
+      result.status === "fulfilled" && result.value.success === true,
   );
-  const failedPromises = results.filter((result): result is PromiseFulfilledResult<actionResult<T>> =>
-    result.status === "fulfilled"
-    && result.value.success === false
+  const failedPromises = results.filter(
+    (result): result is PromiseFulfilledResult<actionResult<T>> =>
+      result.status === "fulfilled" && result.value.success === false,
   );
-  const erroredPromises = results.filter((result): result is PromiseRejectedResult =>
-    result.status === "rejected"
+  const erroredPromises = results.filter(
+    (result): result is PromiseRejectedResult => result.status === "rejected",
   );
   const errorReasons = erroredPromises.flatMap((rejection) => rejection.reason);
 
@@ -50,7 +52,13 @@ export function filterResults<T>(results: PromiseSettledResult<actionResult<T>>[
     },
     errored: {
       count: erroredPromises.length,
-      errors: [...new Set(errorReasons.map((reason) => (reason instanceof Error) ? reason.message : reason))],
+      errors: [
+        ...new Set(
+          errorReasons.map((reason) =>
+            reason instanceof Error ? reason.message : reason,
+          ),
+        ),
+      ],
     },
   };
-};
+}

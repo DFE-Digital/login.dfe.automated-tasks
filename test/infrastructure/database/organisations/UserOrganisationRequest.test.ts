@@ -12,54 +12,57 @@ describe("UserOrganisationRequest database model", () => {
       initialiseUserOrganisationRequest(connection);
 
       expect(model.init).toHaveBeenCalled();
-      expect(model.init).toHaveBeenCalledWith({
-        id: {
-          type: DataTypes.UUID,
-          defaultValue: DataTypes.UUIDV4,
-          primaryKey: true,
-          allowNull: false,
+      expect(model.init).toHaveBeenCalledWith(
+        {
+          id: {
+            type: DataTypes.UUID,
+            defaultValue: DataTypes.UUIDV4,
+            primaryKey: true,
+            allowNull: false,
+          },
+          userId: {
+            type: DataTypes.UUID,
+            field: "user_id",
+            allowNull: false,
+          },
+          organisationId: {
+            type: DataTypes.UUID,
+            field: "organisation_id",
+            allowNull: false,
+          },
+          status: {
+            type: DataTypes.SMALLINT,
+            allowNull: false,
+          },
+          reason: {
+            type: DataTypes.STRING(5000),
+          },
+          actionedAt: {
+            type: DataTypes.DATE,
+            field: "actioned_at",
+          },
+          actionedBy: {
+            type: DataTypes.UUID,
+            field: "actioned_by",
+          },
+          actionedReason: {
+            type: DataTypes.STRING(5000),
+            field: "actioned_reason",
+          },
+          createdAt: {
+            type: DataTypes.DATE,
+            allowNull: false,
+          },
+          updatedAt: {
+            type: DataTypes.DATE,
+            allowNull: false,
+          },
         },
-        userId: {
-          type: DataTypes.UUID,
-          field: "user_id",
-          allowNull: false,
+        {
+          tableName: "user_organisation_requests",
+          sequelize: connection,
         },
-        organisationId: {
-          type: DataTypes.UUID,
-          field: "organisation_id",
-          allowNull: false,
-        },
-        status: {
-          type: DataTypes.SMALLINT,
-          allowNull: false,
-        },
-        reason: {
-          type: DataTypes.STRING(5000),
-        },
-        actionedAt: {
-          type: DataTypes.DATE,
-          field: "actioned_at",
-        },
-        actionedBy: {
-          type: DataTypes.UUID,
-          field: "actioned_by",
-        },
-        actionedReason: {
-          type: DataTypes.STRING(5000),
-          field: "actioned_reason",
-        },
-        createdAt: {
-          type: DataTypes.DATE,
-          allowNull: false,
-        },
-        updatedAt: {
-          type: DataTypes.DATE,
-          allowNull: false,
-        },
-      }, {
-        tableName: "user_organisation_requests",
-        sequelize: connection,
-      });
+      );
     });
   });
 });

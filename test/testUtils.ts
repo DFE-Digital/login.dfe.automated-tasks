@@ -1,7 +1,13 @@
 /* istanbul ignore file */
 
-import { type invitationServiceRecord, type userServiceRecord } from "../src/infrastructure/api/dsiInternal/Access";
-import { type invitationOrganisationRecord, type userOrganisationRecord } from "../src/infrastructure/api/dsiInternal/Organisations";
+import {
+  type invitationServiceRecord,
+  type userServiceRecord,
+} from "../src/infrastructure/api/dsiInternal/Access";
+import {
+  type invitationOrganisationRecord,
+  type userOrganisationRecord,
+} from "../src/infrastructure/api/dsiInternal/Organisations";
 import { Invitation } from "../src/infrastructure/database/directories/Invitation";
 import { User } from "../src/infrastructure/database/directories/User";
 
@@ -18,7 +24,7 @@ export function generateInvitation(
   email: string,
   properties: Partial<Invitation> = {},
 ): Invitation {
-  return ({
+  return {
     id,
     email,
     code: properties.code ?? "",
@@ -44,8 +50,8 @@ export function generateInvitation(
     orgName: properties.orgName ?? null,
     codeMetaData: properties.codeMetaData ?? null,
     callbacks: properties.callbacks ?? [],
-  }) as Invitation;
-};
+  } as Invitation;
+}
 
 /**
  * Generates a specified amount of test Invitation objects.
@@ -56,11 +62,14 @@ export function generateInvitation(
  * @param properties - Additional properties to be applied to all invitations.
  * @returns An array of {@link Invitation} objects without a sequelize connection for testing.
  */
-export function generateInvitations(amount: number, properties: Partial<Invitation> = {}): Invitation[] {
-  return Array
-    .from({ length: amount })
-    .map((_, index ) => generateInvitation(`inv-${index}`, `test+${index}@email`, properties));
-};
+export function generateInvitations(
+  amount: number,
+  properties: Partial<Invitation> = {},
+): Invitation[] {
+  return Array.from({ length: amount }).map((_, index) =>
+    generateInvitation(`inv-${index}`, `test+${index}@email`, properties),
+  );
+}
 
 /**
  * Generates a test User without a sequelize connection for testing.
@@ -75,7 +84,7 @@ export function generateUser(
   email: string,
   properties: Partial<User> = {},
 ): User {
-  return ({
+  return {
     id,
     email,
     firstName: properties.firstName ?? "",
@@ -95,8 +104,8 @@ export function generateUser(
     entraId: properties.entraId ?? null,
     entraLinkedAt: properties.entraLinkedAt ?? null,
     passwordPolicies: properties.passwordPolicies ?? [],
-  }) as User;
-};
+  } as User;
+}
 
 /**
  * Generates a specified amount of test User objects.
@@ -107,11 +116,14 @@ export function generateUser(
  * @param properties - Additional properties to be applied to all users.
  * @returns An array of {@link User} objects without a sequelize connection for testing.
  */
-export function generateUsers(amount: number, properties: Partial<User> = {}): User[] {
-  return Array
-    .from({ length: amount })
-    .map((_, index ) => generateUser(`user-${index}`, `test+${index}@email`, properties));
-};
+export function generateUsers(
+  amount: number,
+  properties: Partial<User> = {},
+): User[] {
+  return Array.from({ length: amount }).map((_, index) =>
+    generateUser(`user-${index}`, `test+${index}@email`, properties),
+  );
+}
 
 /**
  * Generates a test invitationServiceRecord object for testing.
@@ -128,15 +140,15 @@ export function generateInvitationService(
   orgId: string,
   properties: Partial<invitationServiceRecord> = {},
 ): invitationServiceRecord {
-  return ({
+  return {
     invitationId,
     serviceId,
     organisationId: orgId,
     roles: properties.roles ?? [],
     identifiers: properties.identifiers ?? [],
     accessGrantedOn: properties.accessGrantedOn ?? "",
-  });
-};
+  };
+}
 
 /**
  * Generates a specified amount of test invitationServiceRecord objects.
@@ -160,15 +172,15 @@ export function generateInvitationServices(
   orgId?: string,
   properties: Partial<invitationServiceRecord> = {},
 ): invitationServiceRecord[] {
-  return Array
-    .from({ length: amount })
-    .map((_, index ) => generateInvitationService(
+  return Array.from({ length: amount }).map((_, index) =>
+    generateInvitationService(
       invitationId ?? `inv-${index}`,
       serviceId ?? `svc-${index}`,
       orgId ?? `org-${index}`,
       properties,
-    ));
-};
+    ),
+  );
+}
 
 /**
  * Generates a test userServiceRecord object for testing.
@@ -185,15 +197,15 @@ export function generateUserService(
   orgId: string,
   properties: Partial<userServiceRecord> = {},
 ): userServiceRecord {
-  return ({
+  return {
     userId,
     serviceId,
     organisationId: orgId,
     roles: properties.roles ?? [],
     identifiers: properties.identifiers ?? [],
     accessGrantedOn: properties.accessGrantedOn ?? "",
-  });
-};
+  };
+}
 
 /**
  * Generates a specified amount of test userServiceRecord objects.
@@ -217,15 +229,15 @@ export function generateUserServices(
   orgId?: string,
   properties: Partial<userServiceRecord> = {},
 ): userServiceRecord[] {
-  return Array
-    .from({ length: amount })
-    .map((_, index ) => generateUserService(
+  return Array.from({ length: amount }).map((_, index) =>
+    generateUserService(
       userId ?? `user-${index}`,
       serviceId ?? `svc-${index}`,
       orgId ?? `org-${index}`,
       properties,
-    ));
-};
+    ),
+  );
+}
 
 /**
  * Generates a test invitationOrganisationRecord object for testing.
@@ -242,7 +254,7 @@ export function generateInvitationOrganisation(
   organisation: Partial<invitationOrganisationRecord["organisation"]> = {},
   properties: Partial<invitationOrganisationRecord> = {},
 ): invitationOrganisationRecord {
-  return ({
+  return {
     invitationId,
     organisation: {
       id: orgId,
@@ -258,8 +270,8 @@ export function generateInvitationOrganisation(
     },
     approvers: properties.approvers ?? [],
     services: properties.services ?? [],
-  });
-};
+  };
+}
 
 /**
  * Generates a specified amount of test invitationOrganisationRecord objects.
@@ -282,15 +294,15 @@ export function generateInvitationOrganisations(
   organisation: Partial<invitationOrganisationRecord["organisation"]> = {},
   properties: Partial<invitationOrganisationRecord> = {},
 ): invitationOrganisationRecord[] {
-  return Array
-    .from({ length: amount })
-    .map((_, index ) => generateInvitationOrganisation(
+  return Array.from({ length: amount }).map((_, index) =>
+    generateInvitationOrganisation(
       invitationId ?? `inv-${index}`,
       orgId ?? `org-${index}`,
       organisation,
       properties,
-    ));
-};
+    ),
+  );
+}
 
 /**
  * Generates a test userOrganisationRecord object for testing.
@@ -305,7 +317,7 @@ export function generateUserOrganisation(
   organisation: Partial<userOrganisationRecord["organisation"]> = {},
   properties: Partial<userOrganisationRecord> = {},
 ): userOrganisationRecord {
-  return ({
+  return {
     organisation: {
       id: orgId,
       name: organisation.name ?? "",
@@ -344,9 +356,12 @@ export function generateUserOrganisation(
       MasterProviderStatusName: organisation.MasterProviderStatusName ?? null,
       MasterProviderStatusCode: organisation.MasterProviderStatusCode ?? null,
       OpenedOn: organisation.OpenedOn ?? null,
-      DistrictAdministrativeName: organisation.DistrictAdministrativeName ?? null,
-      DistrictAdministrativeCode: organisation.DistrictAdministrativeCode ?? null,
-      DistrictAdministrative_code: organisation.DistrictAdministrative_code ?? null,
+      DistrictAdministrativeName:
+        organisation.DistrictAdministrativeName ?? null,
+      DistrictAdministrativeCode:
+        organisation.DistrictAdministrativeCode ?? null,
+      DistrictAdministrative_code:
+        organisation.DistrictAdministrative_code ?? null,
       IsOnAPAR: organisation.IsOnAPAR ?? null,
     },
     role: properties.role ?? {
@@ -357,8 +372,8 @@ export function generateUserOrganisation(
     endUsers: properties.endUsers ?? [],
     numericIdentifier: properties.numericIdentifier,
     textIdentifier: properties.textIdentifier,
-  });
-};
+  };
+}
 
 /**
  * Generates a specified amount of test invitationOrganisationRecord objects.
@@ -377,11 +392,7 @@ export function generateUserOrganisations(
   organisation: Partial<userOrganisationRecord["organisation"]> = {},
   properties: Partial<userOrganisationRecord> = {},
 ): userOrganisationRecord[] {
-  return Array
-    .from({ length: amount })
-    .map((_, index ) => generateUserOrganisation(
-      orgId ?? `org-${index}`,
-      organisation,
-      properties,
-    ));
-};
+  return Array.from({ length: amount }).map((_, index) =>
+    generateUserOrganisation(orgId ?? `org-${index}`, organisation, properties),
+  );
+}
