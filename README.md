@@ -22,8 +22,11 @@ Automated tasks run on schedules or triggered manually to carry out BAU activiti
 - `deactivateUnusedAccounts`:
   - Default Timer: Midnight on the first day of every month.
   - Description: Deactivates and creates audit records for any users whose last login is older than 2 years from the current run date, or if their account was created over 2 years from the current run date and they never logged in since verifying their email address.
+- `rejectOldOrganisationRequests`:
+  - Default Timer: Midnight on every Monday.
+  - Description: Rejects any organisation requests that are overdue and were created over 3 months ago.
 - `removeGeneratedTestAccounts`:
-  - Default timer: Midnight on every Monday.
+  - Default Timer: Midnight on every Monday.
   - Description: Removes any records for users/invitations generated automatically by the test team as part of their regression testing.
 - `removeUnresolvedInvitations`:
   - Default Timer: Midnight on the first day of every month.
@@ -50,6 +53,7 @@ To ease local running/debugging of these functions, please install the recommend
     "AzureFunctionsJobHost__logging__logLevel__default": "Trace",
     "DEBUG": "true",
     "TIMER_DEACTIVATE_UNUSED_ACCOUNTS": "0 0 0 1 * *",
+    "TIMER_REJECT_OLD_ORGANISATION_REQUESTS": "0 0 0 * * 1",
     "TIMER_REMOVE_GENERATED_TEST_ACCOUNTS": "0 0 0 * * 1",
     "TIMER_REMOVE_UNRESOLVED_INVITATIONS": "0 0 0 1 * *",
     "DATABASE_DIRECTORIES_HOST": "",
@@ -92,6 +96,7 @@ To ease local running/debugging of these functions, please install the recommend
 | AzureFunctionsJobHost__logging__logLevel__default | Sets the log level for the locally running functions, to set what is shown/hidden in the debug console. | Change to one of the following values: `Trace`, `Debug`, `Information`, `Warning`, `Error`, `Critical`. | `Trace` |
 | DEBUG | Turns on additional logging for sequelize, lowers the log level for MSAL to info instead of error, and connects to service bus via Websockets to get around the VPN all to assist with debugging issues. | Simple toggle, change to `false` to disable additional logging. | `true` |
 | TIMER_DEACTIVATE_UNUSED_ACCOUNTS | The NCronTab expression that sets the schedule for the `deactivateUnusedAccounts` function (`./src/functions/deactivateUnusedAccounts`). | Read the [documentation on NCrontab formatting](https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-timer?tabs=python-v2%2Cisolated-process%2Cnodejs-v4&pivots=programming-language-typescript#ncrontab-expressions) and use a [tester](https://ncrontab.swimburger.net/) to verify your expression runs as you'd expect. | `0 0 0 1 * *` Runs at 12AM UTC on the first day of every month. |
+| TIMER_REJECT_OLD_ORGANISATION_REQUESTS | The NCronTab expression that sets the schedule for the `rejectOldOrganisationRequests` function (`./src/functions/rejectOldOrganisationRequests`). | Read the [documentation on NCrontab formatting](https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-timer?tabs=python-v2%2Cisolated-process%2Cnodejs-v4&pivots=programming-language-typescript#ncrontab-expressions) and use a [tester](https://ncrontab.swimburger.net/) to verify your expression runs as you'd expect. | `0 0 0 * * 1` Runs at 12AM UTC on every Monday. |
 | TIMER_REMOVE_GENERATED_TEST_ACCOUNTS | The NCronTab expression that sets the schedule for the `removeGeneratedTestAccounts` function (`./src/functions/removeGeneratedTestAccounts`). | Read the [documentation on NCrontab formatting](https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-timer?tabs=python-v2%2Cisolated-process%2Cnodejs-v4&pivots=programming-language-typescript#ncrontab-expressions) and use a [tester](https://ncrontab.swimburger.net/) to verify your expression runs as you'd expect. | `0 0 0 * * 1` Runs at 12AM UTC on every Monday. |
 | TIMER_REMOVE_UNRESOLVED_INVITATIONS | The NCronTab expression that sets the schedule for the `removeUnresolvedInvitations` function (`./src/functions/removeUnresolvedInvitations`). | Read the [documentation on NCrontab formatting](https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-timer?tabs=python-v2%2Cisolated-process%2Cnodejs-v4&pivots=programming-language-typescript#ncrontab-expressions) and use a [tester](https://ncrontab.swimburger.net/) to verify your expression runs as you'd expect. | `0 0 0 1 * *` Runs at 12AM UTC on the first day of every month. |
 | DATABASE_DIRECTORIES_HOST | The directories database hostname/URL. | Retrieve from KeyVault (Key name: `platformGlobalServerName`) or other database connections. | `""`
