@@ -235,6 +235,96 @@ describe("Organisations API wrapper", () => {
       });
     });
 
+    describe("updateOrganisationRequest", () => {
+      it("it calls requestRaw using the PATCH method", async () => {
+        await organisations.updateOrganisationRequest(
+          "req-1",
+          {},
+          "correlation",
+        );
+
+        expect(internalClient.prototype.requestRaw).toHaveBeenCalled();
+        expect(internalClient.prototype.requestRaw.mock.calls[0][0]).toEqual(
+          ApiRequestMethod.PATCH,
+        );
+      });
+
+      it("it calls requestRaw to the correct path with the passed request ID", async () => {
+        const reqId = "test-123";
+        await organisations.updateOrganisationRequest(reqId, {}, "");
+
+        expect(internalClient.prototype.requestRaw).toHaveBeenCalled();
+        expect(internalClient.prototype.requestRaw.mock.calls[0][1]).toEqual(
+          `/organisations/requests/${reqId}`,
+        );
+      });
+
+      it("it calls requestRaw with the passed correlation ID", async () => {
+        const correlationId = "test-123";
+        await organisations.updateOrganisationRequest("", {}, correlationId);
+
+        expect(internalClient.prototype.requestRaw).toHaveBeenCalled();
+        expect(
+          internalClient.prototype.requestRaw.mock.calls[0][2],
+        ).toHaveProperty("correlationId", correlationId);
+      });
+
+      it("it calls requestRaw with an empty object body if no properties are passed in", async () => {
+        await organisations.updateOrganisationRequest("", {}, "");
+
+        expect(internalClient.prototype.requestRaw).toHaveBeenCalled();
+        expect(
+          internalClient.prototype.requestRaw.mock.calls[0][2],
+        ).toHaveProperty("body", {});
+      });
+
+      it("it calls requestRaw with an object body only containing the properties passed in", async () => {
+        const properties = {
+          status: -1,
+          actioned_at: Date.now(),
+        };
+        await organisations.updateOrganisationRequest("", properties, "");
+
+        expect(internalClient.prototype.requestRaw).toHaveBeenCalled();
+        expect(
+          internalClient.prototype.requestRaw.mock.calls[0][2],
+        ).toHaveProperty("body", properties);
+      });
+
+      it("it returns true if the response status is 202", async () => {
+        setRequestRawResponse(202);
+
+        expect(
+          await organisations.updateOrganisationRequest("", {}, ""),
+        ).toEqual(true);
+      });
+
+      it.each([201, 204, 302, 304])(
+        "it returns false if the response status is not 202 (%p)",
+        async (status) => {
+          setRequestRawResponse(status);
+
+          expect(
+            await organisations.updateOrganisationRequest("", {}, ""),
+          ).toEqual(false);
+        },
+      );
+
+      it("it rejects with requestRaw's error if requestRaw rejects", async () => {
+        const errorMessage = "This is a test error";
+        internalClient.prototype.requestRaw.mockRejectedValue(
+          new Error(errorMessage),
+        );
+
+        try {
+          await organisations.updateOrganisationRequest("", {}, "");
+        } catch (error) {
+          expect(error).toBeInstanceOf(Error);
+          expect(error).toHaveProperty("message", errorMessage);
+        }
+      });
+    });
+
     describe("deleteInvitationOrganisation", () => {
       it("it calls requestRaw using the DELETE method", async () => {
         await organisations.deleteInvitationOrganisation(
