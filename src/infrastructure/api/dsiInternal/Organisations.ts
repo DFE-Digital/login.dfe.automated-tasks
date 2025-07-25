@@ -123,6 +123,19 @@ export type invitationOrganisationRecord = {
   }[];
 };
 
+export type organisationRequestRecord = {
+  id: string;
+  org_id: string;
+  org_name: string;
+  user_id: string;
+  created_date: string;
+  status: {
+    id: number;
+    name: string;
+  };
+  reason: string | null;
+};
+
 /**
  * Wrapper for the internal Organisations API client, turning required endpoints into functions.
  */
@@ -157,6 +170,46 @@ export class Organisations {
           correlationId,
         },
       )) ?? []
+    );
+  }
+
+  /**
+   * Gets a page of organisation requests, optionally filtered by one or more statuses.
+   *
+   * @param page - The page of organisation requests to retrieve.
+   * @param correlationId - Correlation ID to be passed with the request.
+   * @param statuses - The statuses to filter the organisation requests by.
+   * @returns An organisation request page result.
+   */
+  async getOrganisationRequestPage(
+    page: number,
+    correlationId: string,
+    statuses: number[] = [],
+  ) {
+    let statusQuery: string = "";
+
+    statuses.forEach((status) => {
+      statusQuery += `&filterstatus=${status}`;
+    });
+
+    return (
+      (await this.client.request<{
+        requests: organisationRequestRecord[];
+        page: number;
+        totalNumberOfPages: number;
+        totalNumberOfRecords: number;
+      }>(
+        ApiRequestMethod.GET,
+        `/organisations/requests?page=${page}${statusQuery}`,
+        {
+          correlationId,
+        },
+      )) ?? {
+        requests: [],
+        page,
+        totalNumberOfPages: 0,
+        totalNumberOfRecords: 0,
+      }
     );
   }
 

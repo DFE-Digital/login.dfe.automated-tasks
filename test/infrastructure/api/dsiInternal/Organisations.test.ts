@@ -100,6 +100,90 @@ describe("Organisations API wrapper", () => {
       });
     });
 
+    describe("getOrganisationRequestPage", () => {
+      it("it calls request using the GET method", async () => {
+        await organisations.getOrganisationRequestPage(1, "correlation");
+
+        expect(internalClient.prototype.request).toHaveBeenCalled();
+        expect(internalClient.prototype.request.mock.calls[0][0]).toEqual(
+          ApiRequestMethod.GET,
+        );
+      });
+
+      it("it calls request to the correct path with the passed page number if no statuses are passed in", async () => {
+        const page = 1;
+        await organisations.getOrganisationRequestPage(page, "correlation");
+
+        expect(internalClient.prototype.request).toHaveBeenCalled();
+        expect(internalClient.prototype.request.mock.calls[0][1]).toEqual(
+          `/organisations/requests?page=${page}`,
+        );
+      });
+
+      it("it calls request to the correct path with the passed page number and status if one is passed in", async () => {
+        const page = 1;
+        const status = 1;
+        await organisations.getOrganisationRequestPage(page, "correlation", [
+          status,
+        ]);
+
+        expect(internalClient.prototype.request).toHaveBeenCalled();
+        expect(internalClient.prototype.request.mock.calls[0][1]).toEqual(
+          `/organisations/requests?page=${page}&filterstatus=${status}`,
+        );
+      });
+
+      it("it calls request to the correct path with the passed page number and statuses if multiple are passed in", async () => {
+        const page = 1;
+        const statuses = [1, 2];
+        await organisations.getOrganisationRequestPage(
+          page,
+          "correlation",
+          statuses,
+        );
+
+        expect(internalClient.prototype.request).toHaveBeenCalled();
+        expect(internalClient.prototype.request.mock.calls[0][1]).toEqual(
+          `/organisations/requests?page=${page}&filterstatus=${statuses[0]}&filterstatus=${statuses[1]}`,
+        );
+      });
+
+      it("it calls request with the passed correlation ID", async () => {
+        const correlationId = "test-123";
+        await organisations.getOrganisationRequestPage(1, correlationId);
+
+        expect(internalClient.prototype.request).toHaveBeenCalled();
+        expect(internalClient.prototype.request.mock.calls[0][2]).toEqual({
+          correlationId,
+        });
+      });
+
+      it("it returns an empty page if request returns null", async () => {
+        setRequestResponse(null);
+
+        expect(await organisations.getOrganisationRequestPage(2, "")).toEqual({
+          requests: [],
+          page: 2,
+          totalNumberOfPages: 0,
+          totalNumberOfRecords: 0,
+        });
+      });
+
+      it("it rejects with request's error if request rejects", async () => {
+        const errorMessage = "This is a test error";
+        internalClient.prototype.request.mockRejectedValue(
+          new Error(errorMessage),
+        );
+
+        try {
+          await organisations.getOrganisationRequestPage(1, "");
+        } catch (error) {
+          expect(error).toBeInstanceOf(Error);
+          expect(error).toHaveProperty("message", errorMessage);
+        }
+      });
+    });
+
     describe("getUserOrganisations", () => {
       it("it calls request using the GET method", async () => {
         await organisations.getUserOrganisations("user-1", "correlation");
