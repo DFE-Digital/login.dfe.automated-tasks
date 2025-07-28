@@ -58,6 +58,7 @@ describe("Directories API wrapper", () => {
       });
 
       it("it rejects with an error if no user IDs are passed", async () => {
+        expect.hasAssertions();
         try {
           await directories.getUsersByIds([], "");
         } catch (error) {
@@ -107,6 +108,7 @@ describe("Directories API wrapper", () => {
       });
 
       it("it rejects with request's error if request rejects", async () => {
+        expect.hasAssertions();
         const errorMessage = "This is a test error";
         internalClient.prototype.request.mockRejectedValue(
           new Error(errorMessage),
@@ -155,6 +157,7 @@ describe("Directories API wrapper", () => {
       });
 
       it("it rejects with any error returned by response text parsing", async () => {
+        expect.hasAssertions();
         const errorMessage = "This is a test error";
         internalClient.prototype.requestRaw.mockResolvedValue({
           text: () => Promise.reject(new Error(errorMessage)),
@@ -187,6 +190,7 @@ describe("Directories API wrapper", () => {
       );
 
       it("it rejects with requestRaw's error if requestRaw rejects", async () => {
+        expect.hasAssertions();
         const errorMessage = "This is a test error";
         internalClient.prototype.requestRaw.mockRejectedValue(
           new Error(errorMessage),
@@ -251,6 +255,7 @@ describe("Directories API wrapper", () => {
       );
 
       it("it rejects with requestRaw's error if requestRaw rejects", async () => {
+        expect.hasAssertions();
         const errorMessage = "This is a test error";
         internalClient.prototype.requestRaw.mockRejectedValue(
           new Error(errorMessage),

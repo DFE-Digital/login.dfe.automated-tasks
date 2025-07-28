@@ -200,6 +200,7 @@ describe("Base API client", () => {
     });
 
     it("it rejects with an Error with a correlationId if fetch throws an error, and correlationId is set", async () => {
+      expect.hasAssertions();
       const errorMessage = "Fetch Failed";
       mockedFetch.mockRejectedValue(new Error(errorMessage));
       const requestOptions = {
@@ -218,6 +219,7 @@ describe("Base API client", () => {
     });
 
     it("it rejects with an Error without a correlationId if fetch throws an error, and correlationId is not set", async () => {
+      expect.hasAssertions();
       const errorMessage = "Fetch Failed";
       mockedFetch.mockRejectedValue(new Error(errorMessage));
 
@@ -233,6 +235,7 @@ describe("Base API client", () => {
     });
 
     it("it rejects with an Error with a correlationId if the response is not ok, the status is not 404, and correlationId is set", async () => {
+      expect.hasAssertions();
       const failedResponse = {
         status: 500,
         statusText: "Internal Server Error",
@@ -255,6 +258,7 @@ describe("Base API client", () => {
     });
 
     it("it rejects with an Error without a correlationId if the response is not ok, the status is not 404, and correlationId is not set", async () => {
+      expect.hasAssertions();
       const failedResponse = {
         status: 500,
         statusText: "Internal Server Error",
@@ -327,6 +331,7 @@ describe("Base API client", () => {
     });
 
     it("it rejects with an Error if the response body fails to parse as JSON when the response status is not 404", async () => {
+      expect.hasAssertions();
       const errorMessage = "Couldn't parse JSON test error";
       spyRequestRaw.mockResolvedValue({
         status: 200,

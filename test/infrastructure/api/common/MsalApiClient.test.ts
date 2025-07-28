@@ -131,6 +131,7 @@ describe("MSAL API client", () => {
     });
 
     it("it rejects with an Error with a correlation ID if the MSAL package fails to retrieve an access token, when one is provided", async () => {
+      expect.hasAssertions();
       const correlationId = "test-id";
       const errorMessage = "MSAL Error Example";
       clientApp.prototype.acquireTokenByClientCredential.mockRejectedValue(
@@ -151,6 +152,7 @@ describe("MSAL API client", () => {
     });
 
     it("it rejects with an Error without a correlation ID if the MSAL package fails to retrieve an access token, when one isn't provided", async () => {
+      expect.hasAssertions();
       const errorMessage = "MSAL Error Example";
       clientApp.prototype.acquireTokenByClientCredential.mockRejectedValue(
         new Error(errorMessage),
@@ -303,6 +305,7 @@ describe("MSAL API client", () => {
     });
 
     it("it rejects with an Error with a correlation ID if the MSAL package fails to retrieve an access token, when one is provided", async () => {
+      expect.hasAssertions();
       const correlationId = "test-id";
       const errorMessage = "MSAL Error Example";
       clientApp.prototype.acquireTokenByClientCredential.mockRejectedValue(
@@ -323,6 +326,7 @@ describe("MSAL API client", () => {
     });
 
     it("it rejects with an Error without a correlation ID if the MSAL package fails to retrieve an access token, when one isn't provided", async () => {
+      expect.hasAssertions();
       const errorMessage = "MSAL Error Example";
       clientApp.prototype.acquireTokenByClientCredential.mockRejectedValue(
         new Error(errorMessage),

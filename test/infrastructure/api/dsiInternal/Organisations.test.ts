@@ -86,6 +86,7 @@ describe("Organisations API wrapper", () => {
       });
 
       it("it rejects with request's error if request rejects", async () => {
+        expect.hasAssertions();
         const errorMessage = "This is a test error";
         internalClient.prototype.request.mockRejectedValue(
           new Error(errorMessage),
@@ -170,6 +171,7 @@ describe("Organisations API wrapper", () => {
       });
 
       it("it rejects with request's error if request rejects", async () => {
+        expect.hasAssertions();
         const errorMessage = "This is a test error";
         internalClient.prototype.request.mockRejectedValue(
           new Error(errorMessage),
@@ -221,6 +223,7 @@ describe("Organisations API wrapper", () => {
       });
 
       it("it rejects with request's error if request rejects", async () => {
+        expect.hasAssertions();
         const errorMessage = "This is a test error";
         internalClient.prototype.request.mockRejectedValue(
           new Error(errorMessage),
@@ -311,6 +314,7 @@ describe("Organisations API wrapper", () => {
       );
 
       it("it rejects with requestRaw's error if requestRaw rejects", async () => {
+        expect.hasAssertions();
         const errorMessage = "This is a test error";
         internalClient.prototype.requestRaw.mockRejectedValue(
           new Error(errorMessage),
@@ -380,6 +384,7 @@ describe("Organisations API wrapper", () => {
       );
 
       it("it rejects with requestRaw's error if requestRaw rejects", async () => {
+        expect.hasAssertions();
         const errorMessage = "This is a test error";
         internalClient.prototype.requestRaw.mockRejectedValue(
           new Error(errorMessage),
@@ -449,6 +454,7 @@ describe("Organisations API wrapper", () => {
       );
 
       it("it rejects with requestRaw's error if requestRaw rejects", async () => {
+        expect.hasAssertions();
         const errorMessage = "This is a test error";
         internalClient.prototype.requestRaw.mockRejectedValue(
           new Error(errorMessage),
