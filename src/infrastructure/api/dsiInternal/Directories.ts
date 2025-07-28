@@ -1,6 +1,23 @@
 import { ApiRequestMethod } from "../common/ApiClient";
 import { ApiName, DsiInternalApiClient } from "./DsiInternalApiClient";
 
+export type safeUserRecord = {
+  sub: string;
+  given_name: string;
+  family_name: string;
+  email: string;
+  job_title: string | null;
+  status: 0 | 1;
+  phone_number: string | null;
+  last_login: string | null;
+  prev_login: string | null;
+  isEntra: boolean;
+  entraOid: string | null;
+  entraLinked: string | null;
+  isInternalUser: boolean;
+  entraDeferUntil: string | null;
+};
+
 /**
  * Wrapper for the internal Directories API client, turning required endpoints into functions.
  */
@@ -14,6 +31,37 @@ export class Directories {
    */
   constructor() {
     this.client = new DsiInternalApiClient(ApiName.Directories);
+  }
+
+  /**
+   * Gets user details for all existing users in a given array of user IDs.
+   *
+   * @param ids - The IDs of users to retrieve details for.
+   * @param correlationId - Correlation ID to be passed with the request.
+   * @returns An array of {@link safeUserRecord} elements, or an empty array if none exist.
+   */
+  async getUsersByIds(
+    ids: string[],
+    correlationId: string,
+  ): Promise<safeUserRecord[]> {
+    if (ids.length === 0) {
+      return Promise.reject(
+        new Error("getUsersByIds must be called with at least one user ID"),
+      );
+    }
+
+    return (
+      (await this.client.request<safeUserRecord[]>(
+        ApiRequestMethod.POST,
+        "/users/by-ids",
+        {
+          correlationId,
+          body: {
+            ids: ids.join(),
+          },
+        },
+      )) ?? []
+    );
   }
 
   /**
