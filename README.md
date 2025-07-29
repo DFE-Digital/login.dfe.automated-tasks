@@ -73,7 +73,8 @@ To ease local running/debugging of these functions, please install the recommend
     "API_INTERNAL_CLIENT_SECRET": "",
     "API_INTERNAL_RESOURCE": "",
     "AUDIT_CONNECTION_STRING": "",
-    "AUDIT_TOPIC_NAME": "audit"
+    "AUDIT_TOPIC_NAME": "audit",
+    "REDIS_CONNECTION_STRING": ""
   },
   "ConnectionStrings": {}
 }
@@ -117,6 +118,7 @@ To ease local running/debugging of these functions, please install the recommend
 | API_INTERNAL_RESOURCE | Resource ID of the internal API tenant. | Retrieve from KeyVault (Key name: `aadshdappid`). | `""`
 | AUDIT_CONNECTION_STRING | Connection string of the environment's shared service bus. | Retrieve from KeyVault (Key name: `sharedServiceBusConnectionString`) or the service bus' "Shared access policies" page in the Azure portal. | `""`
 | AUDIT_TOPIC_NAME | Service bus audit topic name. | Retrieve from KeyVault (Key name: `auditServiceBusTopicName`) or the service bus' "Overview" page in the Azure portal. | `"audit"`
+| REDIS_CONNECTION_STRING | Redis connection string in the format `redis://username:password@host:port`. | Retrieve from KeyVault (Key name: `redisConn`) or from the "Azure Cache for Redis" section of the Azure Portal. | `""`
 
 ## Adding New Azure Functions
 
