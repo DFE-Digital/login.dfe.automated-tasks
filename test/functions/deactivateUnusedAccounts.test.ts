@@ -203,7 +203,7 @@ describe("Deactivate unused accounts automated task", () => {
     userMock.findAll.mockResolvedValue(generateUsers(150));
     directoriesMock.prototype.deactivateUser.mockRejectedValue(new Error(""));
 
-    expect(
+    await expect(
       deactivateUnusedAccounts({} as Timer, new InvocationContext()),
     ).rejects.toThrow(
       "deactivateUnusedAccounts: Entire batch had an error, failing execution so it can retry.",
@@ -256,7 +256,7 @@ describe("Deactivate unused accounts automated task", () => {
       throw new Error(errorMessage);
     });
 
-    expect(
+    await expect(
       deactivateUnusedAccounts({} as Timer, new InvocationContext()),
     ).rejects.toThrow(`deactivateUnusedAccounts: ${errorMessage}`);
   });
