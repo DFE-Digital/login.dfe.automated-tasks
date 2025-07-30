@@ -4,7 +4,9 @@ import {
   type invitationServiceRecord,
   type userServiceRecord,
 } from "../src/infrastructure/api/dsiInternal/Access";
+import { safeUserRecord } from "../src/infrastructure/api/dsiInternal/Directories";
 import {
+  organisationRequestRecord,
   type invitationOrganisationRecord,
   type userOrganisationRecord,
 } from "../src/infrastructure/api/dsiInternal/Organisations";
@@ -395,4 +397,66 @@ export function generateUserOrganisations(
   return Array.from({ length: amount }).map((_, index) =>
     generateUserOrganisation(orgId ?? `org-${index}`, organisation, properties),
   );
+}
+
+/**
+ * Generates a test "safe" user from Directories for testing.
+ *
+ * @param id - User ID.
+ * @param email - User email address.
+ * @param status - User status (1 = Active).
+ * @param properties - Additional user properties.
+ * @returns A {@link safeUserRecord} object for testing.
+ */
+export function generateSafeUser(
+  id: string,
+  email: string,
+  status: 0 | 1 = 1,
+  properties: Partial<safeUserRecord> = {},
+): safeUserRecord {
+  return {
+    sub: id,
+    given_name: properties.given_name ?? "",
+    family_name: properties.family_name ?? "",
+    email,
+    job_title: properties.job_title ?? null,
+    status,
+    phone_number: properties.phone_number ?? null,
+    last_login: properties.last_login ?? null,
+    prev_login: properties.prev_login ?? null,
+    isEntra: properties.isEntra ?? false,
+    entraOid: properties.entraOid ?? null,
+    entraLinked: properties.entraLinked ?? null,
+    isInternalUser: properties.isInternalUser ?? false,
+    entraDeferUntil: properties.entraDeferUntil ?? null,
+  };
+}
+
+/**
+ * Generates a test user organisation request for testing.
+ *
+ * @param orgId - Request Organisation ID.
+ * @param userId - Request User ID.
+ * @param createdDate - Request created date (ISO string).
+ * @param properties - Additional request properties.
+ * @returns A {@link organisationRequestRecord} object for testing.
+ */
+export function generateOrganisationRequest(
+  orgId: string,
+  userId: string,
+  createdDate: string,
+  properties: Partial<organisationRequestRecord> = {},
+): organisationRequestRecord {
+  return {
+    id: crypto.randomUUID(),
+    org_id: orgId,
+    org_name: properties.org_name ?? "",
+    user_id: userId,
+    created_date: createdDate,
+    status: properties.status ?? {
+      id: 1,
+      name: "",
+    },
+    reason: properties.reason ?? null,
+  };
 }
