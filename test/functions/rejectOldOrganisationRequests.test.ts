@@ -5,9 +5,11 @@ import { Organisations } from "../../src/infrastructure/api/dsiInternal/Organisa
 import { rejectOldOrganisationRequests } from "../../src/functions/rejectOldOrganisationRequests";
 import { checkEnv } from "../../src/infrastructure/utils";
 import { generateOrganisationRequest, generateSafeUser } from "../testUtils";
+import { AuditLogger } from "../../src/infrastructure/AuditLogger";
 
 jest.mock("@azure/functions");
 jest.mock("login.dfe.jobs-client");
+jest.mock("../../src/infrastructure/AuditLogger");
 jest.mock("../../src/infrastructure/api/dsiInternal/Directories");
 jest.mock("../../src/infrastructure/api/dsiInternal/Organisations");
 jest.mock("../../src/infrastructure/utils");
@@ -17,6 +19,7 @@ describe("Reject old overdue user organisation requests automated task", () => {
   const checkEnvMock = jest.mocked(checkEnv);
   const directoriesMock = jest.mocked(Directories);
   const organisationsMock = jest.mocked(Organisations);
+  const auditLoggerMock = jest.mocked(AuditLogger);
   const notificationClientMock = jest.mocked(NotificationClient);
 
   const olderTestDate = new Date();
@@ -82,6 +85,17 @@ describe("Reject old overdue user organisation requests automated task", () => {
       ).rejects.toThrow(`rejectOldOrganisationRequests: ${errorMessage}`);
     },
   );
+
+  it("it throws an error if the audit logger throws an error on instantiation", async () => {
+    const errorMessage = "Test Error Audit";
+    auditLoggerMock.mockImplementation(() => {
+      throw new Error(errorMessage);
+    });
+
+    await expect(
+      rejectOldOrganisationRequests({} as Timer, new InvocationContext()),
+    ).rejects.toThrow(`rejectOldOrganisationRequests: ${errorMessage}`);
+  });
 
   it("it creates a NotificationClient instance pointing to the jobs DB in Redis", async () => {
     const currentEnv = { ...process.env };
@@ -351,7 +365,7 @@ describe("Reject old overdue user organisation requests automated task", () => {
     ).resolves.not.toThrow();
   });
 
-  it("it doesn't log the number of successful request rejections, attempt to retrieve user information, or send any notifications if none were successfully rejected", async () => {
+  it("it doesn't attempt to send any audit logs/notifications or retrieve user data if none were successfully rejected", async () => {
     organisationsMock.prototype.getOrganisationRequestPage
       .mockResolvedValueOnce({
         requests: [
@@ -374,12 +388,105 @@ describe("Reject old overdue user organisation requests automated task", () => {
 
     expect(contextMock.prototype.info).toHaveBeenCalled();
     expect(contextMock.prototype.info).not.toHaveBeenCalledWith(
-      "rejectOldOrganisationRequests: Retrieving user information for the 3 successfully rejected requests",
+      "rejectOldOrganisationRequests: Sending audit messages for the 0 successfully rejected requests",
     );
+    expect(contextMock.prototype.info).not.toHaveBeenCalledWith(
+      "rejectOldOrganisationRequests: Retrieving user information for the 0 successfully rejected requests",
+    );
+    expect(auditLoggerMock.prototype.batchedLog).not.toHaveBeenCalled();
     expect(directoriesMock.prototype.getUsersByIds).not.toHaveBeenCalled();
     expect(
       notificationClientMock.prototype.sendAccessRequest,
     ).not.toHaveBeenCalled();
+  });
+
+  it("it logs the number of successful request rejections having audit messages sent, if some were successfully rejected", async () => {
+    organisationsMock.prototype.getOrganisationRequestPage
+      .mockResolvedValueOnce({
+        requests: [
+          generateOrganisationRequest("", "", olderTestDate.toISOString()),
+          generateOrganisationRequest("", "", olderTestDate.toISOString()),
+          generateOrganisationRequest("", "", olderTestDate.toISOString()),
+        ],
+        page: 1,
+        totalNumberOfPages: 1,
+        totalNumberOfRecords: 3,
+      })
+      .mockResolvedValue(blankOrganisationRequestPage);
+    organisationsMock.prototype.updateOrganisationRequest
+      .mockResolvedValueOnce(false)
+      .mockResolvedValue(true);
+    await rejectOldOrganisationRequests({} as Timer, new InvocationContext());
+
+    expect(contextMock.prototype.info).toHaveBeenCalled();
+    expect(contextMock.prototype.info).toHaveBeenCalledWith(
+      "rejectOldOrganisationRequests: Sending audit messages for the 2 successfully rejected requests",
+    );
+  });
+
+  it("it throws an error if the audit logger throws an error when sending a message batch", async () => {
+    const errorMessage = "Testing Audit Logger Send";
+    organisationsMock.prototype.getOrganisationRequestPage
+      .mockResolvedValueOnce({
+        requests: [
+          generateOrganisationRequest("", "", olderTestDate.toISOString()),
+        ],
+        page: 1,
+        totalNumberOfPages: 1,
+        totalNumberOfRecords: 1,
+      })
+      .mockResolvedValue(blankOrganisationRequestPage);
+    auditLoggerMock.prototype.batchedLog.mockImplementation(() => {
+      throw new Error(errorMessage);
+    });
+
+    await expect(
+      rejectOldOrganisationRequests({} as Timer, new InvocationContext()),
+    ).rejects.toThrow(`rejectOldOrganisationRequests: ${errorMessage}`);
+  });
+
+  it("it sends a batch of correct logs to the audit service bus for all the successful request rejections", async () => {
+    const requests = [
+      generateOrganisationRequest(
+        "org-1",
+        "user-1",
+        olderTestDate.toISOString(),
+      ),
+      generateOrganisationRequest(
+        "org-2",
+        "user-1",
+        olderTestDate.toISOString(),
+      ),
+      generateOrganisationRequest(
+        "org-1",
+        "user-2",
+        olderTestDate.toISOString(),
+      ),
+    ];
+    organisationsMock.prototype.getOrganisationRequestPage
+      .mockResolvedValueOnce({
+        requests,
+        page: 1,
+        totalNumberOfPages: 1,
+        totalNumberOfRecords: 3,
+      })
+      .mockResolvedValue(blankOrganisationRequestPage);
+    await rejectOldOrganisationRequests({} as Timer, new InvocationContext());
+
+    expect(auditLoggerMock.prototype.batchedLog).toHaveBeenCalled();
+    expect(auditLoggerMock.prototype.batchedLog).toHaveBeenCalledWith(
+      requests.map((request) => ({
+        message: `Automated rejection of requests older than 3 months`,
+        type: "approver",
+        subType: "rejected-org",
+        organisationid: request.org_id,
+        meta: {
+          editedUser: request.user_id,
+          reason:
+            "Automated task - Approvers did not action request within 3 months",
+        },
+      })),
+    );
   });
 
   it("it logs the number of successful request rejections that could have notifications sent, if some were successfully rejected", async () => {

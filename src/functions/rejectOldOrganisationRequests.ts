@@ -7,9 +7,20 @@ import {
 } from "../infrastructure/api/dsiInternal/Organisations";
 import { filterResults } from "./utils/filterResults";
 import { checkEnv } from "../infrastructure/utils";
+import { AuditLogger } from "../infrastructure/AuditLogger";
 
 const targetDate = new Date();
 targetDate.setMonth(targetDate.getMonth() - 3);
+
+const rejectionReason =
+  "Automated task - Approvers did not action request within 3 months";
+
+type rejectionEmailInfo = {
+  email: string;
+  name: string;
+  orgName: string;
+  requestDate: Date;
+};
 
 /**
  * Rejects an organisation request.
@@ -29,26 +40,75 @@ async function rejectOrganisationRequest(
     {
       status: -1,
       actioned_at: Date.now(),
-      actioned_reason:
-        "Automated task - Approvers did not action request within 3 months",
+      actioned_reason: rejectionReason,
     },
     correlationId,
   );
 }
 
 /**
+ * Sends rejection audit logs to allow support to see when a request is automatically rejected.
+ *
+ * @param requests - An array of {@link organisationRequestRecord} objects that need audit records to be written.
+ * @param auditLogger - {@link AuditLogger} to send batches of logs for the requests.
+ * @returns {Promise<void>}
+ */
+async function sendRejectionAuditLogs(
+  requests: organisationRequestRecord[],
+  auditLogger: AuditLogger,
+): Promise<void> {
+  return auditLogger.batchedLog(
+    requests.map((request) => ({
+      message: `Automated rejection of requests older than 3 months`,
+      type: "approver",
+      subType: "rejected-org",
+      organisationid: request.org_id,
+      meta: {
+        editedUser: request.user_id,
+        reason: rejectionReason,
+      },
+    })),
+  );
+}
+
+/**
+ * Sends rejection emails to the users using the standard organisation request templates.
+ *
+ * @param emailInfo - An array of {@link rejectionEmailInfo} objects that need rejection emails to be sent.
+ * @param notificationClient - {@link NotificationClient} to queue the email sending jobs.
+ * @returns {Promise<void[]>}
+ */
+async function sendRejectionEmails(
+  emailInfo: rejectionEmailInfo[],
+  notificationClient: NotificationClient,
+): Promise<void[]> {
+  return Promise.all(
+    emailInfo.map(
+      (info) =>
+        notificationClient.sendAccessRequest(
+          info.email,
+          info.name,
+          info.orgName,
+          false,
+          `The approver(s) at the organisation haven't taken any action on your request, which was made on ${info.requestDate.toLocaleDateString()}.`,
+        ) as Promise<void>,
+    ),
+  );
+}
+
+/**
  * Retrieves information to use in the rejected request email template, for any active users linked to requests.
  *
- * @param requests - An array of {@link organisationRequestRecord} objects to
+ * @param requests - An array of {@link organisationRequestRecord} objects that need emails to be sent.
  * @param directoriesApi - {@link Directories} API wrapper.
  * @param correlationId - Correlation ID to be passed with the request.
- * @returns An array of information to use in the rejected request email template.
+ * @returns An array of {@link rejectionEmailInfo} elements to use in the rejected request email template.
  */
 async function getEmailInfo(
   requests: organisationRequestRecord[],
   directoriesApi: Directories,
   correlationId: string,
-) {
+): Promise<rejectionEmailInfo[]> {
   const activeUsers = (
     await directoriesApi.getUsersByIds(
       [...new Set(requests.map((request) => request.user_id))],
@@ -89,6 +149,7 @@ export async function rejectOldOrganisationRequests(
     const correlationId = context.invocationId;
     const directories = new Directories();
     const organisations = new Organisations();
+    const auditLogger = new AuditLogger();
     const notificationClient = new NotificationClient({
       connectionString: `${process.env.REDIS_CONNECTION_STRING}/4?tls=true`,
     });
@@ -142,6 +203,12 @@ export async function rejectOldOrganisationRequests(
 
       if (successful.count > 0) {
         context.info(
+          `rejectOldOrganisationRequests: Sending audit messages for the ${successful.count} successfully rejected requests`,
+        );
+
+        await sendRejectionAuditLogs(successful.objects, auditLogger);
+
+        context.info(
           `rejectOldOrganisationRequests: Retrieving user information for the ${successful.count} successfully rejected requests`,
         );
 
@@ -155,17 +222,7 @@ export async function rejectOldOrganisationRequests(
             `rejectOldOrganisationRequests: Sending rejection emails for the ${emailInfo.length} successfully rejected requests with active users`,
           );
 
-          await Promise.all(
-            emailInfo.map((info) =>
-              notificationClient.sendAccessRequest(
-                info.email,
-                info.name,
-                info.orgName,
-                false,
-                `The approver(s) at the organisation haven't taken any action on your request, which was made on ${info.requestDate.toLocaleDateString()}.`,
-              ),
-            ),
-          );
+          await sendRejectionEmails(emailInfo, notificationClient);
         }
       }
 
