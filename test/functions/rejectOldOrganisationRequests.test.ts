@@ -22,6 +22,7 @@ describe("Reject old overdue user organisation requests automated task", () => {
   const auditLoggerMock = jest.mocked(AuditLogger);
   const notificationClientMock = jest.mocked(NotificationClient);
 
+  const environment = { ...process.env };
   const olderTestDate = new Date();
   olderTestDate.setMonth(olderTestDate.getMonth() - 4);
 
@@ -33,6 +34,7 @@ describe("Reject old overdue user organisation requests automated task", () => {
   };
 
   beforeEach(() => {
+    process.env = {};
     organisationsMock.prototype.getOrganisationRequestPage.mockResolvedValue({
       requests: [],
       page: 1,
@@ -48,17 +50,21 @@ describe("Reject old overdue user organisation requests automated task", () => {
     }));
   });
 
-  it("it will call checkEnv with the required environment variable and name for connecting to Redis", async () => {
+  afterEach(() => {
+    process.env = environment;
+  });
+
+  it("it will call checkEnv with the required environment variables for rejecting requests and connecting to Redis", async () => {
     await rejectOldOrganisationRequests({} as Timer, new InvocationContext());
 
     expect(checkEnvMock).toHaveBeenCalled();
     expect(checkEnvMock).toHaveBeenCalledWith(
-      ["REDIS_CONNECTION_STRING"],
-      "Redis",
+      ["REDIS_CONNECTION_STRING", "SUPPORT_USER_ID"],
+      "valid request rejections or Redis",
     );
   });
 
-  it("it throws an error if checkEnv throws an error when the Redis connection string environment variable is not set", async () => {
+  it("it throws an error if checkEnv throws an error when any required environment variable is not set", async () => {
     const errorMessage = "Test Error";
     checkEnvMock.mockImplementation(() => {
       throw new Error(errorMessage);
@@ -98,7 +104,6 @@ describe("Reject old overdue user organisation requests automated task", () => {
   });
 
   it("it creates a NotificationClient instance pointing to the jobs DB in Redis", async () => {
-    const currentEnv = { ...process.env };
     const testConnectionString = "testing";
     process.env.REDIS_CONNECTION_STRING = testConnectionString;
     await rejectOldOrganisationRequests({} as Timer, new InvocationContext());
@@ -107,8 +112,6 @@ describe("Reject old overdue user organisation requests automated task", () => {
     expect(notificationClientMock).toHaveBeenCalledWith({
       connectionString: `${testConnectionString}/4?tls=true`,
     });
-
-    process.env = currentEnv;
   });
 
   it("it throws an error if the first page retrieval of overdue organisation requests throws an error", async () => {
@@ -207,6 +210,7 @@ describe("Reject old overdue user organisation requests automated task", () => {
 
   it("it attempts to update the old organisation requests using the correct request IDs, invocation ID, and properties", async () => {
     jest.spyOn(Date, "now").mockImplementation(() => 1000);
+    const supportId = "Test Support ID";
     const invocationId = "TestId";
     const requests = [
       generateOrganisationRequest("", "", olderTestDate.toISOString()),
@@ -214,10 +218,12 @@ describe("Reject old overdue user organisation requests automated task", () => {
     ];
     const rejectionProperties = {
       status: -1,
+      actioned_by: supportId,
       actioned_at: Date.now(),
       actioned_reason:
         "Automated task - Approvers did not action request within 3 months",
     };
+    process.env.SUPPORT_USER_ID = supportId;
     contextMock.prototype.invocationId = invocationId;
     organisationsMock.prototype.getOrganisationRequestPage
       .mockResolvedValueOnce({
@@ -446,6 +452,7 @@ describe("Reject old overdue user organisation requests automated task", () => {
   });
 
   it("it sends a batch of correct logs to the audit service bus for all the successful request rejections", async () => {
+    const supportId = "Test Support ID";
     const requests = [
       generateOrganisationRequest(
         "org-1",
@@ -463,6 +470,7 @@ describe("Reject old overdue user organisation requests automated task", () => {
         olderTestDate.toISOString(),
       ),
     ];
+    process.env.SUPPORT_USER_ID = supportId;
     organisationsMock.prototype.getOrganisationRequestPage
       .mockResolvedValueOnce({
         requests,
@@ -479,6 +487,7 @@ describe("Reject old overdue user organisation requests automated task", () => {
         message: `Automated rejection of requests older than 3 months`,
         type: "approver",
         subType: "rejected-org",
+        userId: supportId,
         organisationid: request.org_id,
         meta: {
           editedUser: request.user_id,

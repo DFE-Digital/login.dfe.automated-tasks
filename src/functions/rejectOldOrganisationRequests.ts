@@ -39,6 +39,7 @@ async function rejectOrganisationRequest(
     id,
     {
       status: -1,
+      actioned_by: process.env.SUPPORT_USER_ID,
       actioned_at: Date.now(),
       actioned_reason: rejectionReason,
     },
@@ -62,6 +63,7 @@ async function sendRejectionAuditLogs(
       message: `Automated rejection of requests older than 3 months`,
       type: "approver",
       subType: "rejected-org",
+      userId: process.env.SUPPORT_USER_ID,
       organisationid: request.org_id,
       meta: {
         editedUser: request.user_id,
@@ -144,7 +146,10 @@ export async function rejectOldOrganisationRequests(
   context: InvocationContext,
 ): Promise<void> {
   try {
-    checkEnv(["REDIS_CONNECTION_STRING"], "Redis");
+    checkEnv(
+      ["REDIS_CONNECTION_STRING", "SUPPORT_USER_ID"],
+      "valid request rejections or Redis",
+    );
 
     const correlationId = context.invocationId;
     const directories = new Directories();
