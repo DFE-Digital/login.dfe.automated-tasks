@@ -159,6 +159,10 @@ export async function rejectOldOrganisationRequests(
       connectionString: `${process.env.REDIS_CONNECTION_STRING}/4?tls=true`,
     });
 
+    context.info(
+      "rejectOldOrganisationRequests: Retrieving initial page of overdue organisation requests",
+    );
+
     let requestPage = await organisations.getOrganisationRequestPage(
       1,
       correlationId,
@@ -175,7 +179,7 @@ export async function rejectOldOrganisationRequests(
       }
 
       context.info(
-        `rejectOldOrganisationRequests: Rejecting ${suitableRequests.length} overdue organisation requests older than ${targetDate.toLocaleDateString()} in page ${requestPage.page}`,
+        `rejectOldOrganisationRequests: Rejecting ${suitableRequests.length} overdue organisation requests older than ${targetDate.toLocaleDateString()}`,
       );
 
       const { successful, failed, errored } = filterResults(
@@ -231,8 +235,13 @@ export async function rejectOldOrganisationRequests(
         }
       }
 
+      context.info(
+        "rejectOldOrganisationRequests: Retrieving additional page of overdue organisation requests",
+      );
+
+      // We retrieve page 1 repeatedly as the endpoint is sorted oldest first, so any requests updated above will no longer be returned.
       requestPage = await organisations.getOrganisationRequestPage(
-        requestPage.page + 1,
+        1,
         correlationId,
         [2],
       );

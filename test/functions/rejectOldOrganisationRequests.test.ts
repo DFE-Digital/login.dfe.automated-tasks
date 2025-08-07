@@ -28,7 +28,7 @@ describe("Reject old overdue user organisation requests automated task", () => {
 
   const blankOrganisationRequestPage = {
     requests: [],
-    page: 2,
+    page: 1,
     totalNumberOfPages: 0,
     totalNumberOfRecords: 0,
   };
@@ -114,7 +114,7 @@ describe("Reject old overdue user organisation requests automated task", () => {
     });
   });
 
-  it("it throws an error if the first page retrieval of overdue organisation requests throws an error", async () => {
+  it("it throws an error if the initial page retrieval of overdue organisation requests throws an error", async () => {
     const errorMessage = "Test Error";
     organisationsMock.prototype.getOrganisationRequestPage.mockRejectedValue(
       new Error(errorMessage),
@@ -125,11 +125,15 @@ describe("Reject old overdue user organisation requests automated task", () => {
     ).rejects.toThrow(`rejectOldOrganisationRequests: ${errorMessage}`);
   });
 
-  it("it attempts to retrieve the first page of overdue organisation requests with the invocation ID", async () => {
+  it("it logs and attempts to retrieve the initial page of overdue organisation requests with the invocation ID", async () => {
     const invocationId = "TestId";
     contextMock.prototype.invocationId = invocationId;
     await rejectOldOrganisationRequests({} as Timer, new InvocationContext());
 
+    expect(contextMock.prototype.info).toHaveBeenCalled();
+    expect(contextMock.prototype.info).toHaveBeenCalledWith(
+      "rejectOldOrganisationRequests: Retrieving initial page of overdue organisation requests",
+    );
     expect(
       organisationsMock.prototype.getOrganisationRequestPage,
     ).toHaveBeenCalled();
@@ -138,7 +142,7 @@ describe("Reject old overdue user organisation requests automated task", () => {
     ).toHaveBeenCalledWith(1, invocationId, [2]);
   });
 
-  it("it doesn't attempt to update any requests if the first page request says there are 0 pages/records", async () => {
+  it("it doesn't attempt to update any requests if a request page says there are 0 pages/records", async () => {
     const targetDate = new Date();
     targetDate.setMonth(targetDate.getMonth() - 3);
 
@@ -159,7 +163,7 @@ describe("Reject old overdue user organisation requests automated task", () => {
     );
   });
 
-  it("it doesn't attempt to update any requests if the first page request has no records older than 3 months", async () => {
+  it("it doesn't attempt to update any requests if a request page has no records older than 3 months", async () => {
     const targetDate = new Date();
     targetDate.setMonth(targetDate.getMonth() - 3);
 
@@ -184,7 +188,7 @@ describe("Reject old overdue user organisation requests automated task", () => {
     );
   });
 
-  it("it logs the number of requests older than the target date as well as the page number", async () => {
+  it("it logs the number of requests older than the target date", async () => {
     const targetDate = new Date();
     targetDate.setMonth(targetDate.getMonth() - 3);
     organisationsMock.prototype.getOrganisationRequestPage
@@ -204,7 +208,7 @@ describe("Reject old overdue user organisation requests automated task", () => {
 
     expect(contextMock.prototype.info).toHaveBeenCalled();
     expect(contextMock.prototype.info).toHaveBeenCalledWith(
-      `rejectOldOrganisationRequests: Rejecting 2 overdue organisation requests older than ${targetDate.toLocaleDateString()} in page 1`,
+      `rejectOldOrganisationRequests: Rejecting 2 overdue organisation requests older than ${targetDate.toLocaleDateString()}`,
     );
   });
 
@@ -728,7 +732,7 @@ describe("Reject old overdue user organisation requests automated task", () => {
     );
   });
 
-  it("it throws an error if the following page retrieval of overdue organisation requests throws an error", async () => {
+  it("it throws an error if the additional page retrieval of overdue organisation requests throws an error", async () => {
     const errorMessage = "Test Error";
     organisationsMock.prototype.getOrganisationRequestPage
       .mockResolvedValueOnce({
@@ -747,7 +751,7 @@ describe("Reject old overdue user organisation requests automated task", () => {
     ).rejects.toThrow(`rejectOldOrganisationRequests: ${errorMessage}`);
   });
 
-  it("it attempts to retrieve the following pages of overdue organisation requests with the invocation ID", async () => {
+  it("it logs and attempts to retrieve an additional page of overdue organisation requests with the invocation ID", async () => {
     const invocationId = "TestId";
     contextMock.prototype.invocationId = invocationId;
     organisationsMock.prototype.getOrganisationRequestPage
@@ -763,11 +767,15 @@ describe("Reject old overdue user organisation requests automated task", () => {
       .mockResolvedValue(blankOrganisationRequestPage);
     await rejectOldOrganisationRequests({} as Timer, new InvocationContext());
 
+    expect(contextMock.prototype.info).toHaveBeenCalled();
+    expect(contextMock.prototype.info).toHaveBeenCalledWith(
+      "rejectOldOrganisationRequests: Retrieving additional page of overdue organisation requests",
+    );
     expect(
       organisationsMock.prototype.getOrganisationRequestPage,
     ).toHaveBeenCalledTimes(2);
     expect(
       organisationsMock.prototype.getOrganisationRequestPage,
-    ).toHaveBeenLastCalledWith(2, invocationId, [2]);
+    ).toHaveBeenLastCalledWith(1, invocationId, [2]);
   });
 });
