@@ -159,7 +159,7 @@ describe("Reject old overdue user organisation requests automated task", () => {
     ).not.toHaveBeenCalled();
     expect(contextMock.prototype.info).toHaveBeenCalled();
     expect(contextMock.prototype.info).toHaveBeenCalledWith(
-      `rejectOldOrganisationRequests: No more overdue organisation requests available older than ${targetDate.toLocaleDateString()}`,
+      `rejectOldOrganisationRequests: No more overdue organisation requests available older than ${targetDate.toLocaleDateString("en-GB")}`,
     );
   });
 
@@ -184,7 +184,7 @@ describe("Reject old overdue user organisation requests automated task", () => {
     ).not.toHaveBeenCalled();
     expect(contextMock.prototype.info).toHaveBeenCalled();
     expect(contextMock.prototype.info).toHaveBeenCalledWith(
-      `rejectOldOrganisationRequests: No more overdue organisation requests available older than ${targetDate.toLocaleDateString()}`,
+      `rejectOldOrganisationRequests: No more overdue organisation requests available older than ${targetDate.toLocaleDateString("en-GB")}`,
     );
   });
 
@@ -208,7 +208,7 @@ describe("Reject old overdue user organisation requests automated task", () => {
 
     expect(contextMock.prototype.info).toHaveBeenCalled();
     expect(contextMock.prototype.info).toHaveBeenCalledWith(
-      `rejectOldOrganisationRequests: Rejecting 2 overdue organisation requests older than ${targetDate.toLocaleDateString()}`,
+      `rejectOldOrganisationRequests: Rejecting 2 overdue organisation requests older than ${targetDate.toLocaleDateString("en-GB")}`,
     );
   });
 
@@ -712,7 +712,7 @@ describe("Reject old overdue user organisation requests automated task", () => {
       `${users[0].given_name} ${users[0].family_name}`,
       requests[0].org_name,
       false,
-      `The approver(s) at the organisation haven't taken any action on your request, which was made on ${olderTestDate.toLocaleDateString()}.`,
+      `The approver(s) at the organisation haven't taken any action on your request, which was made on ${olderTestDate.toLocaleDateString("en-GB")}.`,
     );
     expect(sendAccessRequest).toHaveBeenNthCalledWith(
       2,
@@ -720,7 +720,7 @@ describe("Reject old overdue user organisation requests automated task", () => {
       `${users[0].given_name} ${users[0].family_name}`,
       requests[1].org_name,
       false,
-      `The approver(s) at the organisation haven't taken any action on your request, which was made on ${additionalTestDate.toLocaleDateString()}.`,
+      `The approver(s) at the organisation haven't taken any action on your request, which was made on ${additionalTestDate.toLocaleDateString("en-GB")}.`,
     );
     expect(sendAccessRequest).toHaveBeenNthCalledWith(
       3,
@@ -728,7 +728,7 @@ describe("Reject old overdue user organisation requests automated task", () => {
       `${users[1].given_name} ${users[1].family_name}`,
       requests[2].org_name,
       false,
-      `The approver(s) at the organisation haven't taken any action on your request, which was made on ${olderTestDate.toLocaleDateString()}.`,
+      `The approver(s) at the organisation haven't taken any action on your request, which was made on ${olderTestDate.toLocaleDateString("en-GB")}.`,
     );
   });
 

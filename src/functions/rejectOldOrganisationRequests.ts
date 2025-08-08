@@ -92,7 +92,7 @@ async function sendRejectionEmails(
           info.name,
           info.orgName,
           false,
-          `The approver(s) at the organisation haven't taken any action on your request, which was made on ${info.requestDate.toLocaleDateString()}.`,
+          `The approver(s) at the organisation haven't taken any action on your request, which was made on ${info.requestDate.toLocaleDateString("en-GB")}.`,
         ) as Promise<void>,
     ),
   );
@@ -179,7 +179,7 @@ export async function rejectOldOrganisationRequests(
       }
 
       context.info(
-        `rejectOldOrganisationRequests: Rejecting ${suitableRequests.length} overdue organisation requests older than ${targetDate.toLocaleDateString()}`,
+        `rejectOldOrganisationRequests: Rejecting ${suitableRequests.length} overdue organisation requests older than ${targetDate.toLocaleDateString("en-GB")}`,
       );
 
       const { successful, failed, errored } = filterResults(
@@ -248,7 +248,7 @@ export async function rejectOldOrganisationRequests(
     }
 
     context.info(
-      `rejectOldOrganisationRequests: No more overdue organisation requests available older than ${targetDate.toLocaleDateString()}`,
+      `rejectOldOrganisationRequests: No more overdue organisation requests available older than ${targetDate.toLocaleDateString("en-GB")}`,
     );
   } catch (error) {
     throw new Error(`rejectOldOrganisationRequests: ${error.message}`);
