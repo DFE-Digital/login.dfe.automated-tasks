@@ -123,6 +123,19 @@ export type invitationOrganisationRecord = {
   }[];
 };
 
+export type organisationRequestRecord = {
+  id: string;
+  org_id: string;
+  org_name: string;
+  user_id: string;
+  created_date: string;
+  status: {
+    id: number;
+    name: string;
+  };
+  reason: string | null;
+};
+
 /**
  * Wrapper for the internal Organisations API client, turning required endpoints into functions.
  */
@@ -161,6 +174,46 @@ export class Organisations {
   }
 
   /**
+   * Gets a page of organisation requests, optionally filtered by one or more statuses.
+   *
+   * @param page - The page of organisation requests to retrieve.
+   * @param correlationId - Correlation ID to be passed with the request.
+   * @param statuses - The statuses to filter the organisation requests by.
+   * @returns An organisation request page result.
+   */
+  async getOrganisationRequestPage(
+    page: number,
+    correlationId: string,
+    statuses: number[] = [],
+  ) {
+    let statusQuery: string = "";
+
+    statuses.forEach((status) => {
+      statusQuery += `&filterstatus=${status}`;
+    });
+
+    return (
+      (await this.client.request<{
+        requests: organisationRequestRecord[];
+        page: number;
+        totalNumberOfPages: number;
+        totalNumberOfRecords: number;
+      }>(
+        ApiRequestMethod.GET,
+        `/organisations/requests?page=${page}${statusQuery}`,
+        {
+          correlationId,
+        },
+      )) ?? {
+        requests: [],
+        page,
+        totalNumberOfPages: 0,
+        totalNumberOfRecords: 0,
+      }
+    );
+  }
+
+  /**
    * Gets all organisation links for a user if any exist.
    *
    * @param userId - The ID of the user to retrieve organisation links for.
@@ -180,6 +233,35 @@ export class Organisations {
         },
       )) ?? []
     );
+  }
+
+  /**
+   * Updates an organisation request's properties.
+   *
+   * @param id - The ID of the organisation request to update.
+   * @param properties - The properties of the request to be updated.
+   * @param correlationId - Correlation ID to be passed with the request.
+   * @returns true if the request was successfully updated, false otherwise.
+   */
+  async updateOrganisationRequest(
+    id: string,
+    properties: {
+      status?: number;
+      actioned_by?: string;
+      actioned_reason?: string;
+      actioned_at?: EpochTimeStamp;
+    },
+    correlationId: string,
+  ): Promise<boolean> {
+    const response = await this.client.requestRaw(
+      ApiRequestMethod.PATCH,
+      `/organisations/requests/${id}`,
+      {
+        body: properties,
+        correlationId,
+      },
+    );
+    return response.status === 202;
   }
 
   /**

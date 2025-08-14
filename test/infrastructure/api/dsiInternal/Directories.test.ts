@@ -47,6 +47,82 @@ describe("Directories API wrapper", () => {
       directories = new Directories();
     });
 
+    describe("getUsersByIds", () => {
+      it("it calls request using the POST method", async () => {
+        await directories.getUsersByIds(["test"], "correlation");
+
+        expect(internalClient.prototype.request).toHaveBeenCalled();
+        expect(internalClient.prototype.request.mock.calls[0][0]).toEqual(
+          ApiRequestMethod.POST,
+        );
+      });
+
+      it("it rejects with an error if no user IDs are passed", async () => {
+        expect.hasAssertions();
+        try {
+          await directories.getUsersByIds([], "");
+        } catch (error) {
+          expect(error).toBeInstanceOf(Error);
+          expect(error).toHaveProperty(
+            "message",
+            `getUsersByIds must be called with at least one user ID`,
+          );
+        }
+      });
+
+      it("it calls request to the correct path", async () => {
+        await directories.getUsersByIds(["test"], "");
+
+        expect(internalClient.prototype.request).toHaveBeenCalled();
+        expect(internalClient.prototype.request.mock.calls[0][1]).toEqual(
+          `/users/by-ids`,
+        );
+      });
+
+      it("it calls request with the passed correlation ID", async () => {
+        const correlationId = "test-123";
+        await directories.getUsersByIds(["test"], correlationId);
+
+        expect(internalClient.prototype.request).toHaveBeenCalled();
+        expect(
+          internalClient.prototype.request.mock.calls[0][2],
+        ).toHaveProperty("correlationId", correlationId);
+      });
+
+      it("it calls request with the passed user IDs in the body joined by commas", async () => {
+        const userIds = ["test1", "test2", "test3"];
+        await directories.getUsersByIds(userIds, "");
+
+        expect(internalClient.prototype.request).toHaveBeenCalled();
+        expect(
+          internalClient.prototype.request.mock.calls[0][2],
+        ).toHaveProperty("body", {
+          ids: userIds.join(","),
+        });
+      });
+
+      it("it returns an empty array if request returns null", async () => {
+        setRequestResponse(null);
+
+        expect(await directories.getUsersByIds(["test"], "")).toEqual([]);
+      });
+
+      it("it rejects with request's error if request rejects", async () => {
+        expect.hasAssertions();
+        const errorMessage = "This is a test error";
+        internalClient.prototype.request.mockRejectedValue(
+          new Error(errorMessage),
+        );
+
+        try {
+          await directories.getUsersByIds(["test"], "");
+        } catch (error) {
+          expect(error).toBeInstanceOf(Error);
+          expect(error).toHaveProperty("message", errorMessage);
+        }
+      });
+    });
+
     describe("deactivateUser", () => {
       it("it calls requestRaw using the POST method", async () => {
         await directories.deactivateUser("user", "reason", "correlation");
@@ -81,6 +157,7 @@ describe("Directories API wrapper", () => {
       });
 
       it("it rejects with any error returned by response text parsing", async () => {
+        expect.hasAssertions();
         const errorMessage = "This is a test error";
         internalClient.prototype.requestRaw.mockResolvedValue({
           text: () => Promise.reject(new Error(errorMessage)),
@@ -113,6 +190,7 @@ describe("Directories API wrapper", () => {
       );
 
       it("it rejects with requestRaw's error if requestRaw rejects", async () => {
+        expect.hasAssertions();
         const errorMessage = "This is a test error";
         internalClient.prototype.requestRaw.mockRejectedValue(
           new Error(errorMessage),
@@ -177,6 +255,7 @@ describe("Directories API wrapper", () => {
       );
 
       it("it rejects with requestRaw's error if requestRaw rejects", async () => {
+        expect.hasAssertions();
         const errorMessage = "This is a test error";
         internalClient.prototype.requestRaw.mockRejectedValue(
           new Error(errorMessage),
