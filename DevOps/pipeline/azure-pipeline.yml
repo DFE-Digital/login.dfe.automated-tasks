@@ -71,9 +71,9 @@ variables:
   - group: dsi-global
   - group: dsi-envs-list
   - name: applicationShortName
-    value: "automatedtasks"
+    value: "autotasks"
   - name: applicationFullName
-    value: "automatedtasks"
+    value: "autotasks"
   - name: tran
     value: ${{ eq(parameters.tran, 'true') }}
   - name: dev
