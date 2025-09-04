@@ -24,7 +24,7 @@ Automated tasks run on schedules or triggered manually to carry out BAU activiti
   - Description: Deactivates and creates audit records for any users whose last login is older than 2 years from the current run date, or if their account was created over 2 years from the current run date and they never logged in since verifying their email address.
 - `rejectOldOrganisationRequests`:
   - Default Timer: Midnight on every Monday.
-  - Description: Rejects any organisation requests that are overdue and were created over 3 months ago.
+  - Description: Rejects any organisation requests that are overdue or have no approvers, and were created over 3 months ago.
 - `removeGeneratedTestAccounts`:
   - Default Timer: Midnight on every Monday.
   - Description: Removes any records for users/invitations generated automatically by the test team as part of their regression testing.

@@ -132,14 +132,14 @@ describe("Reject old overdue user organisation requests automated task", () => {
 
     expect(contextMock.prototype.info).toHaveBeenCalled();
     expect(contextMock.prototype.info).toHaveBeenCalledWith(
-      "rejectOldOrganisationRequests: Retrieving initial page of overdue organisation requests",
+      "rejectOldOrganisationRequests: Retrieving initial page of overdue/no approver organisation requests",
     );
     expect(
       organisationsMock.prototype.getOrganisationRequestPage,
     ).toHaveBeenCalled();
     expect(
       organisationsMock.prototype.getOrganisationRequestPage,
-    ).toHaveBeenCalledWith(1, invocationId, [2]);
+    ).toHaveBeenCalledWith(1, invocationId, [2, 3]);
   });
 
   it("it doesn't attempt to update any requests if a request page says there are 0 pages/records", async () => {
@@ -159,7 +159,7 @@ describe("Reject old overdue user organisation requests automated task", () => {
     ).not.toHaveBeenCalled();
     expect(contextMock.prototype.info).toHaveBeenCalled();
     expect(contextMock.prototype.info).toHaveBeenCalledWith(
-      `rejectOldOrganisationRequests: No more overdue organisation requests available older than ${targetDate.toLocaleDateString("en-GB")}`,
+      `rejectOldOrganisationRequests: No more overdue/no approver organisation requests available older than ${targetDate.toLocaleDateString("en-GB")}`,
     );
   });
 
@@ -184,7 +184,7 @@ describe("Reject old overdue user organisation requests automated task", () => {
     ).not.toHaveBeenCalled();
     expect(contextMock.prototype.info).toHaveBeenCalled();
     expect(contextMock.prototype.info).toHaveBeenCalledWith(
-      `rejectOldOrganisationRequests: No more overdue organisation requests available older than ${targetDate.toLocaleDateString("en-GB")}`,
+      `rejectOldOrganisationRequests: No more overdue/no approver organisation requests available older than ${targetDate.toLocaleDateString("en-GB")}`,
     );
   });
 
@@ -208,7 +208,7 @@ describe("Reject old overdue user organisation requests automated task", () => {
 
     expect(contextMock.prototype.info).toHaveBeenCalled();
     expect(contextMock.prototype.info).toHaveBeenCalledWith(
-      `rejectOldOrganisationRequests: Rejecting 2 overdue organisation requests older than ${targetDate.toLocaleDateString("en-GB")}`,
+      `rejectOldOrganisationRequests: Rejecting 2 overdue/no approver organisation requests older than ${targetDate.toLocaleDateString("en-GB")}`,
     );
   });
 
@@ -769,13 +769,13 @@ describe("Reject old overdue user organisation requests automated task", () => {
 
     expect(contextMock.prototype.info).toHaveBeenCalled();
     expect(contextMock.prototype.info).toHaveBeenCalledWith(
-      "rejectOldOrganisationRequests: Retrieving additional page of overdue organisation requests",
+      "rejectOldOrganisationRequests: Retrieving additional page of overdue/no approver organisation requests",
     );
     expect(
       organisationsMock.prototype.getOrganisationRequestPage,
     ).toHaveBeenCalledTimes(2);
     expect(
       organisationsMock.prototype.getOrganisationRequestPage,
-    ).toHaveBeenLastCalledWith(1, invocationId, [2]);
+    ).toHaveBeenLastCalledWith(1, invocationId, [2, 3]);
   });
 });

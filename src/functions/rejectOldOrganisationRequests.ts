@@ -136,7 +136,7 @@ async function getEmailInfo(
 }
 
 /**
- * Rejects organisation requests that are overdue and were created over 3 months ago.
+ * Rejects organisation requests that are overdue or have no approvers, and were created over 3 months ago.
  *
  * @param _ - Azure function {@link Timer} to handle scheduling information.
  * @param context - Azure function {@link InvocationContext} to log and retrieve invocation data.
@@ -160,13 +160,13 @@ export async function rejectOldOrganisationRequests(
     });
 
     context.info(
-      "rejectOldOrganisationRequests: Retrieving initial page of overdue organisation requests",
+      "rejectOldOrganisationRequests: Retrieving initial page of overdue/no approver organisation requests",
     );
 
     let requestPage = await organisations.getOrganisationRequestPage(
       1,
       correlationId,
-      [2],
+      [2, 3],
     );
 
     while (requestPage.page <= requestPage.totalNumberOfPages) {
@@ -179,7 +179,7 @@ export async function rejectOldOrganisationRequests(
       }
 
       context.info(
-        `rejectOldOrganisationRequests: Rejecting ${suitableRequests.length} overdue organisation requests older than ${targetDate.toLocaleDateString("en-GB")}`,
+        `rejectOldOrganisationRequests: Rejecting ${suitableRequests.length} overdue/no approver organisation requests older than ${targetDate.toLocaleDateString("en-GB")}`,
       );
 
       const { successful, failed, errored } = filterResults(
@@ -236,19 +236,19 @@ export async function rejectOldOrganisationRequests(
       }
 
       context.info(
-        "rejectOldOrganisationRequests: Retrieving additional page of overdue organisation requests",
+        "rejectOldOrganisationRequests: Retrieving additional page of overdue/no approver organisation requests",
       );
 
       // We retrieve page 1 repeatedly as the endpoint is sorted oldest first, so any requests updated above will no longer be returned.
       requestPage = await organisations.getOrganisationRequestPage(
         1,
         correlationId,
-        [2],
+        [2, 3],
       );
     }
 
     context.info(
-      `rejectOldOrganisationRequests: No more overdue organisation requests available older than ${targetDate.toLocaleDateString("en-GB")}`,
+      `rejectOldOrganisationRequests: No more overdue/no approver organisation requests available older than ${targetDate.toLocaleDateString("en-GB")}`,
     );
   } catch (error) {
     throw new Error(`rejectOldOrganisationRequests: ${error.message}`);
