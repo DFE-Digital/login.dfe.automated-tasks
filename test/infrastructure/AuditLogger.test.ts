@@ -118,15 +118,18 @@ describe("Service bus audit logger", () => {
         await auditLogger.batchedLog(logs);
 
         expect(sendMessages).toHaveBeenCalled();
-        expect(
-          JSON.parse(JSON.parse(sendMessages.mock.calls[0][0][0].body)[0]),
-        ).toHaveProperty("level", "audit");
-        expect(
-          JSON.parse(JSON.parse(sendMessages.mock.calls[0][0][1].body)[0]),
-        ).toHaveProperty("level", "audit");
-        expect(
-          JSON.parse(JSON.parse(sendMessages.mock.calls[0][0][2].body)[0]),
-        ).toHaveProperty("level", level);
+        expect(sendMessages.mock.calls[0][0][0].body).toHaveProperty(
+          "level",
+          "audit",
+        );
+        expect(sendMessages.mock.calls[0][0][1].body).toHaveProperty(
+          "level",
+          "audit",
+        );
+        expect(sendMessages.mock.calls[0][0][2].body).toHaveProperty(
+          "level",
+          level,
+        );
       });
 
       it("it sets each audit record's application to 'automated-tasks' if it is not set", async () => {
@@ -142,15 +145,18 @@ describe("Service bus audit logger", () => {
         await auditLogger.batchedLog(logs);
 
         expect(sendMessages).toHaveBeenCalled();
-        expect(
-          JSON.parse(JSON.parse(sendMessages.mock.calls[0][0][0].body)[0]),
-        ).toHaveProperty("application", "automated-tasks");
-        expect(
-          JSON.parse(JSON.parse(sendMessages.mock.calls[0][0][1].body)[0]),
-        ).toHaveProperty("application", "automated-tasks");
-        expect(
-          JSON.parse(JSON.parse(sendMessages.mock.calls[0][0][2].body)[0]),
-        ).toHaveProperty("application", application);
+        expect(sendMessages.mock.calls[0][0][0].body).toHaveProperty(
+          "application",
+          "automated-tasks",
+        );
+        expect(sendMessages.mock.calls[0][0][1].body).toHaveProperty(
+          "application",
+          "automated-tasks",
+        );
+        expect(sendMessages.mock.calls[0][0][2].body).toHaveProperty(
+          "application",
+          application,
+        );
       });
 
       it("it sets each audit record's env to 'azure' if it is not set", async () => {
@@ -166,15 +172,18 @@ describe("Service bus audit logger", () => {
         await auditLogger.batchedLog(logs);
 
         expect(sendMessages).toHaveBeenCalled();
-        expect(
-          JSON.parse(JSON.parse(sendMessages.mock.calls[0][0][0].body)[0]),
-        ).toHaveProperty("env", "azure");
-        expect(
-          JSON.parse(JSON.parse(sendMessages.mock.calls[0][0][1].body)[0]),
-        ).toHaveProperty("env", "azure");
-        expect(
-          JSON.parse(JSON.parse(sendMessages.mock.calls[0][0][2].body)[0]),
-        ).toHaveProperty("env", env);
+        expect(sendMessages.mock.calls[0][0][0].body).toHaveProperty(
+          "env",
+          "azure",
+        );
+        expect(sendMessages.mock.calls[0][0][1].body).toHaveProperty(
+          "env",
+          "azure",
+        );
+        expect(sendMessages.mock.calls[0][0][2].body).toHaveProperty(
+          "env",
+          env,
+        );
       });
 
       it("it sends the JSON stringified array of the stringified body for each message to the service bus topic", async () => {
@@ -192,7 +201,7 @@ describe("Service bus audit logger", () => {
           },
         };
         const message = {
-          body: JSON.stringify([JSON.stringify(fullLog)]),
+          body: fullLog,
         };
         await auditLogger.batchedLog([fullLog, fullLog, fullLog]);
 
@@ -243,27 +252,30 @@ describe("Service bus audit logger", () => {
         await auditLogger.log(minimumLog);
 
         expect(sendMessages).toHaveBeenCalled();
-        expect(
-          JSON.parse(JSON.parse(sendMessages.mock.calls[0][0].body)[0]),
-        ).toHaveProperty("level", "audit");
+        expect(sendMessages.mock.calls[0][0].body).toHaveProperty(
+          "level",
+          "audit",
+        );
       });
 
       it("it sets the audit record's application to 'automated-tasks' if it is not set", async () => {
         await auditLogger.log(minimumLog);
 
         expect(sendMessages).toHaveBeenCalled();
-        expect(
-          JSON.parse(JSON.parse(sendMessages.mock.calls[0][0].body)[0]),
-        ).toHaveProperty("application", "automated-tasks");
+        expect(sendMessages.mock.calls[0][0].body).toHaveProperty(
+          "application",
+          "automated-tasks",
+        );
       });
 
       it("it sets the audit record's env to 'azure' if it is not set", async () => {
         await auditLogger.log(minimumLog);
 
         expect(sendMessages).toHaveBeenCalled();
-        expect(
-          JSON.parse(JSON.parse(sendMessages.mock.calls[0][0].body)[0]),
-        ).toHaveProperty("env", "azure");
+        expect(sendMessages.mock.calls[0][0].body).toHaveProperty(
+          "env",
+          "azure",
+        );
       });
 
       it("it sends the JSON stringified array of the stringified body to the service bus topic", async () => {
@@ -284,7 +296,7 @@ describe("Service bus audit logger", () => {
 
         expect(sendMessages).toHaveBeenCalled();
         expect(sendMessages).toHaveBeenCalledWith({
-          body: JSON.stringify([JSON.stringify(fullLog)]),
+          body: fullLog,
         });
       });
 
