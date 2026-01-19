@@ -80,7 +80,7 @@ export class AuditLogger {
     }
 
     return {
-      body: JSON.stringify([JSON.stringify(formattedRecord)]),
+      body: formattedRecord,
     };
   }
 
