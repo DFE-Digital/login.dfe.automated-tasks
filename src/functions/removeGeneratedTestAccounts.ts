@@ -239,13 +239,20 @@ async function deleteUserDbRecords(userIds: string[]): Promise<void> {
 /**
  * Removes generated test users/invitations based on their email address domain and names.
  *
- * @param _ - Azure function {@link Timer} to handle scheduling information.
+ * @param timer - Azure function {@link Timer} to handle scheduling information.
  * @param context - Azure function {@link InvocationContext} to log and retrieve invocation data.
  */
 export async function removeGeneratedTestAccounts(
-  _: Timer,
+  timer: Timer,
   context: InvocationContext,
 ): Promise<void> {
+  if (timer.isPastDue) {
+    context.warn(
+      "removeGeneratedTestAccounts: Timer is marked as past due, and attempted to run the function",
+    );
+    return;
+  }
+
   try {
     const correlationId = context.invocationId;
     const batchSize = 100;

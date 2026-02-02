@@ -86,6 +86,22 @@ describe("Remove generated test accounts automated task", () => {
     );
   });
 
+  it("it logs a warning if the timer is marked as past due, without executing", async () => {
+    await removeGeneratedTestAccounts(
+      {
+        isPastDue: true,
+      } as Timer,
+      new InvocationContext(),
+    );
+
+    expect(
+      contextMock.prototype.warn(
+        "removeGeneratedTestAccounts: Timer is marked as past due, and attempted to run the function",
+      ),
+    );
+    expect(userMock.findAll).not.toHaveBeenCalled();
+  });
+
   it.each([
     ["Access", accessMock],
     ["Directories", directoriesMock],

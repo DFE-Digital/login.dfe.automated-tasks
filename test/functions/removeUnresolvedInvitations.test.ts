@@ -52,6 +52,22 @@ describe("Remove unresolved invitations automated task", () => {
     );
   });
 
+  it("it logs a warning if the timer is marked as past due, without executing", async () => {
+    await removeUnresolvedInvitations(
+      {
+        isPastDue: true,
+      } as Timer,
+      new InvocationContext(),
+    );
+
+    expect(
+      contextMock.prototype.warn(
+        "removeUnresolvedInvitations: Timer is marked as past due, and attempted to run the function",
+      ),
+    );
+    expect(invitationMock.findAll).not.toHaveBeenCalled();
+  });
+
   it.each([
     ["Access", jest.mocked(Access)],
     ["Organisations", jest.mocked(Organisations)],

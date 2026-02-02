@@ -31,6 +31,22 @@ describe("Deactivate unused accounts automated task", () => {
     directoriesMock.prototype.deactivateUser.mockResolvedValue(true);
   });
 
+  it("it logs a warning if the timer is marked as past due, without executing", async () => {
+    await deactivateUnusedAccounts(
+      {
+        isPastDue: true,
+      } as Timer,
+      new InvocationContext(),
+    );
+
+    expect(
+      contextMock.prototype.warn(
+        "deactivateUnusedAccounts: Timer is marked as past due, and attempted to run the function",
+      ),
+    );
+    expect(userMock.findAll).not.toHaveBeenCalled();
+  });
+
   it("it throws an error if the directories API throws an error on instantiation", async () => {
     const errorMessage = "Test Error Directories";
     directoriesMock.mockImplementation(() => {
