@@ -85,15 +85,14 @@ async function sendRejectionEmails(
   notificationClient: NotificationClient,
 ): Promise<void[]> {
   return Promise.all(
-    emailInfo.map(
-      (info) =>
-        notificationClient.sendAccessRequest(
-          info.email,
-          info.name,
-          info.orgName,
-          false,
-          `The approver(s) at the organisation haven't taken any action on your request, which was made on ${info.requestDate.toLocaleDateString("en-GB")}.`,
-        ) as Promise<void>,
+    emailInfo.map((info) =>
+      notificationClient.sendAccessRequest(
+        info.email,
+        info.name,
+        info.orgName,
+        false,
+        `The approver(s) at the organisation haven't taken any action on your request, which was made on ${info.requestDate.toLocaleDateString("en-GB")}.`,
+      ),
     ),
   );
 }
