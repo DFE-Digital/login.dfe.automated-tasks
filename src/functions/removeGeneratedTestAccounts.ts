@@ -53,8 +53,8 @@ type userApiRecords = {
  * @returns A promise containing the test user and invitation IDs.
  */
 async function getTestAccountIds(): Promise<{
-  userIds: string[];
-  invitationIds: string[];
+  userIds: { dsi: string; entra: string | null }[];
+  invitationIds: { dsi: string }[];
 }> {
   const directoriesDb = connection(DatabaseName.Directories);
   initialiseAllUserModels(
@@ -98,11 +98,17 @@ async function getTestAccountIds(): Promise<{
     },
   };
 
-  const users: Pick<User, "id">[] = await User.findAll(query);
+  const users: Pick<User, "id" | "entraId">[] = await User.findAll({
+    ...query,
+    attributes: [...query.attributes, "entraId"],
+  });
   const invitations: Pick<Invitation, "id">[] = await Invitation.findAll(query);
   return {
-    userIds: users.map((user) => user.id),
-    invitationIds: invitations.map((invitation) => invitation.id),
+    userIds: users.map((user) => ({
+      dsi: user.id,
+      entra: user.entraId,
+    })),
+    invitationIds: invitations.map((invitation) => ({ dsi: invitation.id })),
   };
 }
 
@@ -286,18 +292,13 @@ export async function removeGeneratedTestAccounts(
 
       const { successful, failed, errored } = filterResults(
         await Promise.allSettled(
-          batch.map(async (userId) => {
+          batch.map(async ({ dsi }) => {
             const apiRecords = await getUserApiRecords(
               apis,
-              userId,
+              dsi,
               correlationId,
             );
-            return deleteUserApiRecords(
-              apis,
-              userId,
-              apiRecords,
-              correlationId,
-            );
+            return deleteUserApiRecords(apis, dsi, apiRecords, correlationId);
           }),
         ),
       );
@@ -334,15 +335,15 @@ export async function removeGeneratedTestAccounts(
 
       const { successful, failed, errored } = filterResults(
         await Promise.allSettled(
-          batch.map(async (invitationId) => {
+          batch.map(async ({ dsi }) => {
             const apiRecords = await getInvitationApiRecords(
               apis,
-              invitationId,
+              dsi,
               correlationId,
             );
             return deleteInvitationApiRecords(
               apis,
-              invitationId,
+              dsi,
               apiRecords,
               correlationId,
             );

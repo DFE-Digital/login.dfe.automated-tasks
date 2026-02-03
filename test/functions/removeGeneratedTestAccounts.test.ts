@@ -205,7 +205,10 @@ describe("Remove generated test accounts automated task", () => {
     await removeGeneratedTestAccounts({} as Timer, new InvocationContext());
 
     expect(userMock.findAll).toHaveBeenCalled();
-    expect(userMock.findAll).toHaveBeenCalledWith(query);
+    expect(userMock.findAll).toHaveBeenCalledWith({
+      ...query,
+      attributes: [...query.attributes, "entraId"],
+    });
     expect(invitationMock.findAll).toHaveBeenCalled();
     expect(invitationMock.findAll).toHaveBeenCalledWith(query);
   });
