@@ -1,16 +1,140 @@
 # login.dfe.automated-tasks
 
+[![Build Status](https://dfe-ssp.visualstudio.com/S141-Dfe-Signin/_apis/build/status%2FBackend%20tier%2Flogin.dfe.automated-tasks?repoName=DFE-Digital%2Flogin.dfe.automated-tasks&branchName=main)](https://dfe-ssp.visualstudio.com/S141-Dfe-Signin/_build/latest?definitionId=3244&repoName=DFE-Digital%2Flogin.dfe.automated-tasks&branchName=main)
+
+## Overview
+
 Automated tasks run on schedules or triggered manually to carry out BAU activities for DfE Sign-in.
 
+This is an Azure Functions application built with TypeScript that runs scheduled maintenance tasks for the DfE Sign-in platform. Common tasks include deactivating unused accounts, rejecting old organisation requests, cleaning up test data, and managing unresolved invitations.
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+- **Node.js** 18.x or higher
+- **npm** 9.x or higher
+- **Visual Studio Code** (recommended)
+- **Git**
+
+For development and testing, the following VSCode extensions are recommended:
+
+- [Azure Functions](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-azurefunctions)
+- [Azurite](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite) (Azure Storage emulator for local development)
+- [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint)
+- [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode)
+
+## Architecture Overview
+
+This application is structured as follows:
+
+- **Functions** (`src/functions/`): Individual Azure Functions that execute scheduled tasks
+- **Infrastructure** (`src/infrastructure/`): Shared services including database connections, API clients, and audit logging
+- **Database Layer** (`src/infrastructure/database/`): Sequelize models and utilities for interacting with the directories and organisations databases
+- **API Layer** (`src/infrastructure/api/`): Clients for communicating with internal DSi APIs using MSAL authentication
+- **Utilities** (`src/functions/utils/`, `src/infrastructure/utils/`): Shared helper functions and validation
+
+Each function is registered in `src/index.ts` and configured with:
+- A schedule (NCronTab expression)
+- Retry strategy for error handling
+- Integration with audit logging for tracking actions
+
+## Project Structure
+
+```
+src/
+├── index.ts                          # Main entry point; function app and trigger registrations
+├── functions/                        # Individual scheduled functions
+│   ├── deactivateUnusedAccounts.ts
+│   ├── rejectOldOrganisationRequests.ts
+│   ├── removeGeneratedTestAccounts.ts
+│   ├── removeUnresolvedInvitations.ts
+│   ├── services/                     # Business logic services used by functions
+│   │   └── invitations.ts
+│   └── utils/                        # Function-specific utilities
+│       └── filterResults.ts
+├── infrastructure/
+│   ├── AuditLogger.ts                # Logging to Azure Service Bus for audit trail
+│   ├── api/                          # API clients
+│   │   ├── common/
+│   │   │   ├── ApiClient.ts          # Base HTTP client
+│   │   │   └── MsalApiClient.ts      # MSAL-authenticated API client
+│   │   └── dsiInternal/              # Internal DSi API clients
+│   │       ├── DsiInternalApiClient.ts
+│   │       ├── Access.ts
+│   │       ├── Directories.ts
+│   │       └── Organisations.ts
+│   ├── database/                     # Database models & connections
+│   │   ├── common/
+│   │   │   ├── connection.ts         # Database connection pool management
+│   │   │   └── utils.ts              # Shared query utilities
+│   │   ├── directories/              # Directories database models
+│   │   │   ├── Invitation.ts
+│   │   │   ├── InvitationCallback.ts
+│   │   │   ├── User.ts
+│   │   │   └── UserPasswordPolicy.ts
+│   │   └── organisations/            # Organisations database models
+│   │       ├── UserBanner.ts
+│   │       ├── UserOrganisationRequest.ts
+│   │       └── UserServiceRequest.ts
+│   └── utils/                        # Global utilities
+│       ├── checkEnv.ts               # Environment variable validation
+│       └── index.ts
+test/                                 # Test files mirroring src/ structure
+├── testUtils.ts                      # Shared test utilities and mocks
+├── functions/
+│   ├── deactivateUnusedAccounts.test.ts
+│   ├── rejectOldOrganisationRequests.test.ts
+│   ├── removeGeneratedTestAccounts.test.ts
+│   ├── removeUnresolvedInvitations.test.ts
+│   ├── services/
+│   │   └── invitations.test.ts
+│   └── utils/
+│       └── filterResults.test.ts
+├── infrastructure/                   # Tests for infrastructure layer
+└── ...
+```
+
 - [login.dfe.automated-tasks](#logindfeautomated-tasks)
+  - [Overview](#overview)
+  - [Prerequisites](#prerequisites)
+  - [Architecture Overview](#architecture-overview)
+  - [Project Structure](#project-structure)
   - [DevOps Requirements](#devops-requirements)
   - [Automated Tasks](#automated-tasks)
   - [Local Debugging](#local-debugging)
     - [First time setup](#first-time-setup)
     - [Running any functions locally](#running-any-functions-locally)
+  - [Testing](#testing)
+    - [Running Tests](#running-tests)
+    - [Test Structure](#test-structure)
+    - [Writing New Tests](#writing-new-tests)
+    - [Test Coverage](#test-coverage)
+  - [Code Quality](#code-quality)
+    - [Common Commands](#common-commands)
+    - [Pre-commit Hooks](#pre-commit-hooks)
+  - [Common Development Tasks](#common-development-tasks)
+    - [Modify an Existing Function](#modify-an-existing-function)
+    - [Add a New Function](#add-a-new-function)
+    - [Debug a Function Locally](#debug-a-function-locally)
+    - [Check Database Queries](#check-database-queries)
+    - [Add a New Database Connection](#add-a-new-database-connection)
+    - [Add a New API Connection](#add-a-new-api-connection)
+  - [Troubleshooting](#troubleshooting)
+    - [Functions Won't Start Locally](#functions-wont-start-locally)
+    - [Database Connection Errors](#database-connection-errors)
+    - [Azurite Storage Issues](#azurite-storage-issues)
+    - [ESLint / TypeScript Errors](#eslint--typescript-errors)
+    - [Test Failures](#test-failures)
+    - [API Authentication Issues](#api-authentication-issues)
   - [Adding New Azure Functions](#adding-new-azure-functions)
   - [Adding New Database Connections](#adding-new-database-connections)
+  - [Adding New Database Connections](#adding-new-database-connections-1)
   - [Adding New DSi Internal API Connections](#adding-new-dsi-internal-api-connections)
+  - [Key Dependencies](#key-dependencies)
+    - [Runtime Dependencies](#runtime-dependencies)
+    - [Development Dependencies](#development-dependencies)
+    - [Build \& Deployment](#build--deployment)
 
 ## DevOps Requirements
 
@@ -121,7 +245,179 @@ To ease local running/debugging of these functions, please install the recommend
 | AUDIT_TOPIC_NAME | Service bus audit topic name. | Retrieve from KeyVault (Key name: `auditServiceBusTopicName`) or the service bus' "Overview" page in the Azure portal. | `"audit"`
 | REDIS_CONNECTION_STRING | Redis connection string in the format `redis://username:password@host:port`. | Retrieve from KeyVault (Key name: `redisConn`) or from the "Azure Cache for Redis" section of the Azure Portal. | `""`
 | SUPPORT_USER_ID | ID/sub of the support team account. | Retrieve from KeyVault (Key name: `supportUserId`) or the directories/organisations database for the environment. | `""`
+## Testing
 
+### Running Tests
+
+Run all tests with coverage:
+
+```bash
+npm run test
+```
+
+Run tests for a specific file:
+
+```bash
+npm test -- src/functions/deactivateUnusedAccounts.test.ts
+```
+
+Run tests in watch mode (reruns tests as files change):
+
+```bash
+npm run watch
+```
+
+### Test Structure
+
+- Unit tests are located alongside their source files with `.test.ts` extensions
+- Tests use Jest and are configured in `jest.config.js`
+- Mock utilities are available in `test/testUtils.ts` for common test setup, including database mocks and API mocks
+- Mocks are automatically reset/restored between tests to ensure test isolation
+
+### Writing New Tests
+
+When adding a new function, create a corresponding test file in `test/functions/` with the same name and `.test.ts` extension. Use the mock utilities to avoid hitting real databases or APIs.
+
+Each function should have comprehensive unit tests covering:
+- Happy path scenarios
+- Error handling and retry logic
+- Edge cases (empty results, database failures, API errors, etc.)
+- Boundary conditions and timeouts
+
+### Test Coverage
+
+Test coverage reports are generated when running tests. Aim for high coverage on:
+- Business logic (functions, services)
+- Error handling paths
+- Database query logic
+
+## Code Quality
+
+This project enforces code quality against DSi coding standard through:
+
+- **ESLint** for code linting (TypeScript support)
+- **Prettier** for code formatting
+- **Husky** for git hooks (automatically formats staged files on commit)
+- **TypeScript** for static type checking
+
+### Common Commands
+
+```bash
+npm run lint             # Check for linting issues
+npm run lint:fix         # Auto-fix linting issues
+npm run format           # Format all files with Prettier
+npm run dev:checks       # Run linting and tests (recommended before commit)
+```
+
+### Pre-commit Hooks
+
+Husky is configured to automatically run Prettier on all staged files when you commit. This ensures consistent formatting across the codebase.
+
+## Common Development Tasks
+
+### Modify an Existing Function
+
+1. Open the function file in `src/functions/functionName.ts`
+2. Make your changes
+3. Update the corresponding test file in `test/functions/functionName.test.ts`
+4. Run linting and tests:
+   ```bash
+   npm run dev:checks
+   ```
+5. Start debug mode to manually test:
+   - Open "Run and Debug" menu in VSCode
+   - Select "Attach to Node functions"
+   - Click the start debugging button
+
+### Add a New Function
+
+See [Adding New Azure Functions](#adding-new-azure-functions) section below.
+
+### Debug a Function Locally
+
+1. Follow the steps in [Local Debugging](#local-debugging) section to set up your environment
+2. In the Azure Functions extension in VSCode (Activity Bar > Azure > Workspace > Local Project > Functions):
+   - Right-click the function you want to test
+   - Select "Execute Function Now"
+3. Set breakpoints in VSCode by clicking the line number
+4. Inspect variable values and step through code using the debugger controls
+5. Check the debug console for `context.log()` output
+
+### Check Database Queries
+
+When debugging database issues:
+
+1. Enable `DEBUG: "true"` in `local.settings.json`
+2. Run functions locally in debug mode
+3. Detailed Sequelize SQL logging will appear in the debug console, showing generated queries and parameters
+4. Use this to identify query issues or N+1 problems
+
+### Add a New Database Connection
+
+See [Adding New Database Connections](#adding-new-database-connections) section below.
+
+### Add a New API Connection
+
+See [Adding New DSi Internal API Connections](#adding-new-dsi-internal-api-connections) section below.
+
+## Troubleshooting
+
+### Functions Won't Start Locally
+
+**Issue**: "Azure Functions Core Tools not found"
+- **Solution**: Run "Azure Functions: Install or Update Azure Functions Core Tools" from VSCode command palette (`F1` or `Ctrl+Shift+P`)
+
+**Issue**: Port 7071 already in use
+- **Solution**: Close other function apps or change the port in `.vscode/settings.json`
+
+**Issue**: Functions start but no output appears
+- **Solution**: Check that Azurite storage emulator is running; run "Azurite: Start" from command palette
+
+### Database Connection Errors
+
+**Issue**: "Unable to connect to database" or timeout errors
+- **Solution**: Verify database credentials in `local.settings.json` match your target environment
+- **Solution**: Ensure your IP is whitelisted on the database server firewall
+- **Solution**: For VPN users: Ensure `DEBUG: "true"` is set to connect via WebSockets
+
+**Issue**: Connection string format error
+- **Solution**: Verify all required fields are populated: host, name, username, password
+- **Solution**: Check that special characters in passwords are not escaped
+
+### Azurite Storage Issues
+
+**Issue**: "Storage emulator not running" when starting functions
+- **Solution**: Run "Azurite: Start" from VSCode command palette first
+
+**Issue**: Files persist between runs causing test failures
+- **Solution**: Run "Azurite: Clean" from command palette to clear emulator files
+
+**Issue**: "Address already in use" for Azurite
+- **Solution**: Stop all running Azurite instances and restart
+
+### ESLint / TypeScript Errors
+
+**Issue**: Build fails with TypeScript errors
+- **Solution**: Run `npm run build` to see detailed errors
+- **Solution**: Run `npm run lint:fix` to auto-fix many issues
+
+**Issue**: "Cannot find module" error
+- **Solution**: Check import paths use correct relative paths (e.g., `../` not `/`)
+- **Solution**: Verify file extensions are included in imports if needed
+
+### Test Failures
+
+**Issue**: Tests pass locally but fail in CI/CD
+- **Solution**: Ensure mocks are properly isolated; check that mock setup/teardown is correct
+- **Solution**: Look for hardcoded dates/times; use mocked `Date` or test utilities
+- **Solution**: Check for race conditions; use `jest.useFakeTimers()` if needed
+
+### API Authentication Issues
+
+**Issue**: "MSAL authentication failed" when calling internal APIs
+- **Solution**: Verify API credentials in `local.settings.json`: `API_INTERNAL_CLIENT_ID`, `API_INTERNAL_CLIENT_SECRET`, etc.
+- **Solution**: Check that client secret hasn't expired in Azure AD
+- **Solution**: Ensure correct tenant ID is set (`API_INTERNAL_TENANT`)
 ## Adding New Azure Functions
 
 In the following steps we'll create a new handler for our new timer trigger `functionName` Azure function, and register it with our function app.
@@ -167,6 +463,17 @@ app.timer("functionName", {
 3. Update the blank `local.settings.json` in step 2 of the ["First time setup"](#first-time-setup) section above.
 4. Add descriptions to the table in step 1 of the ["Running any functions locally"](#running-any-functions-locally) section above.
 
+## Adding New Database Connections
+
+1. Add an additional value to the `DatabaseName` enum within `src/infrastructure/database/common/connection.ts` e.g. `Foo = "foo"`.
+2. Add app settings/environment variables to the app and your `local.settings.json` named using the database name in capitals, the following is using the `"foo"` example:
+   - `DATABASE_FOO_HOST`
+   - `DATABASE_FOO_NAME`
+   - `DATABASE_FOO_USERNAME`
+   - `DATABASE_FOO_PASSWORD`
+3. Update the blank `local.settings.json` in step 2 of the ["First time setup"](#first-time-setup) section above.
+4. Add descriptions to the table in step 1 of the ["Running any functions locally"](#running-any-functions-locally) section above.
+
 ## Adding New DSi Internal API Connections
 
 1. Add an additional value to the `ApiName` enum within `src/infrastructure/api/dsiInternal/DsiInternalApiClient.ts` e.g. `Foo = "foo"`.
@@ -174,3 +481,32 @@ app.timer("functionName", {
    - `API_INTERNAL_FOO_HOST`
 3. Update the blank `local.settings.json` in step 2 of the ["First time setup"](#first-time-setup) section above.
 4. Add a description to the table in step 1 of the ["Running any functions locally"](#running-any-functions-locally) section above.
+
+## Key Dependencies
+
+### Runtime Dependencies
+
+- **@azure/functions**: Azure Functions runtime for Node.js; provides function app lifecycle and trigger decorators
+- **@azure/msal-node**: Microsoft Authentication Library for Node.js; handles service-to-service authentication with internal DSi APIs
+- **@azure/service-bus**: Azure Service Bus SDK; publishes audit events to service bus for compliance tracking
+- **sequelize**: SQL ORM; abstracts database interactions with support for transactions and migrations
+- **tedious**: Microsoft SQL Server driver for Node.js; used by Sequelize for database connections
+- **login.dfe.jobs-client**: Internal DfE package; handles job processing and state management
+- **ws**: WebSocket library; used for service bus connections when debugging (WebSocket mode)
+
+### Development Dependencies
+
+- **typescript**: Compiles TypeScript to JavaScript for Azure Functions runtime
+- **jest**: Unit testing framework with built-in mocking capabilities
+- **ts-jest**: TypeScript support in Jest; allows running `.ts` test files directly
+- **eslint**: Code linter; enforces code style and catches common errors
+- **prettier**: Code formatter; maintains consistent code style across the project
+- **@types/jest**: TypeScript type definitions for Jest
+- **husky**: Git hooks manager; runs Prettier on staged files before commit
+- **lint-staged**: Runs linters/formatters on staged files in git commits
+
+### Build & Deployment
+
+- **npm scripts** in `package.json` define build, test, lint, and watch tasks
+- TypeScript is compiled to JavaScript in the `dist/` directory for Azure deployment
+- The DevOps pipeline (`DevOps/pipeline/azure-pipeline.yml`) orchestrates CI/CD with `buildFlow: true` to enable TypeScript transpilation
