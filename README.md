@@ -39,67 +39,11 @@ Each function is registered in `src/index.ts` and configured with:
 - Retry strategy for error handling
 - Integration with audit logging for tracking actions
 
-## Project Structure
-
-```
-src/
-├── index.ts                          # Main entry point; function app and trigger registrations
-├── functions/                        # Individual scheduled functions
-│   ├── deactivateUnusedAccounts.ts
-│   ├── rejectOldOrganisationRequests.ts
-│   ├── removeGeneratedTestAccounts.ts
-│   ├── removeUnresolvedInvitations.ts
-│   ├── services/                     # Business logic services used by functions
-│   │   └── invitations.ts
-│   └── utils/                        # Function-specific utilities
-│       └── filterResults.ts
-├── infrastructure/
-│   ├── AuditLogger.ts                # Logging to Azure Service Bus for audit trail
-│   ├── api/                          # API clients
-│   │   ├── common/
-│   │   │   ├── ApiClient.ts          # Base HTTP client
-│   │   │   └── MsalApiClient.ts      # MSAL-authenticated API client
-│   │   └── dsiInternal/              # Internal DSi API clients
-│   │       ├── DsiInternalApiClient.ts
-│   │       ├── Access.ts
-│   │       ├── Directories.ts
-│   │       └── Organisations.ts
-│   ├── database/                     # Database models & connections
-│   │   ├── common/
-│   │   │   ├── connection.ts         # Database connection pool management
-│   │   │   └── utils.ts              # Shared query utilities
-│   │   ├── directories/              # Directories database models
-│   │   │   ├── Invitation.ts
-│   │   │   ├── InvitationCallback.ts
-│   │   │   ├── User.ts
-│   │   │   └── UserPasswordPolicy.ts
-│   │   └── organisations/            # Organisations database models
-│   │       ├── UserBanner.ts
-│   │       ├── UserOrganisationRequest.ts
-│   │       └── UserServiceRequest.ts
-│   └── utils/                        # Global utilities
-│       ├── checkEnv.ts               # Environment variable validation
-│       └── index.ts
-test/                                 # Test files mirroring src/ structure
-├── testUtils.ts                      # Shared test utilities and mocks
-├── functions/
-│   ├── deactivateUnusedAccounts.test.ts
-│   ├── rejectOldOrganisationRequests.test.ts
-│   ├── removeGeneratedTestAccounts.test.ts
-│   ├── removeUnresolvedInvitations.test.ts
-│   ├── services/
-│   │   └── invitations.test.ts
-│   └── utils/
-│       └── filterResults.test.ts
-├── infrastructure/                   # Tests for infrastructure layer
-└── ...
-```
 
 - [login.dfe.automated-tasks](#logindfeautomated-tasks)
   - [Overview](#overview)
   - [Prerequisites](#prerequisites)
   - [Architecture Overview](#architecture-overview)
-  - [Project Structure](#project-structure)
   - [DevOps Requirements](#devops-requirements)
   - [Automated Tasks](#automated-tasks)
   - [Local Debugging](#local-debugging)
@@ -266,39 +210,6 @@ Run tests in watch mode (reruns tests as files change):
 ```bash
 npm run watch
 ```
-
-### Test Structure
-
-- Unit tests are located alongside their source files with `.test.ts` extensions
-- Tests use Jest and are configured in `jest.config.js`
-- Mock utilities are available in `test/testUtils.ts` for common test setup, including database mocks and API mocks
-- Mocks are automatically reset/restored between tests to ensure test isolation
-
-### Writing New Tests
-
-When adding a new function, create a corresponding test file in `test/functions/` with the same name and `.test.ts` extension. Use the mock utilities to avoid hitting real databases or APIs.
-
-Each function should have comprehensive unit tests covering:
-- Happy path scenarios
-- Error handling and retry logic
-- Edge cases (empty results, database failures, API errors, etc.)
-- Boundary conditions and timeouts
-
-### Test Coverage
-
-Test coverage reports are generated when running tests. Aim for high coverage on:
-- Business logic (functions, services)
-- Error handling paths
-- Database query logic
-
-## Code Quality
-
-This project enforces code quality against DSi coding standard through:
-
-- **ESLint** for code linting (TypeScript support)
-- **Prettier** for code formatting
-- **Husky** for git hooks (automatically formats staged files on commit)
-- **TypeScript** for static type checking
 
 ### Common Commands
 
@@ -481,29 +392,6 @@ app.timer("functionName", {
    - `API_INTERNAL_FOO_HOST`
 3. Update the blank `local.settings.json` in step 2 of the ["First time setup"](#first-time-setup) section above.
 4. Add a description to the table in step 1 of the ["Running any functions locally"](#running-any-functions-locally) section above.
-
-## Key Dependencies
-
-### Runtime Dependencies
-
-- **@azure/functions**: Azure Functions runtime for Node.js; provides function app lifecycle and trigger decorators
-- **@azure/msal-node**: Microsoft Authentication Library for Node.js; handles service-to-service authentication with internal DSi APIs
-- **@azure/service-bus**: Azure Service Bus SDK; publishes audit events to service bus for compliance tracking
-- **sequelize**: SQL ORM; abstracts database interactions with support for transactions and migrations
-- **tedious**: Microsoft SQL Server driver for Node.js; used by Sequelize for database connections
-- **login.dfe.jobs-client**: Internal DfE package; handles job processing and state management
-- **ws**: WebSocket library; used for service bus connections when debugging (WebSocket mode)
-
-### Development Dependencies
-
-- **typescript**: Compiles TypeScript to JavaScript for Azure Functions runtime
-- **jest**: Unit testing framework with built-in mocking capabilities
-- **ts-jest**: TypeScript support in Jest; allows running `.ts` test files directly
-- **eslint**: Code linter; enforces code style and catches common errors
-- **prettier**: Code formatter; maintains consistent code style across the project
-- **@types/jest**: TypeScript type definitions for Jest
-- **husky**: Git hooks manager; runs Prettier on staged files before commit
-- **lint-staged**: Runs linters/formatters on staged files in git commits
 
 ### Build & Deployment
 
