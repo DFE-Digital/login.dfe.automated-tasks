@@ -1,6 +1,6 @@
 import { ConfidentialClientApplication, LogLevel } from "@azure/msal-node";
 import { Client } from "@microsoft/microsoft-graph-client";
-import { checkEnv } from "../utils";
+import { checkEnv } from "../../utils";
 
 /**
  * Configures the Graph API client to authenticate for Entra with msal-node which we use across our applications.

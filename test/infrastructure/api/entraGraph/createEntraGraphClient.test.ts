@@ -1,11 +1,11 @@
 import { Client } from "@microsoft/microsoft-graph-client";
 import { ConfidentialClientApplication, LogLevel } from "@azure/msal-node";
-import { createEntraGraphClient } from "../../../src/infrastructure/api/createEntraGraphClient";
-import { checkEnv } from "../../../src/infrastructure/utils";
+import { createEntraGraphClient } from "../../../../src/infrastructure/api/entraGraph/createEntraGraphClient";
+import { checkEnv } from "../../../../src/infrastructure/utils";
 
 jest.mock("@microsoft/microsoft-graph-client");
 jest.mock("@azure/msal-node");
-jest.mock("../../../src/infrastructure/utils");
+jest.mock("../../../../src/infrastructure/utils");
 
 describe("createEntraGraphClient", () => {
   const originalEnv = { ...process.env };
