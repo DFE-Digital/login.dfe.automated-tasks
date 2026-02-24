@@ -15,6 +15,8 @@ import {
   Organisations,
   type userOrganisationRecord,
 } from "../infrastructure/api/dsiInternal/Organisations";
+import { batchRequestHelper } from "../infrastructure/api/entraGraph/batchRequestHelper";
+import { createEntraGraphClient } from "../infrastructure/api/entraGraph/createEntraGraphClient";
 import {
   connection,
   DatabaseName,
@@ -29,6 +31,7 @@ import { UserPasswordPolicy } from "../infrastructure/database/directories/UserP
 import { UserBanner } from "../infrastructure/database/organisations/UserBanner";
 import { UserOrganisationRequest } from "../infrastructure/database/organisations/UserOrganisationRequest";
 import { UserServiceRequest } from "../infrastructure/database/organisations/UserServiceRequest";
+import { Client } from "@microsoft/microsoft-graph-client";
 
 /**
  * API clients used throughout this function.
@@ -233,6 +236,43 @@ async function deleteUserApiRecords(
 }
 
 /**
+ * Deletes Entra records for the requested users.
+ *
+ * 404 responses are not counted as failures due to the Entra record no longer existing.
+ *
+ * @param userEntraIds - IDs of users to delete Entra records for.
+ * @param entraClient - An Entra API client to request user deletions with.
+ *
+ * @throws Error if any Graph API responses are not successful or 404 failures.
+ */
+async function deleteUserEntraRecords(
+  userEntraIds: string[],
+  entraClient: Client,
+): Promise<void> {
+  const results = await batchRequestHelper(
+    userEntraIds.map(
+      (id) =>
+        new Request(`https://graph.microsoft.com/users/${id}`, {
+          method: "DELETE",
+        }),
+    ),
+    entraClient,
+  );
+  const failedResponseErrors = results
+    .filter((response) => !response.success && response.status !== 404)
+    .map(
+      (response) =>
+        `${response.status} - ${response.errorCode} - ${response.errorMessage}`,
+    );
+
+  if (failedResponseErrors.length > 0) {
+    throw new Error(
+      "Graph API failures: " + [...new Set(failedResponseErrors)].join(", "),
+    );
+  }
+}
+
+/**
  * Deletes database records for the requested users.
  *
  * @param userIds - IDs of users to delete database records for.
@@ -279,6 +319,7 @@ export async function removeGeneratedTestAccounts(
       directories: new Directories(),
       organisations: new Organisations(),
     };
+    const entraClient = createEntraGraphClient();
 
     const { userIds, invitationIds } = await getTestAccountIds();
     context.info(
@@ -292,13 +333,21 @@ export async function removeGeneratedTestAccounts(
 
       const { successful, failed, errored } = filterResults(
         await Promise.allSettled(
-          batch.map(async ({ dsi }) => {
+          batch.map(async (ids) => {
             const apiRecords = await getUserApiRecords(
               apis,
-              dsi,
+              ids.dsi,
               correlationId,
             );
-            return deleteUserApiRecords(apis, dsi, apiRecords, correlationId);
+            return {
+              ...(await deleteUserApiRecords(
+                apis,
+                ids.dsi,
+                apiRecords,
+                correlationId,
+              )),
+              object: ids,
+            };
           }),
         ),
       );
@@ -320,9 +369,15 @@ export async function removeGeneratedTestAccounts(
 
       if (successful.count > 0) {
         context.info(
-          `removeGeneratedTestAccounts: Removing database records for the ${successful.count} users with successful API record removals`,
+          `removeGeneratedTestAccounts: Removing Entra and database records for the ${successful.count} users with successful API record removals`,
         );
-        await deleteUserDbRecords(successful.objects);
+        await deleteUserEntraRecords(
+          successful.objects
+            .filter((ids) => ids.entra !== null)
+            .map((ids) => ids.entra),
+          entraClient,
+        );
+        await deleteUserDbRecords(successful.objects.map((ids) => ids.dsi));
       }
     }
 
