@@ -17,6 +17,8 @@ import {
 import { Access } from "../../src/infrastructure/api/dsiInternal/Access";
 import { Directories } from "../../src/infrastructure/api/dsiInternal/Directories";
 import { Organisations } from "../../src/infrastructure/api/dsiInternal/Organisations";
+import { batchRequestHelper } from "../../src/infrastructure/api/entraGraph/batchRequestHelper";
+import { createEntraGraphClient } from "../../src/infrastructure/api/entraGraph/createEntraGraphClient";
 import {
   connection,
   DatabaseName,
@@ -37,6 +39,8 @@ jest.mock("../../src/functions/services/invitations");
 jest.mock("../../src/infrastructure/api/dsiInternal/Access");
 jest.mock("../../src/infrastructure/api/dsiInternal/Directories");
 jest.mock("../../src/infrastructure/api/dsiInternal/Organisations");
+jest.mock("../../src/infrastructure/api/entraGraph/batchRequestHelper");
+jest.mock("../../src/infrastructure/api/entraGraph/createEntraGraphClient");
 jest.mock("../../src/infrastructure/database/common/connection");
 jest.mock("../../src/infrastructure/database/common/utils");
 jest.mock("../../src/infrastructure/database/directories/Invitation");
@@ -53,6 +57,8 @@ describe("Remove generated test accounts automated task", () => {
   const accessMock = jest.mocked(Access);
   const directoriesMock = jest.mocked(Directories);
   const organisationsMock = jest.mocked(Organisations);
+  const batchRequestHelperMock = jest.mocked(batchRequestHelper);
+  const createEntraClientMock = jest.mocked(createEntraGraphClient);
   const connectionMock = jest.mocked(connection);
   const invitationMock = jest.mocked(Invitation);
   const userMock = jest.mocked(User);
@@ -71,6 +77,7 @@ describe("Remove generated test accounts automated task", () => {
     accessMock.prototype.deleteUserService.mockResolvedValue(true);
     directoriesMock.prototype.deleteUserCode.mockResolvedValue(true);
     organisationsMock.prototype.getUserOrganisations.mockResolvedValue([]);
+    batchRequestHelperMock.mockResolvedValue([]);
     organisationsMock.prototype.deleteUserOrganisation.mockResolvedValue(true);
     invitationMock.findAll.mockResolvedValue([]);
     userMock.findAll.mockResolvedValue([]);
@@ -84,6 +91,22 @@ describe("Remove generated test accounts automated task", () => {
         success: true,
       }),
     );
+  });
+
+  it("it logs a warning if the timer is marked as past due, without executing", async () => {
+    await removeGeneratedTestAccounts(
+      {
+        isPastDue: true,
+      } as Timer,
+      new InvocationContext(),
+    );
+
+    expect(
+      contextMock.prototype.warn(
+        "removeGeneratedTestAccounts: Timer is marked as past due, and attempted to run the function",
+      ),
+    );
+    expect(userMock.findAll).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -103,6 +126,17 @@ describe("Remove generated test accounts automated task", () => {
       ).rejects.toThrow(`removeGeneratedTestAccounts: ${errorMessage}`);
     },
   );
+
+  it("it throws an error if the Graph API client throws an error on instantiation", async () => {
+    const errorMessage = "Test Error Graph API client";
+    createEntraClientMock.mockImplementation(() => {
+      throw new Error(errorMessage);
+    });
+
+    await expect(
+      removeGeneratedTestAccounts({} as Timer, new InvocationContext()),
+    ).rejects.toThrow(`removeGeneratedTestAccounts: ${errorMessage}`);
+  });
 
   it("it throws an error if the database connection throws an error on instantiation", async () => {
     const errorMessage = "Test Error DB Connection";
@@ -160,7 +194,15 @@ describe("Remove generated test accounts automated task", () => {
           {
             [Op.or]: [
               { firstName: "CreateAccount", lastName: "Test" },
+              { firstName: "CreateDSIAccount", lastName: "AutomationTest" },
+              { firstName: "EntraCreateAccount", lastName: "AutomationTest" },
+              { firstName: "Selenium", lastName: "Test" },
+              { firstName: "SupportInviteUser", lastName: "AutomationTest" },
               { firstName: "Selenium_InviteUserTest", lastName: "Test" },
+              {
+                firstName: { [Op.like]: "EntraInviteNewUser%" },
+                lastName: { [Op.like]: "AutomationTest%" },
+              },
               {
                 firstName: { [Op.like]: "InviteUserTest %" },
                 lastName: { [Op.like]: "AutomationTest %" },
@@ -168,6 +210,10 @@ describe("Remove generated test accounts automated task", () => {
               {
                 firstName: { [Op.like]: "SeleniumInviteUserTest%" },
                 lastName: { [Op.like]: "Test%" },
+              },
+              {
+                firstName: { [Op.like]: "CreateAccountErrors%" },
+                lastName: { [Op.like]: "AutomationTest%" },
               },
             ],
           },
@@ -177,7 +223,10 @@ describe("Remove generated test accounts automated task", () => {
     await removeGeneratedTestAccounts({} as Timer, new InvocationContext());
 
     expect(userMock.findAll).toHaveBeenCalled();
-    expect(userMock.findAll).toHaveBeenCalledWith(query);
+    expect(userMock.findAll).toHaveBeenCalledWith({
+      ...query,
+      attributes: [...query.attributes, "entraId"],
+    });
     expect(invitationMock.findAll).toHaveBeenCalled();
     expect(invitationMock.findAll).toHaveBeenCalledWith(query);
   });
@@ -523,7 +572,7 @@ describe("Remove generated test accounts automated task", () => {
 
       expect(contextMock.prototype.info).toHaveBeenCalled();
       expect(contextMock.prototype.info).not.toHaveBeenCalledWith(
-        `removeGeneratedTestAccounts: Removing database records for the 5 users with successful API record removals`,
+        `removeGeneratedTestAccounts: Removing Entra and database records for the 5 users with successful API record removals`,
       );
       expect(userBannerMock.destroy).not.toHaveBeenCalled();
       expect(userOrgRequestMock.destroy).not.toHaveBeenCalled();
@@ -545,7 +594,92 @@ describe("Remove generated test accounts automated task", () => {
 
       expect(contextMock.prototype.info).toHaveBeenCalled();
       expect(contextMock.prototype.info).toHaveBeenCalledWith(
-        `removeGeneratedTestAccounts: Removing database records for the 2 users with successful API record removals`,
+        `removeGeneratedTestAccounts: Removing Entra and database records for the 2 users with successful API record removals`,
+      );
+    });
+
+    it("it throws an error if batchRequestHelper rejects when calling the Graph API", async () => {
+      const errorMessage = "Test Error Graph API";
+      const users = generateUsers(100);
+      userMock.findAll.mockResolvedValue(users);
+      batchRequestHelperMock.mockRejectedValue(new Error(errorMessage));
+
+      await expect(
+        removeGeneratedTestAccounts({} as Timer, new InvocationContext()),
+      ).rejects.toThrow(`removeGeneratedTestAccounts: ${errorMessage}`);
+    });
+
+    it("it attempts to delete all Entra accounts for all users with successful API record deletions and an Entra ID", async () => {
+      const users = generateUsers(4).map((user, index) => ({
+        ...user,
+        entraId: index % 2 === 0 ? "entra-" + user.id : null,
+      }));
+      userMock.findAll.mockResolvedValue(users as User[]);
+      await removeGeneratedTestAccounts({} as Timer, new InvocationContext());
+
+      expect(batchRequestHelperMock).toHaveBeenCalled();
+      expect(batchRequestHelperMock.mock.calls[0][0].length).toBe(2);
+      expect(batchRequestHelperMock.mock.calls[0][0][0].url).toBe(
+        `https://graph.microsoft.com/users/${users[0].entraId}`,
+      );
+      expect(batchRequestHelperMock.mock.calls[0][0][0].method).toBe("DELETE");
+      expect(batchRequestHelperMock.mock.calls[0][0][1].url).toBe(
+        `https://graph.microsoft.com/users/${users[2].entraId}`,
+      );
+      expect(batchRequestHelperMock.mock.calls[0][0][1].method).toBe("DELETE");
+    });
+
+    it("it does not throw an error if the delete Graph API responses are successful or have a 404 status code", async () => {
+      const users = generateUsers(4).map((user) => ({
+        ...user,
+        entraId: "entra-" + user.id,
+      }));
+      userMock.findAll.mockResolvedValue(users as User[]);
+      batchRequestHelperMock.mockResolvedValue(
+        users.map((_, index) => ({
+          index,
+          success: index % 2 === 0 ? true : false,
+          status: index % 2 === 0 ? 204 : 404,
+          errorCode: index % 2 === 0 ? undefined : "",
+          errorMessage: index % 2 === 0 ? undefined : "",
+          body: new Blob([""]).stream(),
+        })),
+      );
+
+      await expect(
+        removeGeneratedTestAccounts({} as Timer, new InvocationContext()),
+      ).resolves.not.toThrow();
+    });
+
+    it("it throws an error containing unique messages if the delete Graph API responses are non-404 failures", async () => {
+      const baseResponse = {
+        index: 0,
+        success: false,
+        status: 401,
+        errorCode: "Unauthorized",
+        body: new Blob([""]).stream(),
+      };
+      const errorLogPrefix = `${baseResponse.status} - ${baseResponse.errorCode} -`;
+      const errorMessages = ["Test Error 1", "Test Error 2", "Test Error 3"];
+      const users = generateUsers(5).map((user) => ({
+        ...user,
+        entraId: "entra-" + user.id,
+      }));
+      userMock.findAll.mockResolvedValue(users as User[]);
+      batchRequestHelperMock.mockResolvedValue([
+        { ...baseResponse, errorMessage: errorMessages[0] },
+        { ...baseResponse, errorMessage: errorMessages[2] },
+        { ...baseResponse, errorMessage: errorMessages[1] },
+        { ...baseResponse, errorMessage: errorMessages[2] },
+        { ...baseResponse, errorMessage: errorMessages[1] },
+      ]);
+
+      await expect(
+        removeGeneratedTestAccounts({} as Timer, new InvocationContext()),
+      ).rejects.toThrow(
+        new Error(
+          `removeGeneratedTestAccounts: Graph API failures: ${errorLogPrefix} ${errorMessages[0]}, ${errorLogPrefix} ${errorMessages[2]}, ${errorLogPrefix} ${errorMessages[1]}`,
+        ),
       );
     });
 

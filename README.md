@@ -124,14 +124,6 @@ To ease local running/debugging of these functions, please install the recommend
     "TIMER_REJECT_OLD_ORGANISATION_REQUESTS": "0 0 0 * * 1",
     "TIMER_REMOVE_GENERATED_TEST_ACCOUNTS": "0 0 0 * * 1",
     "TIMER_REMOVE_UNRESOLVED_INVITATIONS": "0 0 0 1 * *",
-    "DATABASE_DIRECTORIES_HOST": "",
-    "DATABASE_DIRECTORIES_NAME": "",
-    "DATABASE_DIRECTORIES_USERNAME": "",
-    "DATABASE_DIRECTORIES_PASSWORD": "",
-    "DATABASE_ORGANISATIONS_HOST": "",
-    "DATABASE_ORGANISATIONS_NAME": "",
-    "DATABASE_ORGANISATIONS_USERNAME": "",
-    "DATABASE_ORGANISATIONS_PASSWORD": "",
     "API_INTERNAL_ACCESS_HOST": "",
     "API_INTERNAL_DIRECTORIES_HOST": "",
     "API_INTERNAL_ORGANISATIONS_HOST": "",
@@ -142,6 +134,18 @@ To ease local running/debugging of these functions, please install the recommend
     "API_INTERNAL_RESOURCE": "",
     "AUDIT_CONNECTION_STRING": "",
     "AUDIT_TOPIC_NAME": "audit",
+    "DATABASE_DIRECTORIES_HOST": "",
+    "DATABASE_DIRECTORIES_NAME": "",
+    "DATABASE_DIRECTORIES_USERNAME": "",
+    "DATABASE_DIRECTORIES_PASSWORD": "",
+    "DATABASE_ORGANISATIONS_HOST": "",
+    "DATABASE_ORGANISATIONS_NAME": "",
+    "DATABASE_ORGANISATIONS_USERNAME": "",
+    "DATABASE_ORGANISATIONS_PASSWORD": "",
+    "ENTRA_CLIENT_ID": "",
+    "ENTRA_CLIENT_SECRET": "",
+    "ENTRA_CLOUD_INSTANCE": "",
+    "ENTRA_TENANT_ID": "",
     "REDIS_CONNECTION_STRING": "",
     "SUPPORT_USER_ID": ""
   },
@@ -169,14 +173,6 @@ To ease local running/debugging of these functions, please install the recommend
 | TIMER_REJECT_OLD_ORGANISATION_REQUESTS | The NCronTab expression that sets the schedule for the `rejectOldOrganisationRequests` function (`./src/functions/rejectOldOrganisationRequests`). | Read the [documentation on NCrontab formatting](https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-timer?tabs=python-v2%2Cisolated-process%2Cnodejs-v4&pivots=programming-language-typescript#ncrontab-expressions) and use a [tester](https://ncrontab.swimburger.net/) to verify your expression runs as you'd expect. | `0 0 0 * * 1` Runs at 12AM UTC on every Monday. |
 | TIMER_REMOVE_GENERATED_TEST_ACCOUNTS | The NCronTab expression that sets the schedule for the `removeGeneratedTestAccounts` function (`./src/functions/removeGeneratedTestAccounts`). | Read the [documentation on NCrontab formatting](https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-timer?tabs=python-v2%2Cisolated-process%2Cnodejs-v4&pivots=programming-language-typescript#ncrontab-expressions) and use a [tester](https://ncrontab.swimburger.net/) to verify your expression runs as you'd expect. | `0 0 0 * * 1` Runs at 12AM UTC on every Monday. |
 | TIMER_REMOVE_UNRESOLVED_INVITATIONS | The NCronTab expression that sets the schedule for the `removeUnresolvedInvitations` function (`./src/functions/removeUnresolvedInvitations`). | Read the [documentation on NCrontab formatting](https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-timer?tabs=python-v2%2Cisolated-process%2Cnodejs-v4&pivots=programming-language-typescript#ncrontab-expressions) and use a [tester](https://ncrontab.swimburger.net/) to verify your expression runs as you'd expect. | `0 0 0 1 * *` Runs at 12AM UTC on the first day of every month. |
-| DATABASE_DIRECTORIES_HOST | The directories database hostname/URL. | Retrieve from KeyVault (Key name: `platformGlobalServerName`) or other database connections. | `""`
-| DATABASE_DIRECTORIES_NAME | The directories database name | Retrieve from KeyVault (Key name: `platformGlobalDirectoriesDatabaseName`) or other database connections. | `""`
-| DATABASE_DIRECTORIES_USERNAME | SQL username for connecting to the directories database. | Use your own username or retrieve from KeyVault (Key name: `svcSigninDir`). | `""`
-| DATABASE_DIRECTORIES_PASSWORD | SQL password for connecting to the directories database. | Use your own password or retrieve from KeyVault (Key name: `svcSigninDirPassword`). | `""`
-| DATABASE_ORGANISATIONS_HOST | The organisations database hostname/URL. | Retrieve from KeyVault (Key name: `platformGlobalServerName`) or other database connections. | `""`
-| DATABASE_ORGANISATIONS_NAME | The organisations database name | Retrieve from KeyVault (Key name: `platformGlobalOrganisationsDatabaseName`) or other database connections. | `""`
-| DATABASE_ORGANISATIONS_USERNAME | SQL username for connecting to the organisations database. | Use your own username or retrieve from KeyVault (Key name: `svcSigninOrg`). | `""`
-| DATABASE_ORGANISATIONS_PASSWORD | SQL password for connecting to the organisations database. | Use your own password or retrieve from KeyVault (Key name: `svcSigninOrgPassword`). | `""`
 | API_INTERNAL_ACCESS_HOST | Host URL for the internal access API. | Retrieve from KeyVault (Key name: `standaloneAccessHostName`) or the "Domains" section of the app service's "Overview" page in the Azure portal. | `""`
 | API_INTERNAL_DIRECTORIES_HOST | Host URL for the internal directories API. | Retrieve from KeyVault (Key name: `standaloneDirectoriesHostName`) or the "Domains" section of the app service's "Overview" page in the Azure portal. | `""`
 | API_INTERNAL_ORGANISATIONS_HOST | Host URL for the internal organisations API. | Retrieve from KeyVault (Key name: `standaloneOrganisationsHostName`) or the "Domains" section of the app service's "Overview" page in the Azure portal. | `""`
@@ -187,6 +183,18 @@ To ease local running/debugging of these functions, please install the recommend
 | API_INTERNAL_RESOURCE | Resource ID of the internal API tenant. | Retrieve from KeyVault (Key name: `aadshdappid`). | `""`
 | AUDIT_CONNECTION_STRING | Connection string of the environment's shared service bus. | Retrieve from KeyVault (Key name: `sharedServiceBusConnectionString`) or the service bus' "Shared access policies" page in the Azure portal. | `""`
 | AUDIT_TOPIC_NAME | Service bus audit topic name. | Retrieve from KeyVault (Key name: `auditServiceBusTopicName`) or the service bus' "Overview" page in the Azure portal. | `"audit"`
+| DATABASE_DIRECTORIES_HOST | The directories database hostname/URL. | Retrieve from KeyVault (Key name: `platformGlobalServerName`) or other database connections. | `""`
+| DATABASE_DIRECTORIES_NAME | The directories database name. | Retrieve from KeyVault (Key name: `platformGlobalDirectoriesDatabaseName`) or other database connections. | `""`
+| DATABASE_DIRECTORIES_USERNAME | SQL username for connecting to the directories database. | Use your own username or retrieve from KeyVault (Key name: `svcSigninDir`). | `""`
+| DATABASE_DIRECTORIES_PASSWORD | SQL password for connecting to the directories database. | Use your own password or retrieve from KeyVault (Key name: `svcSigninDirPassword`). | `""`
+| DATABASE_ORGANISATIONS_HOST | The organisations database hostname/URL. | Retrieve from KeyVault (Key name: `platformGlobalServerName`) or other database connections. | `""`
+| DATABASE_ORGANISATIONS_NAME | The organisations database name. | Retrieve from KeyVault (Key name: `platformGlobalOrganisationsDatabaseName`) or other database connections. | `""`
+| DATABASE_ORGANISATIONS_USERNAME | SQL username for connecting to the organisations database. | Use your own username or retrieve from KeyVault (Key name: `svcSigninOrg`). | `""`
+| DATABASE_ORGANISATIONS_PASSWORD | SQL password for connecting to the organisations database. | Use your own password or retrieve from KeyVault (Key name: `svcSigninOrgPassword`). | `""`
+| ENTRA_CLIENT_ID | The client ID of our Entra application used for Graph API queries. | Retrieve from KeyVault (Key name: `dfeSigninHybridIntegrationAppClientId`). | `""`
+| ENTRA_CLIENT_SECRET | The client secret of our Entra application used for Graph API queries. | Retrieve from KeyVault (Key name: `dfeSigninHybridIntegrationAppSecret`). | `""`
+| ENTRA_CLOUD_INSTANCE | The custom URL for our Entra instance. | Retrieve from KeyVault (Key name: `entraCloudInstance`). | `""`
+| ENTRA_TENANT_ID | The UUID of our Entra tenant. | Retrieve from KeyVault (Key name: `entraTenantId`). | `""`
 | REDIS_CONNECTION_STRING | Redis connection string in the format `redis://username:password@host:port`. | Retrieve from KeyVault (Key name: `redisConn`) or from the "Azure Cache for Redis" section of the Azure Portal. | `""`
 | SUPPORT_USER_ID | ID/sub of the support team account. | Retrieve from KeyVault (Key name: `supportUserId`) or the directories/organisations database for the environment. | `""`
 ## Testing

@@ -85,15 +85,14 @@ async function sendRejectionEmails(
   notificationClient: NotificationClient,
 ): Promise<void[]> {
   return Promise.all(
-    emailInfo.map(
-      (info) =>
-        notificationClient.sendAccessRequest(
-          info.email,
-          info.name,
-          info.orgName,
-          false,
-          `The approver(s) at the organisation haven't taken any action on your request, which was made on ${info.requestDate.toLocaleDateString("en-GB")}.`,
-        ) as Promise<void>,
+    emailInfo.map((info) =>
+      notificationClient.sendAccessRequest(
+        info.email,
+        info.name,
+        info.orgName,
+        false,
+        `The approver(s) at the organisation haven't taken any action on your request, which was made on ${info.requestDate.toLocaleDateString("en-GB")}.`,
+      ),
     ),
   );
 }
@@ -138,13 +137,20 @@ async function getEmailInfo(
 /**
  * Rejects organisation requests that are overdue or have no approvers, and were created over 3 months ago.
  *
- * @param _ - Azure function {@link Timer} to handle scheduling information.
+ * @param timer - Azure function {@link Timer} to handle scheduling information.
  * @param context - Azure function {@link InvocationContext} to log and retrieve invocation data.
  */
 export async function rejectOldOrganisationRequests(
-  _: Timer,
+  timer: Timer,
   context: InvocationContext,
 ): Promise<void> {
+  if (timer.isPastDue) {
+    context.warn(
+      "rejectOldOrganisationRequests: Timer is marked as past due, and attempted to run the function",
+    );
+    return;
+  }
+
   try {
     checkEnv(
       ["REDIS_CONNECTION_STRING", "SUPPORT_USER_ID"],
