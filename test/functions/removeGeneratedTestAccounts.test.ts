@@ -186,51 +186,53 @@ describe("Remove generated test accounts automated task", () => {
   );
 
   it("it performs the correct query to retrieve generated test accounts on the User and Invitation models", async () => {
-    const query = {
-      attributes: ["id"],
-      where: {
-        [Op.and]: [
-          { email: { [Op.like]: "%mailosaur%" } },
-          {
-            [Op.or]: [
-              { firstName: "CreateAccount", lastName: "Test" },
-              { firstName: "CreateDSIAccount", lastName: "AutomationTest" },
-              { firstName: "EntraCreateAccount", lastName: "AutomationTest" },
-              { firstName: "Selenium", lastName: "Test" },
-              { firstName: "SupportInviteUser", lastName: "AutomationTest" },
-              { firstName: "Selenium_InviteUserTest", lastName: "Test" },
-              {
-                firstName: { [Op.like]: "EntraInviteNewUser%" },
-                lastName: { [Op.like]: "AutomationTest%" },
-              },
-              {
-                firstName: { [Op.like]: "InviteUserTest %" },
-                lastName: { [Op.like]: "AutomationTest %" },
-              },
-              {
-                firstName: { [Op.like]: "SeleniumInviteUserTest%" },
-                lastName: { [Op.like]: "Test%" },
-              },
-              {
-                firstName: { [Op.like]: "CreateAccountErrors%" },
-                lastName: { [Op.like]: "AutomationTest%" },
-              },
-            ],
-          },
-        ],
-      },
-    };
-    await removeGeneratedTestAccounts({} as Timer, new InvocationContext());
+  const query = {
+    attributes: ["id"],
+    where: {
+      [Op.and]: [
+        { email: { [Op.like]: "%mailosaur%" } },
+        {
+          [Op.or]: [
+            { firstName: "CreateDSIAccount", lastName: "AutomationTest" },
+            { firstName: "EntraCreateAccount", lastName: "AutomationTest" },
+            { firstName: "Selenium", lastName: "Test" },
+            { firstName: "SupportInviteUser", lastName: "AutomationTest" },
+            { firstName: "Selenium_InviteUserTest", lastName: "Test" },
 
-    expect(userMock.findAll).toHaveBeenCalled();
-    expect(userMock.findAll).toHaveBeenCalledWith({
-      ...query,
-      attributes: [...query.attributes, "entraId"],
-    });
-    expect(invitationMock.findAll).toHaveBeenCalled();
-    expect(invitationMock.findAll).toHaveBeenCalledWith(query);
+            {
+              firstName: { [Op.like]: "EntraInviteNewUser %" },
+              lastName: { [Op.like]: "AutomationTest %" },
+            },
+            {
+              firstName: { [Op.like]: "InviteNewUser %" },
+              lastName: { [Op.like]: "AutomationTest %" },
+            },
+
+            {
+              firstName: { [Op.like]: "SeleniumInviteUserTest%" },
+              lastName: { [Op.like]: "Test%" },
+            },
+            {
+              firstName: { [Op.like]: "CreateAccountErrors%" },
+              lastName: { [Op.like]: "AutomationTest%" },
+            },
+          ],
+        },
+      ],
+    },
+  };
+
+  await removeGeneratedTestAccounts({} as Timer, new InvocationContext());
+
+  expect(userMock.findAll).toHaveBeenCalled();
+  expect(userMock.findAll).toHaveBeenCalledWith({
+    ...query,
+    attributes: [...query.attributes, "entraId"],
   });
-
+  expect(invitationMock.findAll).toHaveBeenCalled();
+  expect(invitationMock.findAll).toHaveBeenCalledWith(query);
+});
+  
   it("it logs the number of users and invitations found by the queries", async () => {
     const userCount = 25;
     const invitationCount = 42;
