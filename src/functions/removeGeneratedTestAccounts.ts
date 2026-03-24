@@ -60,6 +60,7 @@ async function getTestAccountIds(): Promise<{
   invitationIds: { dsi: string }[];
 }> {
   const directoriesDb = connection(DatabaseName.Directories);
+
   initialiseAllUserModels(
     directoriesDb,
     connection(DatabaseName.Organisations),
@@ -73,20 +74,24 @@ async function getTestAccountIds(): Promise<{
         { email: { [Op.like]: "%mailosaur%" } },
         {
           [Op.or]: [
-            { firstName: "CreateAccount", lastName: "Test" },
+            // AC exact matches
             { firstName: "CreateDSIAccount", lastName: "AutomationTest" },
             { firstName: "EntraCreateAccount", lastName: "AutomationTest" },
             { firstName: "Selenium", lastName: "Test" },
             { firstName: "SupportInviteUser", lastName: "AutomationTest" },
             { firstName: "Selenium_InviteUserTest", lastName: "Test" },
+
+            // AC: LIKE patterns WITH spaces
             {
-              firstName: { [Op.like]: "EntraInviteNewUser%" },
-              lastName: { [Op.like]: "AutomationTest%" },
-            },
-            {
-              firstName: { [Op.like]: "InviteUserTest %" },
+              firstName: { [Op.like]: "EntraInviteNewUser %" },
               lastName: { [Op.like]: "AutomationTest %" },
             },
+            {
+              firstName: { [Op.like]: "InviteNewUser %" },
+              lastName: { [Op.like]: "AutomationTest %" },
+            },
+
+            // Remaining AC LIKE patterns
             {
               firstName: { [Op.like]: "SeleniumInviteUserTest%" },
               lastName: { [Op.like]: "Test%" },
@@ -105,7 +110,9 @@ async function getTestAccountIds(): Promise<{
     ...query,
     attributes: [...query.attributes, "entraId"],
   });
+
   const invitations: Pick<Invitation, "id">[] = await Invitation.findAll(query);
+
   return {
     userIds: users.map((user) => ({
       dsi: user.id,
@@ -114,6 +121,7 @@ async function getTestAccountIds(): Promise<{
     invitationIds: invitations.map((invitation) => ({ dsi: invitation.id })),
   };
 }
+
 
 /**
  * Gets the API records for a specified user, so they can be used for deletions.
