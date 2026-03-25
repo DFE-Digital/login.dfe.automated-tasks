@@ -84,11 +84,11 @@ async function getTestAccountIds(): Promise<{
             // AC: LIKE patterns
             {
               firstName: { [Op.like]: "EntraInviteNewUser%" },
-              lastName: { [Op.like]: "AutomationTest %" },
+              lastName: { [Op.like]: "AutomationTest%" },
             },
             {
-              firstName: { [Op.like]: "InviteNewUser %" },
-              lastName: { [Op.like]: "AutomationTest %" },
+              firstName: { [Op.like]: "InviteNewUser%" },
+              lastName: { [Op.like]: "AutomationTest%" },
             },
 
             // Remaining AC LIKE patterns
