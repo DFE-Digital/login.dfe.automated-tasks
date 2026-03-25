@@ -14,7 +14,11 @@ export function checkEnv(
 ): void {
   const missingVariableNames = variableNames.filter((name) => {
     const value = process.env[name];
-    return !(typeof value === "string" && value.length > 0);
+    return !(
+      typeof value === "string" &&
+      value.length > 0 &&
+      !value.toLowerCase().startsWith("@microsoft.keyvault(")
+    );
   });
   const verb = missingVariableNames.length > 1 ? "are" : "is";
 

@@ -15,6 +15,8 @@ import {
   Organisations,
   type userOrganisationRecord,
 } from "../infrastructure/api/dsiInternal/Organisations";
+import { batchRequestHelper } from "../infrastructure/api/entraGraph/batchRequestHelper";
+import { createEntraGraphClient } from "../infrastructure/api/entraGraph/createEntraGraphClient";
 import {
   connection,
   DatabaseName,
@@ -29,6 +31,7 @@ import { UserPasswordPolicy } from "../infrastructure/database/directories/UserP
 import { UserBanner } from "../infrastructure/database/organisations/UserBanner";
 import { UserOrganisationRequest } from "../infrastructure/database/organisations/UserOrganisationRequest";
 import { UserServiceRequest } from "../infrastructure/database/organisations/UserServiceRequest";
+import { Client } from "@microsoft/microsoft-graph-client";
 
 /**
  * API clients used throughout this function.
@@ -53,10 +56,11 @@ type userApiRecords = {
  * @returns A promise containing the test user and invitation IDs.
  */
 async function getTestAccountIds(): Promise<{
-  userIds: string[];
-  invitationIds: string[];
+  userIds: { dsi: string; entra: string | null }[];
+  invitationIds: { dsi: string }[];
 }> {
   const directoriesDb = connection(DatabaseName.Directories);
+
   initialiseAllUserModels(
     directoriesDb,
     connection(DatabaseName.Organisations),
@@ -70,15 +74,31 @@ async function getTestAccountIds(): Promise<{
         { email: { [Op.like]: "%mailosaur%" } },
         {
           [Op.or]: [
-            { firstName: "CreateAccount", lastName: "Test" },
+            // AC exact matches
+            { firstName: "CreateDSIAccount", lastName: "AutomationTest" },
+            { firstName: "EntraCreateAccount", lastName: "AutomationTest" },
+            { firstName: "Selenium", lastName: "Test" },
+            { firstName: "SupportInviteUser", lastName: "AutomationTest" },
             { firstName: "Selenium_InviteUserTest", lastName: "Test" },
+
+            // AC: LIKE patterns
             {
-              firstName: { [Op.like]: "InviteUserTest %" },
-              lastName: { [Op.like]: "AutomationTest %" },
+              firstName: { [Op.like]: "EntraInviteNewUser%" },
+              lastName: { [Op.like]: "AutomationTest%" },
             },
+            {
+              firstName: { [Op.like]: "InviteNewUser%" },
+              lastName: { [Op.like]: "AutomationTest%" },
+            },
+
+            // Remaining AC LIKE patterns
             {
               firstName: { [Op.like]: "SeleniumInviteUserTest%" },
               lastName: { [Op.like]: "Test%" },
+            },
+            {
+              firstName: { [Op.like]: "CreateAccountErrors%" },
+              lastName: { [Op.like]: "AutomationTest%" },
             },
           ],
         },
@@ -86,11 +106,19 @@ async function getTestAccountIds(): Promise<{
     },
   };
 
-  const users: Pick<User, "id">[] = await User.findAll(query);
+  const users: Pick<User, "id" | "entraId">[] = await User.findAll({
+    ...query,
+    attributes: [...query.attributes, "entraId"],
+  });
+
   const invitations: Pick<Invitation, "id">[] = await Invitation.findAll(query);
+
   return {
-    userIds: users.map((user) => user.id),
-    invitationIds: invitations.map((invitation) => invitation.id),
+    userIds: users.map((user) => ({
+      dsi: user.id,
+      entra: user.entraId,
+    })),
+    invitationIds: invitations.map((invitation) => ({ dsi: invitation.id })),
   };
 }
 
@@ -215,6 +243,43 @@ async function deleteUserApiRecords(
 }
 
 /**
+ * Deletes Entra records for the requested users.
+ *
+ * 404 responses are not counted as failures due to the Entra record no longer existing.
+ *
+ * @param userEntraIds - IDs of users to delete Entra records for.
+ * @param entraClient - An Entra API client to request user deletions with.
+ *
+ * @throws Error if any Graph API responses are not successful or 404 failures.
+ */
+async function deleteUserEntraRecords(
+  userEntraIds: string[],
+  entraClient: Client,
+): Promise<void> {
+  const results = await batchRequestHelper(
+    userEntraIds.map(
+      (id) =>
+        new Request(`https://graph.microsoft.com/v1.0/users/${id}`, {
+          method: "DELETE",
+        }),
+    ),
+    entraClient,
+  );
+  const failedResponseErrors = results
+    .filter((response) => !response.success && response.status !== 404)
+    .map(
+      (response) =>
+        `${response.status} - ${response.errorCode} - ${response.errorMessage}`,
+    );
+
+  if (failedResponseErrors.length > 0) {
+    throw new Error(
+      "Graph API failures: " + [...new Set(failedResponseErrors)].join(", "),
+    );
+  }
+}
+
+/**
  * Deletes database records for the requested users.
  *
  * @param userIds - IDs of users to delete database records for.
@@ -239,13 +304,20 @@ async function deleteUserDbRecords(userIds: string[]): Promise<void> {
 /**
  * Removes generated test users/invitations based on their email address domain and names.
  *
- * @param _ - Azure function {@link Timer} to handle scheduling information.
+ * @param timer - Azure function {@link Timer} to handle scheduling information.
  * @param context - Azure function {@link InvocationContext} to log and retrieve invocation data.
  */
 export async function removeGeneratedTestAccounts(
-  _: Timer,
+  timer: Timer,
   context: InvocationContext,
 ): Promise<void> {
+  if (timer.isPastDue) {
+    context.warn(
+      "removeGeneratedTestAccounts: Timer is marked as past due, and attempted to run the function",
+    );
+    return;
+  }
+
   try {
     const correlationId = context.invocationId;
     const batchSize = 100;
@@ -254,6 +326,7 @@ export async function removeGeneratedTestAccounts(
       directories: new Directories(),
       organisations: new Organisations(),
     };
+    const entraClient = createEntraGraphClient();
 
     const { userIds, invitationIds } = await getTestAccountIds();
     context.info(
@@ -267,18 +340,21 @@ export async function removeGeneratedTestAccounts(
 
       const { successful, failed, errored } = filterResults(
         await Promise.allSettled(
-          batch.map(async (userId) => {
+          batch.map(async (ids) => {
             const apiRecords = await getUserApiRecords(
               apis,
-              userId,
+              ids.dsi,
               correlationId,
             );
-            return deleteUserApiRecords(
-              apis,
-              userId,
-              apiRecords,
-              correlationId,
-            );
+            return {
+              ...(await deleteUserApiRecords(
+                apis,
+                ids.dsi,
+                apiRecords,
+                correlationId,
+              )),
+              object: ids,
+            };
           }),
         ),
       );
@@ -300,9 +376,15 @@ export async function removeGeneratedTestAccounts(
 
       if (successful.count > 0) {
         context.info(
-          `removeGeneratedTestAccounts: Removing database records for the ${successful.count} users with successful API record removals`,
+          `removeGeneratedTestAccounts: Removing Entra and database records for the ${successful.count} users with successful API record removals`,
         );
-        await deleteUserDbRecords(successful.objects);
+        await deleteUserEntraRecords(
+          successful.objects
+            .filter((ids) => ids.entra !== null)
+            .map((ids) => ids.entra),
+          entraClient,
+        );
+        await deleteUserDbRecords(successful.objects.map((ids) => ids.dsi));
       }
     }
 
@@ -315,15 +397,15 @@ export async function removeGeneratedTestAccounts(
 
       const { successful, failed, errored } = filterResults(
         await Promise.allSettled(
-          batch.map(async (invitationId) => {
+          batch.map(async ({ dsi }) => {
             const apiRecords = await getInvitationApiRecords(
               apis,
-              invitationId,
+              dsi,
               correlationId,
             );
             return deleteInvitationApiRecords(
               apis,
-              invitationId,
+              dsi,
               apiRecords,
               correlationId,
             );

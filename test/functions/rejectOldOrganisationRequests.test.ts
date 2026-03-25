@@ -54,6 +54,24 @@ describe("Reject old overdue user organisation requests automated task", () => {
     process.env = environment;
   });
 
+  it("it logs a warning if the timer is marked as past due, without executing", async () => {
+    await rejectOldOrganisationRequests(
+      {
+        isPastDue: true,
+      } as Timer,
+      new InvocationContext(),
+    );
+
+    expect(
+      contextMock.prototype.warn(
+        "rejectOldOrganisationRequests: Timer is marked as past due, and attempted to run the function",
+      ),
+    );
+    expect(
+      organisationsMock.prototype.getOrganisationRequestPage,
+    ).not.toHaveBeenCalled();
+  });
+
   it("it will call checkEnv with the required environment variables for rejecting requests and connecting to Redis", async () => {
     await rejectOldOrganisationRequests({} as Timer, new InvocationContext());
 

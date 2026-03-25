@@ -15,15 +15,22 @@ import { filterResults } from "./utils/filterResults";
 /**
  * Deactivates and generates audit logs for any users whose account has been inactive for over 2 years from the current date.
  *
- * @param _ - Azure function {@link Timer} implementing object.
+ * @param timer - Azure function {@link Timer} implementing object.
  * @param context - Azure function {@link InvocationContext} to log and retrieve invocation data.
  *
  * @throws Error if any infrastructure connections fail, all user deactivations fail, or batched audit logging fails.
  */
 export async function deactivateUnusedAccounts(
-  _: Timer,
+  timer: Timer,
   context: InvocationContext,
 ): Promise<void> {
+  if (timer.isPastDue) {
+    context.warn(
+      "deactivateUnusedAccounts: Timer is marked as past due, and attempted to run the function",
+    );
+    return;
+  }
+
   try {
     const batchSize = 100;
     const directoriesApi = new Directories();
