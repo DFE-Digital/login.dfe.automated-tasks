@@ -186,53 +186,53 @@ describe("Remove generated test accounts automated task", () => {
   );
 
   it("it performs the correct query to retrieve generated test accounts on the User and Invitation models", async () => {
-  const query = {
-    attributes: ["id"],
-    where: {
-      [Op.and]: [
-        { email: { [Op.like]: "%mailosaur%" } },
-        {
-          [Op.or]: [
-            { firstName: "CreateDSIAccount", lastName: "AutomationTest" },
-            { firstName: "EntraCreateAccount", lastName: "AutomationTest" },
-            { firstName: "Selenium", lastName: "Test" },
-            { firstName: "SupportInviteUser", lastName: "AutomationTest" },
-            { firstName: "Selenium_InviteUserTest", lastName: "Test" },
+    const query = {
+      attributes: ["id"],
+      where: {
+        [Op.and]: [
+          { email: { [Op.like]: "%mailosaur%" } },
+          {
+            [Op.or]: [
+              { firstName: "CreateDSIAccount", lastName: "AutomationTest" },
+              { firstName: "EntraCreateAccount", lastName: "AutomationTest" },
+              { firstName: "Selenium", lastName: "Test" },
+              { firstName: "SupportInviteUser", lastName: "AutomationTest" },
+              { firstName: "Selenium_InviteUserTest", lastName: "Test" },
 
-            {
-              firstName: { [Op.like]: "EntraInviteNewUser %" },
-              lastName: { [Op.like]: "AutomationTest %" },
-            },
-            {
-              firstName: { [Op.like]: "InviteNewUser %" },
-              lastName: { [Op.like]: "AutomationTest %" },
-            },
+              {
+                firstName: { [Op.like]: "EntraInviteNewUser%" },
+                lastName: { [Op.like]: "AutomationTest %" },
+              },
+              {
+                firstName: { [Op.like]: "InviteNewUser %" },
+                lastName: { [Op.like]: "AutomationTest %" },
+              },
 
-            {
-              firstName: { [Op.like]: "SeleniumInviteUserTest%" },
-              lastName: { [Op.like]: "Test%" },
-            },
-            {
-              firstName: { [Op.like]: "CreateAccountErrors%" },
-              lastName: { [Op.like]: "AutomationTest%" },
-            },
-          ],
-        },
-      ],
-    },
-  };
+              {
+                firstName: { [Op.like]: "SeleniumInviteUserTest%" },
+                lastName: { [Op.like]: "Test%" },
+              },
+              {
+                firstName: { [Op.like]: "CreateAccountErrors%" },
+                lastName: { [Op.like]: "AutomationTest%" },
+              },
+            ],
+          },
+        ],
+      },
+    };
 
-  await removeGeneratedTestAccounts({} as Timer, new InvocationContext());
+    await removeGeneratedTestAccounts({} as Timer, new InvocationContext());
 
-  expect(userMock.findAll).toHaveBeenCalled();
-  expect(userMock.findAll).toHaveBeenCalledWith({
-    ...query,
-    attributes: [...query.attributes, "entraId"],
+    expect(userMock.findAll).toHaveBeenCalled();
+    expect(userMock.findAll).toHaveBeenCalledWith({
+      ...query,
+      attributes: [...query.attributes, "entraId"],
+    });
+    expect(invitationMock.findAll).toHaveBeenCalled();
+    expect(invitationMock.findAll).toHaveBeenCalledWith(query);
   });
-  expect(invitationMock.findAll).toHaveBeenCalled();
-  expect(invitationMock.findAll).toHaveBeenCalledWith(query);
-});
-  
+
   it("it logs the number of users and invitations found by the queries", async () => {
     const userCount = 25;
     const invitationCount = 42;
@@ -622,11 +622,11 @@ describe("Remove generated test accounts automated task", () => {
       expect(batchRequestHelperMock).toHaveBeenCalled();
       expect(batchRequestHelperMock.mock.calls[0][0].length).toBe(2);
       expect(batchRequestHelperMock.mock.calls[0][0][0].url).toBe(
-        `https://graph.microsoft.com/users/${users[0].entraId}`,
+        `https://graph.microsoft.com/v1.0/users/${users[0].entraId}`,
       );
       expect(batchRequestHelperMock.mock.calls[0][0][0].method).toBe("DELETE");
       expect(batchRequestHelperMock.mock.calls[0][0][1].url).toBe(
-        `https://graph.microsoft.com/users/${users[2].entraId}`,
+        `https://graph.microsoft.com/v1.0/users/${users[2].entraId}`,
       );
       expect(batchRequestHelperMock.mock.calls[0][0][1].method).toBe("DELETE");
     });

@@ -81,9 +81,9 @@ async function getTestAccountIds(): Promise<{
             { firstName: "SupportInviteUser", lastName: "AutomationTest" },
             { firstName: "Selenium_InviteUserTest", lastName: "Test" },
 
-            // AC: LIKE patterns WITH spaces
+            // AC: LIKE patterns
             {
-              firstName: { [Op.like]: "EntraInviteNewUser %" },
+              firstName: { [Op.like]: "EntraInviteNewUser%" },
               lastName: { [Op.like]: "AutomationTest %" },
             },
             {
@@ -121,7 +121,6 @@ async function getTestAccountIds(): Promise<{
     invitationIds: invitations.map((invitation) => ({ dsi: invitation.id })),
   };
 }
-
 
 /**
  * Gets the API records for a specified user, so they can be used for deletions.
@@ -260,7 +259,7 @@ async function deleteUserEntraRecords(
   const results = await batchRequestHelper(
     userEntraIds.map(
       (id) =>
-        new Request(`https://graph.microsoft.com/users/${id}`, {
+        new Request(`https://graph.microsoft.com/v1.0/users/${id}`, {
           method: "DELETE",
         }),
     ),
