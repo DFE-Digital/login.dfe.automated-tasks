@@ -622,11 +622,11 @@ describe("Remove generated test accounts automated task", () => {
       expect(batchRequestHelperMock).toHaveBeenCalled();
       expect(batchRequestHelperMock.mock.calls[0][0].length).toBe(2);
       expect(batchRequestHelperMock.mock.calls[0][0][0].url).toBe(
-        `https://graph.microsoft.com/v1.0/users/${users[0].entraId}`,
+        `https://graph.microsoft.com/users/${users[0].entraId}`,
       );
       expect(batchRequestHelperMock.mock.calls[0][0][0].method).toBe("DELETE");
       expect(batchRequestHelperMock.mock.calls[0][0][1].url).toBe(
-        `https://graph.microsoft.com/v1.0/users/${users[2].entraId}`,
+        `https://graph.microsoft.com/users/${users[2].entraId}`,
       );
       expect(batchRequestHelperMock.mock.calls[0][0][1].method).toBe("DELETE");
     });
