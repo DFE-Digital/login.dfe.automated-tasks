@@ -256,13 +256,16 @@ async function deleteUserEntraRecords(
   userEntraIds: string[],
   entraClient: Client,
 ): Promise<void> {
+  const createDeleteBatchRequest = (id: string): Request =>
+    ({
+      url: `/users/${id}`,
+      method: "DELETE",
+      headers: new Headers(),
+      clone: () => createDeleteBatchRequest(id),
+    }) as unknown as Request;
+
   const results = await batchRequestHelper(
-    userEntraIds.map(
-      (id) =>
-        new Request(`https://graph.microsoft.com/users/${id}`, {
-          method: "DELETE",
-        }),
-    ),
+    userEntraIds.map((id) => createDeleteBatchRequest(id)),
     entraClient,
   );
   const failedResponseErrors = results
