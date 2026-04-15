@@ -259,7 +259,7 @@ async function deleteUserEntraRecords(
   const results = await batchRequestHelper(
     userEntraIds.map(
       (id) =>
-        new Request(`https://graph.microsoft.com/v1.0/users/${id}`, {
+        new Request(`/v1.0/users/${id}`, {
           method: "DELETE",
         }),
     ),
