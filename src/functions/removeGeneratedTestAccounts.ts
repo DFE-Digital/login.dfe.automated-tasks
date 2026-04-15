@@ -259,9 +259,10 @@ async function deleteUserEntraRecords(
   const results = await batchRequestHelper(
     userEntraIds.map(
       (id) =>
-        new Request(`/v1.0/users/${id}`, {
+        ({
+          url: `/v1.0/users/${id}`,
           method: "DELETE",
-        }),
+        }) as Request,
     ),
     entraClient,
   );
