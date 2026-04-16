@@ -6,6 +6,27 @@ import {
   Client,
 } from "@microsoft/microsoft-graph-client";
 
+/**
+ * Returns a Request-compatible object using only the pathname of the original request's URL.
+ *
+ * BatchRequestContent requires relative URLs in batch item requests (e.g. /v1.0/users/{id}).
+ * Using an absolute URL causes Graph to return 400 "Resource not found for the segment 'v1.0'".
+ * We can't construct a real `Request` with a relative URL in Node (the URL constructor rejects it),
+ * so we build a plain object that carries the relative path while preserving the real `Headers`
+ * instance from the source request so the SDK's internal `headers.forEach()` never receives undefined.
+ *
+ * @param request - A real Request instance with an absolute URL.
+ * @returns A Request-shaped object whose `.url` is the pathname only.
+ */
+function toRelativeRequest(request: Request): Request {
+  return {
+    url: new URL(request.url).pathname,
+    method: request.method,
+    headers: request.headers,
+    body: request.body,
+  } as unknown as Request;
+}
+
 export type BatchItemResponse = {
   index: number;
   success: boolean;
@@ -32,7 +53,7 @@ export async function batchRequestHelper(
   const batchSteps: BatchRequestStep[] = [...requests].map(
     (request, index) => ({
       id: index.toString(),
-      request,
+      request: toRelativeRequest(request),
     }),
   );
   const responses: BatchItemResponse[] = [];
@@ -56,7 +77,7 @@ export async function batchRequestHelper(
       );
     }
     const rawResponses = [
-      ...new BatchResponseContent(batchResponse).getResponses(),
+      ...(new BatchResponseContent(batchResponse).getResponses() ?? new Map()),
     ];
 
     for (const [id, response] of rawResponses) {
@@ -67,7 +88,7 @@ export async function batchRequestHelper(
         );
         batchSteps.unshift({
           id,
-          request: requests[id].clone(),
+          request: toRelativeRequest(requests[parseInt(id, 10)].clone()),
         });
       } else {
         const body =
