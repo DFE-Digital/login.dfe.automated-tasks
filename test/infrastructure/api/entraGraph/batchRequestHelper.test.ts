@@ -369,7 +369,13 @@ describe("batchRequestHelper", () => {
   });
 
   it("it retries the correct requests if they are retryable (429 response status) as the responses aren't in order", async () => {
-    const requests = generateRequests(4);
+    const requests = Array.from(
+      { length: 4 },
+      (_, index) =>
+        new Request(`https://graph.microsoft.com/v1.0/users/${index}`, {
+          method: "DELETE",
+        }),
+    );
     const responses = new Map(
       Array.from({ length: 4 }, (_, index) => [
         index.toString(),
@@ -407,11 +413,11 @@ describe("batchRequestHelper", () => {
     // The later request goes first due to unshift appending to the front.
     expect(batchRequestMock.mock.calls[1][0][0].id).toEqual("2");
     expect(batchRequestMock.mock.calls[1][0][0].request.url).toEqual(
-      new URL(requests[2].url).pathname,
+      "/users/2",
     );
     expect(batchRequestMock.mock.calls[1][0][1].id).toEqual("0");
     expect(batchRequestMock.mock.calls[1][0][1].request.url).toEqual(
-      new URL(requests[0].url).pathname,
+      "/users/0",
     );
   });
 
@@ -467,7 +473,7 @@ describe("batchRequestHelper", () => {
     expect(postMock).toHaveBeenCalledTimes(2);
   });
 
-  it("it normalizes absolute request URLs to relative pathnames before building BatchRequestContent", async () => {
+  it("it strips the /v1.0 prefix and produces a batch-relative URL before building BatchRequestContent", async () => {
     const requests = [
       new Request("https://graph.microsoft.com/v1.0/users/abc-123", {
         method: "DELETE",
@@ -480,8 +486,49 @@ describe("batchRequestHelper", () => {
 
     expect(batchRequestMock).toHaveBeenCalledTimes(1);
     const step = batchRequestMock.mock.calls[0][0][0];
-    expect(step.request.url).toEqual("/v1.0/users/abc-123");
+    expect(step.request.url).toEqual("/users/abc-123");
     expect(step.request.method).toEqual("DELETE");
+    expect(step.request.headers).toBe(requests[0].headers);
+  });
+
+  it("it strips the /beta prefix and produces a batch-relative URL before building BatchRequestContent", async () => {
+    const requests = [
+      new Request("https://graph.microsoft.com/beta/users/abc-123", {
+        method: "DELETE",
+      }),
+    ];
+    await batchRequestHelper(
+      requests,
+      graphClientMock.init({ authProvider: () => {} }),
+    );
+
+    expect(batchRequestMock).toHaveBeenCalledTimes(1);
+    const step = batchRequestMock.mock.calls[0][0][0];
+    expect(step.request.url).toEqual("/users/abc-123");
+    expect(step.request.method).toEqual("DELETE");
+    expect(step.request.headers).toBe(requests[0].headers);
+  });
+
+  it("it preserves query parameters while stripping the API version prefix", async () => {
+    const requests = [
+      new Request(
+        "https://graph.microsoft.com/v1.0/users/abc-123?$select=id,displayName&$count=true",
+        {
+          method: "GET",
+        },
+      ),
+    ];
+    await batchRequestHelper(
+      requests,
+      graphClientMock.init({ authProvider: () => {} }),
+    );
+
+    expect(batchRequestMock).toHaveBeenCalledTimes(1);
+    const step = batchRequestMock.mock.calls[0][0][0];
+    expect(step.request.url).toEqual(
+      "/users/abc-123?$select=id,displayName&$count=true",
+    );
+    expect(step.request.method).toEqual("GET");
     expect(step.request.headers).toBe(requests[0].headers);
   });
 

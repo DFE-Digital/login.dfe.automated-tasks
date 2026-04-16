@@ -651,6 +651,25 @@ describe("Remove generated test accounts automated task", () => {
       ).resolves.not.toThrow();
     });
 
+    it("it does not throw if batchRequestHelper returns an empty response list and still proceeds with DB cleanup", async () => {
+      const users = generateUsers(2).map((user) => ({
+        ...user,
+        entraId: "entra-" + user.id,
+      }));
+      userMock.findAll.mockResolvedValue(users as User[]);
+      batchRequestHelperMock.mockResolvedValue([]);
+
+      await expect(
+        removeGeneratedTestAccounts({} as Timer, new InvocationContext()),
+      ).resolves.not.toThrow();
+
+      expect(userBannerMock.destroy).toHaveBeenCalled();
+      expect(userOrgRequestMock.destroy).toHaveBeenCalled();
+      expect(userServiceRequestMock.destroy).toHaveBeenCalled();
+      expect(userPasswordPolicyMock.destroy).toHaveBeenCalled();
+      expect(userMock.destroy).toHaveBeenCalled();
+    });
+
     it("it throws an error containing unique messages if the delete Graph API responses are non-404 failures", async () => {
       const baseResponse = {
         index: 0,
