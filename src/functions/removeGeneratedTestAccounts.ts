@@ -313,10 +313,9 @@ export async function removeGeneratedTestAccounts(
   context: InvocationContext,
 ): Promise<void> {
   if (timer.isPastDue) {
-    context.warn(
-      "removeGeneratedTestAccounts: Timer is marked as past due, and attempted to run the function",
+    context.info(
+      "removeGeneratedTestAccounts: Timer is marked as past due, running anyway",
     );
-    return;
   }
 
   try {
