@@ -6,6 +6,35 @@ import {
   Client,
 } from "@microsoft/microsoft-graph-client";
 
+/**
+ * Returns a Request-compatible object with a Graph batch item URL relative to the versioned batch endpoint.
+ *
+ * Graph batch requests are posted to a versioned endpoint (for example `/v1.0/$batch`), so each item URL
+ * must omit the API version prefix. For example, `/v1.0/users/{id}` and `/beta/users/{id}` must become
+ * `/users/{id}` to avoid ending up with an effective `/v1.0/v1.0/...` or `/v1.0/beta/...` path.
+ *
+ * We can't construct a real `Request` with a relative URL in Node (the URL constructor rejects it),
+ * so we build a plain object that carries the relative URL while preserving the real `Headers`
+ * instance from the source request so the SDK's internal `headers.forEach()` never receives undefined.
+ *
+ * @param request - A real Request instance with an absolute URL.
+ * @returns A Request-shaped object whose `.url` is versionless and batch-relative.
+ */
+function toRelativeRequest(request: Request): Request {
+  const parsedUrl = new URL(request.url);
+  const versionlessPath = parsedUrl.pathname.replace(
+    /^\/(v1\.0|beta)(?=\/|$)/i,
+    "",
+  );
+
+  return {
+    url: `${versionlessPath || "/"}${parsedUrl.search}`,
+    method: request.method,
+    headers: request.headers,
+    body: request.body,
+  } as unknown as Request;
+}
+
 export type BatchItemResponse = {
   index: number;
   success: boolean;
@@ -32,7 +61,7 @@ export async function batchRequestHelper(
   const batchSteps: BatchRequestStep[] = [...requests].map(
     (request, index) => ({
       id: index.toString(),
-      request,
+      request: toRelativeRequest(request),
     }),
   );
   const responses: BatchItemResponse[] = [];
@@ -56,7 +85,7 @@ export async function batchRequestHelper(
       );
     }
     const rawResponses = [
-      ...new BatchResponseContent(batchResponse).getResponses(),
+      ...(new BatchResponseContent(batchResponse).getResponses() ?? new Map()),
     ];
 
     for (const [id, response] of rawResponses) {
@@ -67,7 +96,7 @@ export async function batchRequestHelper(
         );
         batchSteps.unshift({
           id,
-          request: requests[id].clone(),
+          request: toRelativeRequest(requests[parseInt(id, 10)].clone()),
         });
       } else {
         const body =

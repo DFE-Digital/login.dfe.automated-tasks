@@ -102,13 +102,13 @@ describe("batchRequestHelper", () => {
     expect(apiMock).toHaveBeenCalledWith("/$batch");
     expect(postMock).toHaveBeenCalledTimes(3);
     expect(batchRequestMock.mock.calls[0][0][0].request.url).toEqual(
-      requests[0].url,
+      new URL(requests[0].url).pathname,
     );
     expect(batchRequestMock.mock.calls[1][0][0].request.url).toEqual(
-      requests[20].url,
+      new URL(requests[20].url).pathname,
     );
     expect(batchRequestMock.mock.calls[2][0][0].request.url).toEqual(
-      requests[40].url,
+      new URL(requests[40].url).pathname,
     );
   });
 
@@ -369,7 +369,13 @@ describe("batchRequestHelper", () => {
   });
 
   it("it retries the correct requests if they are retryable (429 response status) as the responses aren't in order", async () => {
-    const requests = generateRequests(4);
+    const requests = Array.from(
+      { length: 4 },
+      (_, index) =>
+        new Request(`https://graph.microsoft.com/v1.0/users/${index}`, {
+          method: "DELETE",
+        }),
+    );
     const responses = new Map(
       Array.from({ length: 4 }, (_, index) => [
         index.toString(),
@@ -407,11 +413,11 @@ describe("batchRequestHelper", () => {
     // The later request goes first due to unshift appending to the front.
     expect(batchRequestMock.mock.calls[1][0][0].id).toEqual("2");
     expect(batchRequestMock.mock.calls[1][0][0].request.url).toEqual(
-      requests[2].url,
+      "/users/2",
     );
     expect(batchRequestMock.mock.calls[1][0][1].id).toEqual("0");
     expect(batchRequestMock.mock.calls[1][0][1].request.url).toEqual(
-      requests[0].url,
+      "/users/0",
     );
   });
 
@@ -465,6 +471,87 @@ describe("batchRequestHelper", () => {
 
     expect(setTimeout).not.toHaveBeenCalled();
     expect(postMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("it strips the /v1.0 prefix and produces a batch-relative URL before building BatchRequestContent", async () => {
+    const requests = [
+      new Request("https://graph.microsoft.com/v1.0/users/abc-123", {
+        method: "DELETE",
+      }),
+    ];
+    await batchRequestHelper(
+      requests,
+      graphClientMock.init({ authProvider: () => {} }),
+    );
+
+    expect(batchRequestMock).toHaveBeenCalledTimes(1);
+    const step = batchRequestMock.mock.calls[0][0][0];
+    expect(step.request.url).toEqual("/users/abc-123");
+    expect(step.request.method).toEqual("DELETE");
+    expect(step.request.headers).toBe(requests[0].headers);
+  });
+
+  it("it strips the /beta prefix and produces a batch-relative URL before building BatchRequestContent", async () => {
+    const requests = [
+      new Request("https://graph.microsoft.com/beta/users/abc-123", {
+        method: "DELETE",
+      }),
+    ];
+    await batchRequestHelper(
+      requests,
+      graphClientMock.init({ authProvider: () => {} }),
+    );
+
+    expect(batchRequestMock).toHaveBeenCalledTimes(1);
+    const step = batchRequestMock.mock.calls[0][0][0];
+    expect(step.request.url).toEqual("/users/abc-123");
+    expect(step.request.method).toEqual("DELETE");
+    expect(step.request.headers).toBe(requests[0].headers);
+  });
+
+  it("it preserves query parameters while stripping the API version prefix", async () => {
+    const requests = [
+      new Request(
+        "https://graph.microsoft.com/v1.0/users/abc-123?$select=id,displayName&$count=true",
+        {
+          method: "GET",
+        },
+      ),
+    ];
+    await batchRequestHelper(
+      requests,
+      graphClientMock.init({ authProvider: () => {} }),
+    );
+
+    expect(batchRequestMock).toHaveBeenCalledTimes(1);
+    const step = batchRequestMock.mock.calls[0][0][0];
+    expect(step.request.url).toEqual(
+      "/users/abc-123?$select=id,displayName&$count=true",
+    );
+    expect(step.request.method).toEqual("GET");
+    expect(step.request.headers).toBe(requests[0].headers);
+  });
+
+  it("it returns an empty array without throwing if getResponses returns undefined (malformed batch response)", async () => {
+    batchResponseMock.prototype.getResponses.mockReturnValue(
+      undefined as unknown as Map<string, Response>,
+    );
+    const results = await batchRequestHelper(
+      generateRequests(1),
+      graphClientMock.init({ authProvider: () => {} }),
+    );
+
+    expect(results).toEqual([]);
+  });
+
+  it("it returns an empty array without throwing if getResponses returns an empty map", async () => {
+    batchResponseMock.prototype.getResponses.mockReturnValue(new Map());
+    const results = await batchRequestHelper(
+      generateRequests(1),
+      graphClientMock.init({ authProvider: () => {} }),
+    );
+
+    expect(results).toEqual([]);
   });
 
   it("it does not wait a second time if some requests in a batch are retried then succeed with more requests remaining", async () => {

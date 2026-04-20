@@ -93,7 +93,7 @@ describe("Remove generated test accounts automated task", () => {
     );
   });
 
-  it("it logs a warning if the timer is marked as past due, without executing", async () => {
+  it("it logs that the timer is past due and still executes", async () => {
     await removeGeneratedTestAccounts(
       {
         isPastDue: true,
@@ -101,12 +101,10 @@ describe("Remove generated test accounts automated task", () => {
       new InvocationContext(),
     );
 
-    expect(
-      contextMock.prototype.warn(
-        "removeGeneratedTestAccounts: Timer is marked as past due, and attempted to run the function",
-      ),
+    expect(contextMock.prototype.info).toHaveBeenCalledWith(
+      "removeGeneratedTestAccounts: Timer is marked as past due, running anyway",
     );
-    expect(userMock.findAll).not.toHaveBeenCalled();
+    expect(userMock.findAll).toHaveBeenCalled();
   });
 
   it.each([
@@ -198,19 +196,33 @@ describe("Remove generated test accounts automated task", () => {
               { firstName: "Selenium", lastName: "Test" },
               { firstName: "SupportInviteUser", lastName: "AutomationTest" },
               { firstName: "Selenium_InviteUserTest", lastName: "Test" },
-
+              {
+                firstName: { [Op.like]: "EntraInviteNewUser %" },
+                lastName: { [Op.like]: "AutomationTest %" },
+              },
               {
                 firstName: { [Op.like]: "EntraInviteNewUser%" },
                 lastName: { [Op.like]: "AutomationTest%" },
               },
               {
+                firstName: { [Op.like]: "InviteNewUser %" },
+                lastName: { [Op.like]: "AutomationTest %" },
+              },
+              {
                 firstName: { [Op.like]: "InviteNewUser%" },
                 lastName: { [Op.like]: "AutomationTest%" },
               },
-
+              {
+                firstName: { [Op.like]: "SeleniumInviteUserTest %" },
+                lastName: { [Op.like]: "Test%" },
+              },
               {
                 firstName: { [Op.like]: "SeleniumInviteUserTest%" },
                 lastName: { [Op.like]: "Test%" },
+              },
+              {
+                firstName: { [Op.like]: "CreateAccountErrors %" },
+                lastName: { [Op.like]: "AutomationTest%" },
               },
               {
                 firstName: { [Op.like]: "CreateAccountErrors%" },
@@ -220,6 +232,10 @@ describe("Remove generated test accounts automated task", () => {
           },
         ],
       },
+      order: [
+        ["firstName", "ASC"],
+        ["lastName", "ASC"],
+      ],
     };
 
     await removeGeneratedTestAccounts({} as Timer, new InvocationContext());
@@ -574,7 +590,7 @@ describe("Remove generated test accounts automated task", () => {
 
       expect(contextMock.prototype.info).toHaveBeenCalled();
       expect(contextMock.prototype.info).not.toHaveBeenCalledWith(
-        `removeGeneratedTestAccounts: Removing Entra and database records for the 5 users with successful API record removals`,
+        `removeGeneratedTestAccounts: Removing database records for the 5 users with successful API record removals`,
       );
       expect(userBannerMock.destroy).not.toHaveBeenCalled();
       expect(userOrgRequestMock.destroy).not.toHaveBeenCalled();
@@ -596,14 +612,17 @@ describe("Remove generated test accounts automated task", () => {
 
       expect(contextMock.prototype.info).toHaveBeenCalled();
       expect(contextMock.prototype.info).toHaveBeenCalledWith(
-        `removeGeneratedTestAccounts: Removing Entra and database records for the 2 users with successful API record removals`,
+        `removeGeneratedTestAccounts: Removing database records for the 2 users with successful API record removals`,
       );
     });
 
     it("it throws an error if batchRequestHelper rejects when calling the Graph API", async () => {
       const errorMessage = "Test Error Graph API";
-      const users = generateUsers(100);
-      userMock.findAll.mockResolvedValue(users);
+      const users = generateUsers(100).map((user) => ({
+        ...user,
+        entraId: "entra-" + user.id,
+      }));
+      userMock.findAll.mockResolvedValue(users as User[]);
       batchRequestHelperMock.mockRejectedValue(new Error(errorMessage));
 
       await expect(
@@ -611,7 +630,7 @@ describe("Remove generated test accounts automated task", () => {
       ).rejects.toThrow(`removeGeneratedTestAccounts: ${errorMessage}`);
     });
 
-    it("it attempts to delete all Entra accounts for all users with successful API record deletions and an Entra ID", async () => {
+    it("it attempts to delete all Entra accounts for all users in a batch that have an Entra ID", async () => {
       const users = generateUsers(4).map((user, index) => ({
         ...user,
         entraId: index % 2 === 0 ? "entra-" + user.id : null,
@@ -629,6 +648,47 @@ describe("Remove generated test accounts automated task", () => {
         `https://graph.microsoft.com/v1.0/users/${users[2].entraId}`,
       );
       expect(batchRequestHelperMock.mock.calls[0][0][1].method).toBe("DELETE");
+    });
+
+    it("it attempts Entra deletion for users with Entra IDs even when API record cleanup failed", async () => {
+      const users = generateUsers(2).map((user) => ({
+        ...user,
+        entraId: "entra-" + user.id,
+      }));
+      userMock.findAll.mockResolvedValue(users as User[]);
+      directoriesMock.prototype.deleteUserCode
+        .mockResolvedValueOnce(false)
+        .mockResolvedValueOnce(true);
+
+      await removeGeneratedTestAccounts({} as Timer, new InvocationContext());
+
+      expect(batchRequestHelperMock).toHaveBeenCalledTimes(1);
+      expect(batchRequestHelperMock.mock.calls[0][0].length).toBe(2);
+      expect(userMock.destroy).toHaveBeenCalledWith({
+        where: {
+          id: [users[1].id],
+        },
+      });
+    });
+
+    it("it logs skipped Entra deletions for users missing entraId", async () => {
+      const users = generateUsers(3).map((user, index) => ({
+        ...user,
+        entraId:
+          index === 0 ? "  entra-" + user.id + "  " : index === 1 ? null : " ",
+      }));
+      userMock.findAll.mockResolvedValue(users as User[]);
+
+      await removeGeneratedTestAccounts({} as Timer, new InvocationContext());
+
+      expect(contextMock.prototype.info).toHaveBeenCalledWith(
+        `removeGeneratedTestAccounts: Skipping Entra delete for 2 users due to missing entraId (${users[1].id}, ${users[2].id})`,
+      );
+      expect(batchRequestHelperMock).toHaveBeenCalledTimes(1);
+      expect(batchRequestHelperMock.mock.calls[0][0].length).toBe(1);
+      expect(batchRequestHelperMock.mock.calls[0][0][0].url).toBe(
+        `https://graph.microsoft.com/v1.0/users/entra-${users[0].id}`,
+      );
     });
 
     it("it does not throw an error if the delete Graph API responses are successful or have a 404 status code", async () => {
@@ -651,6 +711,25 @@ describe("Remove generated test accounts automated task", () => {
       await expect(
         removeGeneratedTestAccounts({} as Timer, new InvocationContext()),
       ).resolves.not.toThrow();
+    });
+
+    it("it does not throw if batchRequestHelper returns an empty response list and still proceeds with DB cleanup", async () => {
+      const users = generateUsers(2).map((user) => ({
+        ...user,
+        entraId: "entra-" + user.id,
+      }));
+      userMock.findAll.mockResolvedValue(users as User[]);
+      batchRequestHelperMock.mockResolvedValue([]);
+
+      await expect(
+        removeGeneratedTestAccounts({} as Timer, new InvocationContext()),
+      ).resolves.not.toThrow();
+
+      expect(userBannerMock.destroy).toHaveBeenCalled();
+      expect(userOrgRequestMock.destroy).toHaveBeenCalled();
+      expect(userServiceRequestMock.destroy).toHaveBeenCalled();
+      expect(userPasswordPolicyMock.destroy).toHaveBeenCalled();
+      expect(userMock.destroy).toHaveBeenCalled();
     });
 
     it("it throws an error containing unique messages if the delete Graph API responses are non-404 failures", async () => {

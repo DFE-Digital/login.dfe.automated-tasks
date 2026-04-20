@@ -74,27 +74,38 @@ async function getTestAccountIds(): Promise<{
         { email: { [Op.like]: "%mailosaur%" } },
         {
           [Op.or]: [
-            // AC exact matches
             { firstName: "CreateDSIAccount", lastName: "AutomationTest" },
             { firstName: "EntraCreateAccount", lastName: "AutomationTest" },
             { firstName: "Selenium", lastName: "Test" },
             { firstName: "SupportInviteUser", lastName: "AutomationTest" },
             { firstName: "Selenium_InviteUserTest", lastName: "Test" },
-
-            // AC: LIKE patterns
+            {
+              firstName: { [Op.like]: "EntraInviteNewUser %" },
+              lastName: { [Op.like]: "AutomationTest %" },
+            },
             {
               firstName: { [Op.like]: "EntraInviteNewUser%" },
               lastName: { [Op.like]: "AutomationTest%" },
             },
             {
+              firstName: { [Op.like]: "InviteNewUser %" },
+              lastName: { [Op.like]: "AutomationTest %" },
+            },
+            {
               firstName: { [Op.like]: "InviteNewUser%" },
               lastName: { [Op.like]: "AutomationTest%" },
             },
-
-            // Remaining AC LIKE patterns
+            {
+              firstName: { [Op.like]: "SeleniumInviteUserTest %" },
+              lastName: { [Op.like]: "Test%" },
+            },
             {
               firstName: { [Op.like]: "SeleniumInviteUserTest%" },
               lastName: { [Op.like]: "Test%" },
+            },
+            {
+              firstName: { [Op.like]: "CreateAccountErrors %" },
+              lastName: { [Op.like]: "AutomationTest%" },
             },
             {
               firstName: { [Op.like]: "CreateAccountErrors%" },
@@ -104,14 +115,22 @@ async function getTestAccountIds(): Promise<{
         },
       ],
     },
+    order: [["firstName", "ASC"] as const, ["lastName", "ASC"] as const],
   };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const findOrder: any = query.order;
 
   const users: Pick<User, "id" | "entraId">[] = await User.findAll({
     ...query,
     attributes: [...query.attributes, "entraId"],
+    order: findOrder,
   });
 
-  const invitations: Pick<Invitation, "id">[] = await Invitation.findAll(query);
+  const invitations: Pick<Invitation, "id">[] = await Invitation.findAll({
+    ...query,
+    order: findOrder,
+  });
 
   return {
     userIds: users.map((user) => ({
@@ -312,10 +331,9 @@ export async function removeGeneratedTestAccounts(
   context: InvocationContext,
 ): Promise<void> {
   if (timer.isPastDue) {
-    context.warn(
-      "removeGeneratedTestAccounts: Timer is marked as past due, and attempted to run the function",
+    context.info(
+      "removeGeneratedTestAccounts: Timer is marked as past due, running anyway",
     );
-    return;
   }
 
   try {
@@ -374,15 +392,33 @@ export async function removeGeneratedTestAccounts(
         );
       }
 
-      if (successful.count > 0) {
+      const usersWithEntraId = batch.filter(
+        (ids): ids is { dsi: string; entra: string } =>
+          typeof ids.entra === "string" && ids.entra.trim().length > 0,
+      );
+      const usersMissingEntraId = batch.filter(
+        (ids) => typeof ids.entra !== "string" || ids.entra.trim().length === 0,
+      );
+
+      if (usersMissingEntraId.length > 0) {
         context.info(
-          `removeGeneratedTestAccounts: Removing Entra and database records for the ${successful.count} users with successful API record removals`,
+          `removeGeneratedTestAccounts: Skipping Entra delete for ${usersMissingEntraId.length} users due to missing entraId (${usersMissingEntraId.map((ids) => ids.dsi).join(", ")})`,
+        );
+      }
+
+      if (usersWithEntraId.length > 0) {
+        context.info(
+          `removeGeneratedTestAccounts: Removing Entra records for ${usersWithEntraId.length} users in batch ${userRange}`,
         );
         await deleteUserEntraRecords(
-          successful.objects
-            .filter((ids) => ids.entra !== null)
-            .map((ids) => ids.entra),
+          usersWithEntraId.map((ids) => ids.entra.trim()),
           entraClient,
+        );
+      }
+
+      if (successful.count > 0) {
+        context.info(
+          `removeGeneratedTestAccounts: Removing database records for the ${successful.count} users with successful API record removals`,
         );
         await deleteUserDbRecords(successful.objects.map((ids) => ids.dsi));
       }
