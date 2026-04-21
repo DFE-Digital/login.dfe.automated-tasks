@@ -76,6 +76,14 @@ async function getTestAccountIds(): Promise<{
           [Op.or]: [
             { firstName: "CreateDSIAccount", lastName: "AutomationTest" },
             { firstName: "EntraCreateAccount", lastName: "AutomationTest" },
+            {
+              firstName: { [Op.like]: "EntraCreateAccount %" },
+              lastName: { [Op.like]: "AutomationTest %" },
+            },
+            {
+              firstName: { [Op.like]: "EntraCreateAccount%" },
+              lastName: { [Op.like]: "AutomationTest%" },
+            },
             { firstName: "Selenium", lastName: "Test" },
             { firstName: "SupportInviteUser", lastName: "AutomationTest" },
             { firstName: "Selenium_InviteUserTest", lastName: "Test" },
