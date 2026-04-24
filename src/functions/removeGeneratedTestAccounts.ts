@@ -397,7 +397,7 @@ async function getEntraOrphanedTestAccountIds(
     await entraClient
       .api("/users")
       .header("ConsistencyLevel", "eventual")
-      .filter("contains(mail,'mailosaur')")
+      .filter("endsWith(mail,'mailosaur.net')")
       .count(true)
       .select(["id", "displayName"])
       .top(999)

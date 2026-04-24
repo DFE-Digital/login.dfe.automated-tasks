@@ -1126,7 +1126,9 @@ describe("Remove generated test accounts automated task", () => {
       expect(mockEntraApiMock).toHaveBeenCalledWith("/users");
       const chain = mockEntraApiMock.mock.results[0].value;
       expect(chain.header).toHaveBeenCalledWith("ConsistencyLevel", "eventual");
-      expect(chain.filter).toHaveBeenCalledWith("contains(mail,'mailosaur')");
+      expect(chain.filter).toHaveBeenCalledWith(
+        "endsWith(mail,'mailosaur.net')",
+      );
       expect(chain.count).toHaveBeenCalledWith(true);
       expect(chain.select).toHaveBeenCalledWith(["id", "displayName"]);
       expect(chain.top).toHaveBeenCalledWith(999);
