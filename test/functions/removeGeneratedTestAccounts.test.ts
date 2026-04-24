@@ -60,6 +60,8 @@ describe("Remove generated test accounts automated task", () => {
   const batchRequestHelperMock = jest.mocked(batchRequestHelper);
   const createEntraClientMock = jest.mocked(createEntraGraphClient);
   const connectionMock = jest.mocked(connection);
+  let mockEntraApiGetMock: jest.Mock;
+  let mockEntraApiMock: jest.Mock;
   const invitationMock = jest.mocked(Invitation);
   const userMock = jest.mocked(User);
   const userPasswordPolicyMock = jest.mocked(UserPasswordPolicy);
@@ -91,6 +93,19 @@ describe("Remove generated test accounts automated task", () => {
         success: true,
       }),
     );
+    mockEntraApiGetMock = jest.fn().mockResolvedValue({ value: [] });
+    const mockEntraApiChain = {
+      header: jest.fn().mockReturnThis(),
+      filter: jest.fn().mockReturnThis(),
+      count: jest.fn().mockReturnThis(),
+      select: jest.fn().mockReturnThis(),
+      top: jest.fn().mockReturnThis(),
+      get: mockEntraApiGetMock,
+    };
+    mockEntraApiMock = jest.fn().mockReturnValue(mockEntraApiChain);
+    createEntraClientMock.mockReturnValue({
+      api: mockEntraApiMock,
+    } as unknown as ReturnType<typeof createEntraGraphClient>);
   });
 
   it("it logs that the timer is past due and still executes", async () => {
@@ -192,10 +207,50 @@ describe("Remove generated test accounts automated task", () => {
           {
             [Op.or]: [
               { firstName: "CreateDSIAccount", lastName: "AutomationTest" },
+              {
+                firstName: { [Op.like]: "CreateDSIAccount %" },
+                lastName: { [Op.like]: "AutomationTest %" },
+              },
+              {
+                firstName: { [Op.like]: "CreateDSIAccount%" },
+                lastName: { [Op.like]: "AutomationTest%" },
+              },
               { firstName: "EntraCreateAccount", lastName: "AutomationTest" },
+              {
+                firstName: { [Op.like]: "EntraCreateAccount %" },
+                lastName: { [Op.like]: "AutomationTest %" },
+              },
+              {
+                firstName: { [Op.like]: "EntraCreateAccount%" },
+                lastName: { [Op.like]: "AutomationTest%" },
+              },
               { firstName: "Selenium", lastName: "Test" },
+              {
+                firstName: { [Op.like]: "Selenium %" },
+                lastName: { [Op.like]: "Test %" },
+              },
+              {
+                firstName: { [Op.like]: "Selenium%" },
+                lastName: { [Op.like]: "Test%" },
+              },
               { firstName: "SupportInviteUser", lastName: "AutomationTest" },
+              {
+                firstName: { [Op.like]: "SupportInviteUser %" },
+                lastName: { [Op.like]: "AutomationTest %" },
+              },
+              {
+                firstName: { [Op.like]: "SupportInviteUser%" },
+                lastName: { [Op.like]: "AutomationTest%" },
+              },
               { firstName: "Selenium_InviteUserTest", lastName: "Test" },
+              {
+                firstName: { [Op.like]: "Selenium_InviteUserTest %" },
+                lastName: { [Op.like]: "Test %" },
+              },
+              {
+                firstName: { [Op.like]: "Selenium_InviteUserTest%" },
+                lastName: { [Op.like]: "Test%" },
+              },
               {
                 firstName: { [Op.like]: "EntraInviteNewUser %" },
                 lastName: { [Op.like]: "AutomationTest %" },
@@ -1061,6 +1116,110 @@ describe("Remove generated test accounts automated task", () => {
       expect(deleteInvitationDbRecordsMock).toHaveBeenCalledWith(
         invitations.map((invitation) => invitation.id),
       );
+    });
+  });
+
+  describe("Orphaned Entra account cleanup", () => {
+    it("it queries Entra with the correct parameters to find test accounts with mailosaur emails", async () => {
+      await removeGeneratedTestAccounts({} as Timer, new InvocationContext());
+
+      expect(mockEntraApiMock).toHaveBeenCalledWith("/users");
+      const chain = mockEntraApiMock.mock.results[0].value;
+      expect(chain.header).toHaveBeenCalledWith("ConsistencyLevel", "eventual");
+      expect(chain.filter).toHaveBeenCalledWith(
+        "endsWith(mail,'mailosaur.net')",
+      );
+      expect(chain.count).toHaveBeenCalledWith(true);
+      expect(chain.select).toHaveBeenCalledWith(["id", "displayName"]);
+      expect(chain.top).toHaveBeenCalledWith(999);
+    });
+
+    it("it deletes orphaned Entra accounts whose display name matches a test account pattern", async () => {
+      const orphanedUser = {
+        id: "orphan-entra-id-1",
+        displayName: "AutomationTest, EntraCreateAccount 1",
+      };
+      mockEntraApiGetMock.mockResolvedValue({ value: [orphanedUser] });
+
+      await removeGeneratedTestAccounts({} as Timer, new InvocationContext());
+
+      expect(batchRequestHelperMock).toHaveBeenCalledTimes(1);
+      expect(batchRequestHelperMock.mock.calls[0][0][0].url).toBe(
+        `https://graph.microsoft.com/v1.0/users/${orphanedUser.id}`,
+      );
+      expect(batchRequestHelperMock.mock.calls[0][0][0].method).toBe("DELETE");
+    });
+
+    it("it does not delete Entra accounts that do not match any test account display name pattern", async () => {
+      const nonTestUser = { id: "real-user-id", displayName: "Smith, John" };
+      mockEntraApiGetMock.mockResolvedValue({ value: [nonTestUser] });
+
+      await removeGeneratedTestAccounts({} as Timer, new InvocationContext());
+
+      expect(batchRequestHelperMock).not.toHaveBeenCalled();
+    });
+
+    it("it follows pagination nextLink to collect all orphaned Entra accounts", async () => {
+      const user1 = {
+        id: "orphan-1",
+        displayName: "AutomationTest, EntraCreateAccount 1",
+      };
+      const user2 = {
+        id: "orphan-2",
+        displayName: "AutomationTest, EntraCreateAccount 2",
+      };
+      const nextLink =
+        "https://graph.microsoft.com/v1.0/users?$skiptoken=abc123";
+      mockEntraApiGetMock
+        .mockResolvedValueOnce({ value: [user1], "@odata.nextLink": nextLink })
+        .mockResolvedValueOnce({ value: [user2] });
+
+      await removeGeneratedTestAccounts({} as Timer, new InvocationContext());
+
+      expect(mockEntraApiMock).toHaveBeenCalledWith(nextLink);
+      expect(batchRequestHelperMock).toHaveBeenCalledTimes(1);
+      expect(batchRequestHelperMock.mock.calls[0][0].length).toBe(2);
+      expect(batchRequestHelperMock.mock.calls[0][0][0].url).toBe(
+        `https://graph.microsoft.com/v1.0/users/${user1.id}`,
+      );
+      expect(batchRequestHelperMock.mock.calls[0][0][1].url).toBe(
+        `https://graph.microsoft.com/v1.0/users/${user2.id}`,
+      );
+    });
+
+    it("it logs the number of orphaned Entra accounts found and the range being removed", async () => {
+      const orphanedUser = {
+        id: "orphan-entra-id-1",
+        displayName: "AutomationTest, EntraCreateAccount 1",
+      };
+      mockEntraApiGetMock.mockResolvedValue({ value: [orphanedUser] });
+
+      await removeGeneratedTestAccounts({} as Timer, new InvocationContext());
+
+      expect(contextMock.prototype.info).toHaveBeenCalledWith(
+        "removeGeneratedTestAccounts: Found 1 orphaned Entra test account(s) not covered by database records",
+      );
+      expect(contextMock.prototype.info).toHaveBeenCalledWith(
+        "removeGeneratedTestAccounts: Removing orphaned Entra records 1 to 1",
+      );
+    });
+
+    it("it does not log or attempt deletion if no orphaned Entra accounts are found", async () => {
+      await removeGeneratedTestAccounts({} as Timer, new InvocationContext());
+
+      expect(contextMock.prototype.info).not.toHaveBeenCalledWith(
+        expect.stringContaining("orphaned Entra"),
+      );
+      expect(batchRequestHelperMock).not.toHaveBeenCalled();
+    });
+
+    it("it throws an error if the Graph query for orphaned accounts fails", async () => {
+      const errorMessage = "Graph query failed";
+      mockEntraApiGetMock.mockRejectedValue(new Error(errorMessage));
+
+      await expect(
+        removeGeneratedTestAccounts({} as Timer, new InvocationContext()),
+      ).rejects.toThrow(`removeGeneratedTestAccounts: ${errorMessage}`);
     });
   });
 });

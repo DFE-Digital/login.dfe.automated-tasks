@@ -75,10 +75,50 @@ async function getTestAccountIds(): Promise<{
         {
           [Op.or]: [
             { firstName: "CreateDSIAccount", lastName: "AutomationTest" },
+            {
+              firstName: { [Op.like]: "CreateDSIAccount %" },
+              lastName: { [Op.like]: "AutomationTest %" },
+            },
+            {
+              firstName: { [Op.like]: "CreateDSIAccount%" },
+              lastName: { [Op.like]: "AutomationTest%" },
+            },
             { firstName: "EntraCreateAccount", lastName: "AutomationTest" },
+            {
+              firstName: { [Op.like]: "EntraCreateAccount %" },
+              lastName: { [Op.like]: "AutomationTest %" },
+            },
+            {
+              firstName: { [Op.like]: "EntraCreateAccount%" },
+              lastName: { [Op.like]: "AutomationTest%" },
+            },
             { firstName: "Selenium", lastName: "Test" },
+            {
+              firstName: { [Op.like]: "Selenium %" },
+              lastName: { [Op.like]: "Test %" },
+            },
+            {
+              firstName: { [Op.like]: "Selenium%" },
+              lastName: { [Op.like]: "Test%" },
+            },
             { firstName: "SupportInviteUser", lastName: "AutomationTest" },
+            {
+              firstName: { [Op.like]: "SupportInviteUser %" },
+              lastName: { [Op.like]: "AutomationTest %" },
+            },
+            {
+              firstName: { [Op.like]: "SupportInviteUser%" },
+              lastName: { [Op.like]: "AutomationTest%" },
+            },
             { firstName: "Selenium_InviteUserTest", lastName: "Test" },
+            {
+              firstName: { [Op.like]: "Selenium_InviteUserTest %" },
+              lastName: { [Op.like]: "Test %" },
+            },
+            {
+              firstName: { [Op.like]: "Selenium_InviteUserTest%" },
+              lastName: { [Op.like]: "Test%" },
+            },
             {
               firstName: { [Op.like]: "EntraInviteNewUser %" },
               lastName: { [Op.like]: "AutomationTest %" },
@@ -321,6 +361,71 @@ async function deleteUserDbRecords(userIds: string[]): Promise<void> {
 }
 
 /**
+ * The firstName substrings that identify generated test accounts in Entra.
+ * Used for client-side filtering of Microsoft Graph API query results.
+ */
+const TEST_ACCOUNT_DISPLAY_NAME_PATTERNS = [
+  "EntraCreateAccount",
+  "CreateDSIAccount",
+  "SupportInviteUser",
+  "Selenium_InviteUserTest",
+  "SeleniumInviteUserTest",
+  "EntraInviteNewUser",
+  "InviteNewUser",
+  "CreateAccountErrors",
+  "Selenium",
+] as const;
+
+type EntraUserRecord = { id: string; displayName: string };
+
+/**
+ * Queries the Microsoft Graph API for Entra user object IDs that match the generated test account
+ * display name patterns and have a mailosaur email address.
+ *
+ * This catches accounts where entra_oid was not populated in the DSI database and therefore
+ * would not be selected by the database query — preventing them from becoming permanent Entra orphans.
+ *
+ * @param entraClient - An Entra API client to query users with.
+ * @returns A promise containing an array of Entra user object IDs matching test account patterns.
+ */
+async function getEntraOrphanedTestAccountIds(
+  entraClient: Client,
+): Promise<string[]> {
+  const entraIds: string[] = [];
+
+  let response: { value: EntraUserRecord[]; "@odata.nextLink"?: string } =
+    await entraClient
+      .api("/users")
+      .header("ConsistencyLevel", "eventual")
+      .filter("endsWith(mail,'mailosaur.net')")
+      .count(true)
+      .select(["id", "displayName"])
+      .top(999)
+      .get();
+
+  while (true) {
+    for (const user of response.value ?? []) {
+      if (
+        TEST_ACCOUNT_DISPLAY_NAME_PATTERNS.some((pattern) =>
+          user.displayName?.includes(pattern),
+        )
+      ) {
+        entraIds.push(user.id);
+      }
+    }
+
+    if (!response["@odata.nextLink"]) break;
+
+    response = await entraClient
+      .api(response["@odata.nextLink"])
+      .header("ConsistencyLevel", "eventual")
+      .get();
+  }
+
+  return entraIds;
+}
+
+/**
  * Removes generated test users/invitations based on their email address domain and names.
  *
  * @param timer - Azure function {@link Timer} to handle scheduling information.
@@ -469,6 +574,21 @@ export async function removeGeneratedTestAccounts(
           `removeGeneratedTestAccounts: Removing database records for the ${successful.count} invitations with successful API record removals`,
         );
         await deleteInvitationDbRecords(successful.objects);
+      }
+    }
+
+    const orphanedEntraIds = await getEntraOrphanedTestAccountIds(entraClient);
+    if (orphanedEntraIds.length > 0) {
+      context.info(
+        `removeGeneratedTestAccounts: Found ${orphanedEntraIds.length} orphaned Entra test account(s) not covered by database records`,
+      );
+      for (let index = 0; index < orphanedEntraIds.length; index += batchSize) {
+        const batch = orphanedEntraIds.slice(index, index + batchSize);
+        const range = `${index + 1} to ${index + batch.length}`;
+        context.info(
+          `removeGeneratedTestAccounts: Removing orphaned Entra records ${range}`,
+        );
+        await deleteUserEntraRecords(batch, entraClient);
       }
     }
   } catch (error) {
