@@ -3,6 +3,7 @@ import { deactivateUnusedAccounts } from "./functions/deactivateUnusedAccounts";
 import { removeGeneratedTestAccounts } from "./functions/removeGeneratedTestAccounts";
 import { removeUnresolvedInvitations } from "./functions/removeUnresolvedInvitations";
 import { rejectOldOrganisationRequests } from "./functions/rejectOldOrganisationRequests";
+import { rejectOldServiceRequests } from "./functions/rejectOldServiceRequests";
 
 app.setup({
   enableHttpStream: true,
@@ -24,6 +25,12 @@ app.timer("deactivateUnusedAccounts", {
 app.timer("rejectOldOrganisationRequests", {
   schedule: "%TIMER_REJECT_OLD_ORGANISATION_REQUESTS%",
   handler: rejectOldOrganisationRequests,
+  retry: defaultRetryStrategy,
+});
+
+app.timer("rejectOldServiceRequests", {
+  schedule: "%TIMER_REJECT_OLD_SERVICE_REQUESTS%",
+  handler: rejectOldServiceRequests,
   retry: defaultRetryStrategy,
 });
 

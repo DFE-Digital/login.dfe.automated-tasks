@@ -97,6 +97,35 @@ export class Access {
   }
 
   /**
+   * Updates a service request's properties.
+   *
+   * @param id - The ID of the service request to update.
+   * @param properties - The properties of the request to be updated.
+   * @param correlationId - Correlation ID to be passed with the request.
+   * @returns true if the request was successfully updated, false otherwise.
+   */
+  async updateServiceRequest(
+    id: string,
+    properties: {
+      status?: number;
+      actioned_by?: string;
+      actioned_reason?: string;
+      actioned_at?: EpochTimeStamp;
+    },
+    correlationId: string,
+  ): Promise<boolean> {
+    const response = await this.client.requestRaw(
+      ApiRequestMethod.PATCH,
+      `/services/requests/${id}`,
+      {
+        body: properties,
+        correlationId,
+      },
+    );
+    return response.status === 202;
+  }
+
+  /**
    * Deletes a service link from an invitation in an organisation.
    *
    * @param invitationId - The ID of the invitation to remove the service from.

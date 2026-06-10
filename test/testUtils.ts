@@ -12,6 +12,7 @@ import {
 } from "../src/infrastructure/api/dsiInternal/Organisations";
 import { Invitation } from "../src/infrastructure/database/directories/Invitation";
 import { User } from "../src/infrastructure/database/directories/User";
+import { UserServiceRequest } from "../src/infrastructure/database/organisations/UserServiceRequest";
 
 /**
  * Generates a test Invitation without a sequelize connection for testing.
@@ -433,7 +434,39 @@ export function generateSafeUser(
 }
 
 /**
- * Generates a test user organisation request for testing.
+ * Generates a test user service request for testing.
+ *
+ * @param userId - Request User ID.
+ * @param serviceId - Request Service ID.
+ * @param orgId - Request Organisation ID.
+ * @param properties - Additional request properties.
+ * @returns A {@link UserServiceRequest} object for testing.
+ */
+export function generateServiceRequest(
+  userId: string,
+  serviceId: string,
+  orgId: string,
+  properties: Partial<UserServiceRequest> = {},
+): UserServiceRequest {
+  return {
+    id: crypto.randomUUID(),
+    userId,
+    serviceId,
+    organisationId: orgId,
+    status: properties.status ?? 2,
+    roleIds: properties.roleIds ?? null,
+    reason: properties.reason ?? null,
+    actionedAt: properties.actionedAt ?? null,
+    actionedBy: properties.actionedBy ?? null,
+    actionedReason: properties.actionedReason ?? null,
+    requestType: properties.requestType ?? "service",
+    createdAt: properties.createdAt ?? new Date(),
+    updatedAt: properties.updatedAt ?? new Date(),
+  } as UserServiceRequest;
+}
+
+/**
+ * Generates a test organisation request record for testing.
  *
  * @param orgId - Request Organisation ID.
  * @param userId - Request User ID.
