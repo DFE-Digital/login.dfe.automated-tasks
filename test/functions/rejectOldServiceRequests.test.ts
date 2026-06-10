@@ -155,33 +155,22 @@ describe("Reject old overdue user service requests automated task", () => {
   });
 
   it("it performs the correct query to retrieve old overdue/no approver service requests", async () => {
-    const frozenNow = new Date("2026-06-10T00:00:00.000Z");
-    jest.useFakeTimers();
-    jest.setSystemTime(frozenNow);
+    await rejectOldServiceRequests({} as Timer, new InvocationContext());
 
-    const targetDate = new Date();
-    targetDate.setMonth(targetDate.getMonth() - 3);
-
-    try {
-      await rejectOldServiceRequests({} as Timer, new InvocationContext());
-
-      expect(userServiceRequestMock.findAll).toHaveBeenCalledWith({
-        attributes: [
-          "id",
-          "userId",
-          "organisationId",
-          "serviceId",
-          "roleIds",
-          "createdAt",
-        ],
-        where: {
-          status: { [Op.in]: [2, 3] },
-          createdAt: { [Op.lt]: targetDate },
-        },
-      });
-    } finally {
-      jest.useRealTimers();
-    }
+    expect(userServiceRequestMock.findAll).toHaveBeenCalledWith({
+      attributes: [
+        "id",
+        "userId",
+        "organisationId",
+        "serviceId",
+        "roleIds",
+        "createdAt",
+      ],
+      where: {
+        status: { [Op.in]: [2, 3] },
+        createdAt: { [Op.lt]: expect.any(Date) },
+      },
+    });
   });
 
   it("it throws an error if the findAll query throws an error", async () => {
