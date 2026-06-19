@@ -211,7 +211,8 @@ describe("Reject old overdue user service requests automated task", () => {
   });
 
   it("it attempts to update each old service request individually with the expected rejection properties", async () => {
-    jest.spyOn(Date, "now").mockImplementation(() => 1000);
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date("2024-01-01T00:00:00.000Z"));
     const supportId = "Test Support ID";
     process.env.SUPPORT_USER_ID = supportId;
     const invocationId = "TestInvocationId";
@@ -232,7 +233,7 @@ describe("Reject old overdue user service requests automated task", () => {
       {
         status: -1,
         actioned_by: supportId,
-        actioned_at: 1000,
+        actioned_at: "2024-01-01T00:00:00.000Z",
         actioned_reason:
           "Automated task - Approvers did not action request within 3 months",
       },
@@ -243,12 +244,13 @@ describe("Reject old overdue user service requests automated task", () => {
       {
         status: -1,
         actioned_by: supportId,
-        actioned_at: 1000,
+        actioned_at: "2024-01-01T00:00:00.000Z",
         actioned_reason:
           "Automated task - Approvers did not action request within 3 months",
       },
       invocationId,
     );
+    jest.useRealTimers();
   });
 
   it("it logs the correct number of successful, failed, and errored request rejections", async () => {
