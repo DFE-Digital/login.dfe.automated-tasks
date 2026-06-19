@@ -110,7 +110,7 @@ export class Access {
       status?: number;
       actioned_by?: string;
       actioned_reason?: string;
-      actioned_at?: EpochTimeStamp;
+      actioned_at?: string;
     },
     correlationId: string,
   ): Promise<boolean> {

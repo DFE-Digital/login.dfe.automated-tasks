@@ -47,7 +47,7 @@ async function rejectServiceRequest(
     {
       status: -1,
       actioned_by: process.env.SUPPORT_USER_ID,
-      actioned_at: Date.now(),
+      actioned_at: new Date().toISOString(),
       actioned_reason: rejectionReason,
     },
     correlationId,
