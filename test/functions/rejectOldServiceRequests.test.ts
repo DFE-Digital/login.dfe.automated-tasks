@@ -61,6 +61,7 @@ describe("Reject old overdue user service requests automated task", () => {
 
   afterEach(() => {
     process.env = environment;
+    jest.useRealTimers();
   });
 
   it("it logs a warning if the timer is marked as past due, without executing", async () => {
@@ -250,7 +251,6 @@ describe("Reject old overdue user service requests automated task", () => {
       },
       invocationId,
     );
-    jest.useRealTimers();
   });
 
   it("it logs the correct number of successful, failed, and errored request rejections", async () => {
