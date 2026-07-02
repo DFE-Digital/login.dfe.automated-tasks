@@ -47,6 +47,58 @@ describe("Organisations API wrapper", () => {
       organisations = new Organisations();
     });
 
+    describe("getOrganisationById", () => {
+      it("it calls request using the GET method", async () => {
+        await organisations.getOrganisationById("org-1", "correlation");
+
+        expect(internalClient.prototype.request).toHaveBeenCalled();
+        expect(internalClient.prototype.request.mock.calls[0][0]).toEqual(
+          ApiRequestMethod.GET,
+        );
+      });
+
+      it("it calls request to the correct path with the passed organisation ID", async () => {
+        const orgId = "test-123";
+        await organisations.getOrganisationById(orgId, "");
+
+        expect(internalClient.prototype.request).toHaveBeenCalled();
+        expect(internalClient.prototype.request.mock.calls[0][1]).toEqual(
+          `/organisations/v2/${orgId}`,
+        );
+      });
+
+      it("it calls request with the passed correlation ID", async () => {
+        const correlationId = "test-123";
+        await organisations.getOrganisationById("", correlationId);
+
+        expect(internalClient.prototype.request).toHaveBeenCalled();
+        expect(internalClient.prototype.request.mock.calls[0][2]).toEqual({
+          correlationId,
+        });
+      });
+
+      it("it returns null if the organisation is not found", async () => {
+        setRequestResponse(null);
+
+        expect(await organisations.getOrganisationById("", "")).toBeNull();
+      });
+
+      it("it rejects with request's error if request rejects", async () => {
+        expect.hasAssertions();
+        const errorMessage = "This is a test error";
+        internalClient.prototype.request.mockRejectedValue(
+          new Error(errorMessage),
+        );
+
+        try {
+          await organisations.getOrganisationById("", "");
+        } catch (error) {
+          expect(error).toBeInstanceOf(Error);
+          expect(error).toHaveProperty("message", errorMessage);
+        }
+      });
+    });
+
     describe("getInvitationOrganisations", () => {
       it("it calls request using the GET method", async () => {
         await organisations.getInvitationOrganisations("inv-1", "correlation");

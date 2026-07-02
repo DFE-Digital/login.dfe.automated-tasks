@@ -151,6 +151,69 @@ describe("Access API wrapper", () => {
       });
     });
 
+    describe("updateServiceRequest", () => {
+      it("it calls requestRaw using the PATCH method", async () => {
+        await access.updateServiceRequest("req-1", {}, "correlation");
+
+        expect(internalClient.prototype.requestRaw).toHaveBeenCalled();
+        expect(internalClient.prototype.requestRaw.mock.calls[0][0]).toEqual(
+          ApiRequestMethod.PATCH,
+        );
+      });
+
+      it("it calls requestRaw to the correct path with the passed request ID", async () => {
+        const requestId = "test-123";
+        await access.updateServiceRequest(requestId, {}, "");
+
+        expect(internalClient.prototype.requestRaw).toHaveBeenCalled();
+        expect(internalClient.prototype.requestRaw.mock.calls[0][1]).toEqual(
+          `/services/requests/${requestId}`,
+        );
+      });
+
+      it("it calls requestRaw with the passed properties as the body and correlation ID", async () => {
+        const correlationId = "test-123";
+        const properties = { status: -1, actioned_by: "user-1" };
+        await access.updateServiceRequest("", properties, correlationId);
+
+        expect(internalClient.prototype.requestRaw).toHaveBeenCalled();
+        expect(internalClient.prototype.requestRaw.mock.calls[0][2]).toEqual({
+          body: properties,
+          correlationId,
+        });
+      });
+
+      it("it returns true if the response status is 202", async () => {
+        setRequestRawResponse(202);
+
+        expect(await access.updateServiceRequest("", {}, "")).toEqual(true);
+      });
+
+      it.each([200, 201, 204, 302])(
+        "it returns false if the response status is not 202 (%p)",
+        async (status) => {
+          setRequestRawResponse(status);
+
+          expect(await access.updateServiceRequest("", {}, "")).toEqual(false);
+        },
+      );
+
+      it("it rejects with requestRaw's error if requestRaw rejects", async () => {
+        expect.hasAssertions();
+        const errorMessage = "This is a test error";
+        internalClient.prototype.requestRaw.mockRejectedValue(
+          new Error(errorMessage),
+        );
+
+        try {
+          await access.updateServiceRequest("", {}, "");
+        } catch (error) {
+          expect(error).toBeInstanceOf(Error);
+          expect(error).toHaveProperty("message", errorMessage);
+        }
+      });
+    });
+
     describe("deleteInvitationService", () => {
       it("it calls requestRaw using the DELETE method", async () => {
         await access.deleteInvitationService(
