@@ -140,9 +140,14 @@ async function getEmailInfo(
         lastName: user.family_name,
         orgName: orgMap.get(request.organisationId) ?? "Unknown Organisation",
         serviceName: serviceMap.get(request.serviceId) ?? "Unknown Service",
-        requestedSubServices: request.roleIds
-          ? JSON.parse(request.roleIds)
-          : [],
+        requestedSubServices: (() => {
+          try {
+            const parsed = JSON.parse(request.roleIds ?? "[]");
+            return Array.isArray(parsed) ? parsed : [];
+          } catch {
+            return [];
+          }
+        })(),
       };
     })
     .filter((info) => info !== null);
