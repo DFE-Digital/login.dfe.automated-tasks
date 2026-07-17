@@ -9,5 +9,15 @@ declare module "login.dfe.jobs-client" {
       approved: boolean,
       reason: string,
     ): Promise<void>;
+
+    sendServiceRequestRejected(
+      email: string,
+      firstName: string,
+      lastName: string,
+      orgName: string,
+      serviceName: string,
+      requestedSubServices: string[],
+      reason: string,
+    ): Promise<void>;
   }
 }

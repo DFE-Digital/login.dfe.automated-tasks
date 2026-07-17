@@ -123,6 +123,11 @@ export type invitationOrganisationRecord = {
   }[];
 };
 
+export type organisationRecord = {
+  id: string;
+  name: string | null;
+};
+
 export type organisationRequestRecord = {
   id: string;
   org_id: string;
@@ -149,6 +154,24 @@ export class Organisations {
    */
   constructor() {
     this.client = new DsiInternalApiClient(ApiName.Organisations);
+  }
+
+  /**
+   * Gets an organisation by its ID.
+   *
+   * @param organisationId - The ID of the organisation to retrieve.
+   * @param correlationId - Correlation ID to be passed with the request.
+   * @returns An {@link organisationRecord} if found, or null if not.
+   */
+  async getOrganisationById(
+    organisationId: string,
+    correlationId: string,
+  ): Promise<organisationRecord | null> {
+    return this.client.request<organisationRecord>(
+      ApiRequestMethod.GET,
+      `/organisations/v2/${organisationId}`,
+      { correlationId },
+    );
   }
 
   /**

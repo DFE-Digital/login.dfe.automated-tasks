@@ -6,6 +6,7 @@ import { checkEnv } from "../../utils";
  */
 export enum ApiName {
   Access = "access",
+  Applications = "applications",
   Directories = "directories",
   Organisations = "organisations",
 }

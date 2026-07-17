@@ -47,6 +47,7 @@ describe("Reject old overdue user organisation requests automated task", () => {
     directoriesMock.prototype.getUsersByIds.mockResolvedValue([]);
     notificationClientMock.mockImplementation(() => ({
       sendAccessRequest: jest.fn(),
+      sendServiceRequestRejected: jest.fn(),
     }));
   });
 
@@ -646,6 +647,7 @@ describe("Reject old overdue user organisation requests automated task", () => {
       sendAccessRequest: jest.fn(() => {
         throw new Error(errorMessage);
       }),
+      sendServiceRequestRejected: jest.fn(),
     }));
 
     await expect(
@@ -720,6 +722,7 @@ describe("Reject old overdue user organisation requests automated task", () => {
     const sendAccessRequest = jest.fn();
     notificationClientMock.mockImplementation(() => ({
       sendAccessRequest,
+      sendServiceRequestRejected: jest.fn(),
     }));
     await rejectOldOrganisationRequests({} as Timer, new InvocationContext());
 
