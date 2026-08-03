@@ -276,10 +276,8 @@ describe("reconcileEntraDsiDrift", () => {
       new InvocationContext(),
     );
 
-    expect(
-      contextMock.prototype.warn(
-        "reconcileEntraDsiDrift: Timer is marked as past due, and attempted to run the function",
-      ),
+    expect(contextMock.prototype.warn).toHaveBeenCalledWith(
+      "reconcileEntraDsiDrift: Timer is marked as past due, and attempted to run the function",
     );
     expect(userMock.findAll).not.toHaveBeenCalled();
   });
