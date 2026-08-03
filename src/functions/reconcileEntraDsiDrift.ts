@@ -89,3 +89,64 @@ export async function findUnlinkedDsiUsers(
 
   return anomalies;
 }
+
+/**
+ * Finds Entra accounts created within the given lookback window that have no matching DSI
+ * user by Entra object ID. This catches registration failures that didn't self-heal via a
+ * subsequent sign-in (e.g. a permanent conflict such as a duplicate email).
+ *
+ * @param entraClient - Graph API client used to list recently created Entra users.
+ * @param context - Azure function {@link InvocationContext} used for logging.
+ * @param lookbackDays - How many days back to scan for newly created Entra users.
+ * @returns Audit log entries for each anomaly found.
+ */
+export async function findOrphanedEntraUsers(
+  entraClient: Client,
+  context: InvocationContext,
+  lookbackDays: number,
+): Promise<AuditLog[]> {
+  const sinceDate = new Date();
+  sinceDate.setDate(sinceDate.getDate() - lookbackDays);
+
+  const response = await entraClient
+    .api("/users")
+    .filter(`createdDateTime ge ${sinceDate.toISOString()}`)
+    .select("id,mail,createdDateTime")
+    .get();
+  const recentEntraUsers: {
+    id: string;
+    mail: string;
+    createdDateTime: string;
+  }[] = response.value;
+
+  context.info(
+    `findOrphanedEntraUsers: ${recentEntraUsers.length} recently created Entra user(s) found`,
+  );
+
+  if (recentEntraUsers.length === 0) {
+    return [];
+  }
+
+  const dsiUsers: Pick<User, "entraId">[] = await User.findAll({
+    attributes: ["entraId"],
+    where: {
+      entraId: recentEntraUsers.map((entraUser) => entraUser.id),
+    },
+  });
+  const linkedEntraIds = new Set(dsiUsers.map((user) => user.entraId));
+
+  const anomalies: AuditLog[] = recentEntraUsers
+    .filter((entraUser) => !linkedEntraIds.has(entraUser.id))
+    .map((entraUser) => ({
+      level: AuditLevel.Warning,
+      message: `Entra account ${entraUser.id} (${entraUser.mail}) created ${entraUser.createdDateTime} has no matching DSI user`,
+      type: "support",
+      subType: "orphaned-entra-account",
+    }));
+
+  context.info(
+    `findOrphanedEntraUsers: ${anomalies.length} orphaned anomaly/anomalies found`,
+  );
+
+  return anomalies;
+}
