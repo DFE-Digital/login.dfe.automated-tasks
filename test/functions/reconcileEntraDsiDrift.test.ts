@@ -6,7 +6,10 @@ import {
   findUnlinkedDsiUsers,
   reconcileEntraDsiDrift,
 } from "../../src/functions/reconcileEntraDsiDrift";
-import { AuditLogger } from "../../src/infrastructure/AuditLogger";
+import {
+  AuditLogger,
+  type AuditLog,
+} from "../../src/infrastructure/AuditLogger";
 import { createEntraGraphClient } from "../../src/infrastructure/api/entraGraph/createEntraGraphClient";
 import {
   connection,
@@ -62,6 +65,7 @@ describe("findUnlinkedDsiUsers", () => {
       where: {
         isInternalUser: true,
         isEntra: false,
+        status: 1,
         createdAt: {
           [Op.lt]: Sequelize.fn(
             "DATEADD",
@@ -162,6 +166,7 @@ describe("findOrphanedEntraUsers", () => {
     count: jest.fn().mockReturnThis(),
     filter: jest.fn().mockReturnThis(),
     select: jest.fn().mockReturnThis(),
+    top: jest.fn().mockReturnThis(),
     get: jest.fn(),
   };
   const entraClientMock = {
@@ -174,6 +179,7 @@ describe("findOrphanedEntraUsers", () => {
     apiMock.count.mockReturnThis();
     apiMock.filter.mockReturnThis();
     apiMock.select.mockReturnThis();
+    apiMock.top.mockReturnThis();
     // jest.config.js sets resetMocks: true, which wipes mockReturnValue before
     // every test, so the api() -> chain mock must be re-established here too.
     (entraClientMock.api as jest.Mock).mockReturnValue(apiMock);
@@ -239,6 +245,48 @@ describe("findOrphanedEntraUsers", () => {
 
     expect(result).toEqual([]);
   });
+
+  it("follows @odata.nextLink to collect every page of recently created Entra users", async () => {
+    apiMock.get
+      .mockResolvedValueOnce({
+        value: [
+          {
+            id: "21892c65-88df-4268-b025-d06f51c52404",
+            mail: "jo.bradford@example.com",
+            createdDateTime: "2026-07-30T00:00:00.000Z",
+          },
+        ],
+        "@odata.nextLink":
+          "https://graph.microsoft.com/v1.0/users?$skiptoken=abc123",
+      })
+      .mockResolvedValueOnce({
+        value: [
+          {
+            id: "c64bc171-ceef-4656-b22d-43918c14210f",
+            mail: "alex.johnson@example.com",
+            createdDateTime: "2026-07-31T00:00:00.000Z",
+          },
+        ],
+      });
+    userMock.findAll.mockResolvedValue([]);
+
+    const result = await findOrphanedEntraUsers(
+      entraClientMock,
+      new InvocationContext(),
+      7,
+    );
+
+    expect(apiMock.get).toHaveBeenCalledTimes(2);
+    expect(entraClientMock.api).toHaveBeenNthCalledWith(
+      2,
+      "https://graph.microsoft.com/v1.0/users?$skiptoken=abc123",
+    );
+    expect(result).toHaveLength(2);
+    expect(result.map((anomaly) => anomaly.message)).toEqual([
+      expect.stringContaining("21892c65-88df-4268-b025-d06f51c52404"),
+      expect.stringContaining("c64bc171-ceef-4656-b22d-43918c14210f"),
+    ]);
+  });
 });
 
 describe("reconcileEntraDsiDrift", () => {
@@ -253,6 +301,7 @@ describe("reconcileEntraDsiDrift", () => {
     count: jest.fn().mockReturnThis(),
     filter: jest.fn().mockReturnThis(),
     select: jest.fn().mockReturnThis(),
+    top: jest.fn().mockReturnThis(),
     get: jest.fn(),
   };
 
@@ -262,6 +311,7 @@ describe("reconcileEntraDsiDrift", () => {
     apiMock.count.mockReturnThis();
     apiMock.filter.mockReturnThis();
     apiMock.select.mockReturnThis();
+    apiMock.top.mockReturnThis();
     apiMock.get.mockResolvedValue({ value: [] });
     createEntraClientMock.mockReturnValue({
       api: jest.fn().mockReturnValue(apiMock),
@@ -324,5 +374,83 @@ describe("reconcileEntraDsiDrift", () => {
     const loggedAnomalies =
       auditLoggerMock.prototype.batchedLog.mock.calls[0][0];
     expect(loggedAnomalies).toHaveLength(2);
+    // Assert both directions actually contributed — a plain toHaveLength(2) would still pass if
+    // both anomalies happened to come from the same direction.
+    expect(
+      loggedAnomalies.map((anomaly: AuditLog) => anomaly.subType).sort(),
+    ).toEqual(["orphaned-entra-account", "unlinked-entra-account"]);
+    expect(contextMock.prototype.warn).toHaveBeenCalledWith(
+      "reconcileEntraDsiDrift: 2 total anomaly/anomalies found",
+    );
+  });
+
+  it("still audits anomalies from the successful direction when the other direction rejects", async () => {
+    // Mock consumption order: findUnlinkedDsiUsers and findOrphanedEntraUsers are both started
+    // synchronously by Promise.allSettled, in array order, up to their first await — so
+    // userMock.findAll's 1st queued value goes to findUnlinkedDsiUsers' candidate query, and
+    // apiMock.get's 1st queued value goes to findOrphanedEntraUsers' initial /users query.
+    userMock.findAll.mockResolvedValueOnce([
+      {
+        id: "8f6a9b1e-9e3a-4b8e-9f1a-9b2c3d4e5f6a",
+        email: "jo.bradford@example.com",
+        createdAt: new Date("2026-06-01T00:00:00.000Z"),
+      } as User,
+    ]);
+    apiMock.get
+      .mockRejectedValueOnce(new Error("Graph API unavailable"))
+      .mockResolvedValueOnce({
+        value: [{ id: "21892c65-88df-4268-b025-d06f51c52404" }],
+      });
+
+    await reconcileEntraDsiDrift(
+      { isPastDue: false } as Timer,
+      new InvocationContext(),
+    );
+
+    expect(contextMock.prototype.error).toHaveBeenCalledWith(
+      expect.stringContaining(
+        "reconcileEntraDsiDrift: findOrphanedEntraUsers failed",
+      ),
+    );
+    expect(auditLoggerMock.prototype.batchedLog).toHaveBeenCalledTimes(1);
+    const loggedAnomalies =
+      auditLoggerMock.prototype.batchedLog.mock.calls[0][0];
+    expect(loggedAnomalies).toHaveLength(1);
+    expect(loggedAnomalies[0]).toMatchObject({
+      subType: "unlinked-entra-account",
+    });
+  });
+
+  it("still audits anomalies from the successful direction when findUnlinkedDsiUsers rejects", async () => {
+    userMock.findAll
+      .mockRejectedValueOnce(new Error("connection reset"))
+      .mockResolvedValueOnce([]);
+    apiMock.get.mockResolvedValueOnce({
+      value: [
+        {
+          id: "c64bc171-ceef-4656-b22d-43918c14210f",
+          mail: "alex.johnson@example.com",
+          createdDateTime: "2026-07-30T00:00:00.000Z",
+        },
+      ],
+    });
+
+    await reconcileEntraDsiDrift(
+      { isPastDue: false } as Timer,
+      new InvocationContext(),
+    );
+
+    expect(contextMock.prototype.error).toHaveBeenCalledWith(
+      expect.stringContaining(
+        "reconcileEntraDsiDrift: findUnlinkedDsiUsers failed",
+      ),
+    );
+    expect(auditLoggerMock.prototype.batchedLog).toHaveBeenCalledTimes(1);
+    const loggedAnomalies =
+      auditLoggerMock.prototype.batchedLog.mock.calls[0][0];
+    expect(loggedAnomalies).toHaveLength(1);
+    expect(loggedAnomalies[0]).toMatchObject({
+      subType: "orphaned-entra-account",
+    });
   });
 });

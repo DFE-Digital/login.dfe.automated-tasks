@@ -1,8 +1,11 @@
 import { InvocationContext, Timer } from "@azure/functions";
 import { Client } from "@microsoft/microsoft-graph-client";
 import { Op, Sequelize } from "sequelize";
-import { AuditLevel, type AuditLog } from "../infrastructure/AuditLogger";
-import { AuditLogger } from "../infrastructure/AuditLogger";
+import {
+  AuditLevel,
+  AuditLogger,
+  type AuditLog,
+} from "../infrastructure/AuditLogger";
 import { createEntraGraphClient } from "../infrastructure/api/entraGraph/createEntraGraphClient";
 import {
   connection,
@@ -46,6 +49,7 @@ export async function findUnlinkedDsiUsers(
       where: {
         isInternalUser: true,
         isEntra: false,
+        status: 1,
         createdAt: {
           [Op.lt]: Sequelize.fn(
             "DATEADD",
@@ -99,6 +103,8 @@ export async function findUnlinkedDsiUsers(
   return anomalies;
 }
 
+type EntraUserRecord = { id: string; mail: string; createdDateTime: string };
+
 /**
  * Finds Entra accounts created within the given lookback window that have no matching DSI
  * user by Entra object ID. This catches registration failures that didn't self-heal via a
@@ -120,18 +126,35 @@ export async function findOrphanedEntraUsers(
   // Filtering /users on createdDateTime (and use of the `ge` operator) requires Microsoft
   // Graph's advanced query capabilities, which must be requested via the ConsistencyLevel
   // header and $count=true, otherwise the live Graph API rejects the request.
-  const response = await entraClient
+  let response: {
+    value: EntraUserRecord[];
+    "@odata.nextLink"?: string;
+  } = await entraClient
     .api("/users")
     .header("ConsistencyLevel", "eventual")
     .count(true)
     .filter(`createdDateTime ge ${sinceDate.toISOString()}`)
     .select("id,mail,createdDateTime")
+    .top(999)
     .get();
-  const recentEntraUsers: {
-    id: string;
-    mail: string;
-    createdDateTime: string;
-  }[] = response.value;
+
+  const recentEntraUsers: EntraUserRecord[] = [];
+
+  // Graph paginates at 100 results per page by default (999 requested above via .top(), which is
+  // the maximum permitted per page) — follow @odata.nextLink until every page has been consumed,
+  // otherwise a tenant with more than one page of matches would silently only be partially scanned.
+  while (true) {
+    recentEntraUsers.push(...(response.value ?? []));
+
+    if (!response["@odata.nextLink"]) {
+      break;
+    }
+
+    response = await entraClient
+      .api(response["@odata.nextLink"])
+      .header("ConsistencyLevel", "eventual")
+      .get();
+  }
 
   context.info(
     `findOrphanedEntraUsers: ${recentEntraUsers.length} recently created Entra user(s) found`,
@@ -193,7 +216,7 @@ export async function reconcileEntraDsiDrift(
 
   initialiseUser(connection(DatabaseName.Directories));
 
-  const [unlinkedAnomalies, orphanedAnomalies] = await Promise.all([
+  const [unlinkedResult, orphanedResult] = await Promise.allSettled([
     findUnlinkedDsiUsers(entraClient, context, UNLINKED_DSI_USER_MIN_AGE_DAYS),
     findOrphanedEntraUsers(
       entraClient,
@@ -202,13 +225,30 @@ export async function reconcileEntraDsiDrift(
     ),
   ]);
 
-  const anomalies = [...unlinkedAnomalies, ...orphanedAnomalies];
+  // Use allSettled rather than all so a failure in one direction (e.g. a transient Graph API
+  // error) doesn't discard anomalies that were successfully gathered from the other direction.
+  if (unlinkedResult.status === "rejected") {
+    context.error(
+      `reconcileEntraDsiDrift: findUnlinkedDsiUsers failed: ${unlinkedResult.reason?.message ?? unlinkedResult.reason}`,
+    );
+  }
+  if (orphanedResult.status === "rejected") {
+    context.error(
+      `reconcileEntraDsiDrift: findOrphanedEntraUsers failed: ${orphanedResult.reason?.message ?? orphanedResult.reason}`,
+    );
+  }
 
-  context.info(
-    `reconcileEntraDsiDrift: ${anomalies.length} total anomaly/anomalies found`,
-  );
+  const anomalies = [
+    ...(unlinkedResult.status === "fulfilled" ? unlinkedResult.value : []),
+    ...(orphanedResult.status === "fulfilled" ? orphanedResult.value : []),
+  ];
 
   if (anomalies.length > 0) {
+    context.warn(
+      `reconcileEntraDsiDrift: ${anomalies.length} total anomaly/anomalies found`,
+    );
     await auditLogger.batchedLog(anomalies);
+  } else {
+    context.info("reconcileEntraDsiDrift: 0 total anomalies found");
   }
 }
