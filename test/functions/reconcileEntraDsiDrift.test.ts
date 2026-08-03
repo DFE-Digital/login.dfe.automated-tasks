@@ -1,5 +1,6 @@
 import { InvocationContext } from "@azure/functions";
 import { Client } from "@microsoft/microsoft-graph-client";
+import { Op, Sequelize } from "sequelize";
 import { findUnlinkedDsiUsers } from "../../src/functions/reconcileEntraDsiDrift";
 import { User } from "../../src/infrastructure/database/directories/User";
 
@@ -39,6 +40,39 @@ describe("findUnlinkedDsiUsers", () => {
 
     expect(result).toEqual([]);
     expect(apiMock.get).not.toHaveBeenCalled();
+  });
+
+  it("performs the correct query to retrieve unlinked internal user candidates on the User model", async () => {
+    const minAgeDays = 14;
+    const query = {
+      attributes: ["id", "email", "createdAt"],
+      where: {
+        isInternalUser: true,
+        isEntra: false,
+        createdAt: {
+          [Op.lt]: Sequelize.fn(
+            "DATEADD",
+            Sequelize.literal("DAY"),
+            -minAgeDays,
+            Sequelize.fn("GETDATE"),
+          ),
+        },
+        [Op.or]: [
+          { entraDeferUntil: { [Op.is]: null } },
+          { entraDeferUntil: { [Op.lte]: Sequelize.fn("GETDATE") } },
+        ],
+      },
+    };
+    userMock.findAll.mockResolvedValue([]);
+
+    await findUnlinkedDsiUsers(
+      entraClientMock,
+      new InvocationContext(),
+      minAgeDays,
+    );
+
+    expect(userMock.findAll).toHaveBeenCalled();
+    expect(userMock.findAll).toHaveBeenCalledWith(query);
   });
 
   it("flags a candidate that has a matching Entra account", async () => {
