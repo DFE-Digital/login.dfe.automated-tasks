@@ -108,8 +108,13 @@ export async function findOrphanedEntraUsers(
   const sinceDate = new Date();
   sinceDate.setDate(sinceDate.getDate() - lookbackDays);
 
+  // Filtering /users on createdDateTime (and use of the `ge` operator) requires Microsoft
+  // Graph's advanced query capabilities, which must be requested via the ConsistencyLevel
+  // header and $count=true, otherwise the live Graph API rejects the request.
   const response = await entraClient
     .api("/users")
+    .header("ConsistencyLevel", "eventual")
+    .count(true)
     .filter(`createdDateTime ge ${sinceDate.toISOString()}`)
     .select("id,mail,createdDateTime")
     .get();

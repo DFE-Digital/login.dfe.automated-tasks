@@ -148,6 +148,8 @@ describe("findOrphanedEntraUsers", () => {
   const userMock = jest.mocked(User);
 
   const apiMock = {
+    header: jest.fn().mockReturnThis(),
+    count: jest.fn().mockReturnThis(),
     filter: jest.fn().mockReturnThis(),
     select: jest.fn().mockReturnThis(),
     get: jest.fn(),
@@ -158,6 +160,8 @@ describe("findOrphanedEntraUsers", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    apiMock.header.mockReturnThis();
+    apiMock.count.mockReturnThis();
     apiMock.filter.mockReturnThis();
     apiMock.select.mockReturnThis();
     // jest.config.js sets resetMocks: true, which wipes mockReturnValue before
