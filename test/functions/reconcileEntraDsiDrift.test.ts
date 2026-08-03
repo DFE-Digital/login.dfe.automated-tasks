@@ -1,0 +1,108 @@
+import { InvocationContext } from "@azure/functions";
+import { Client } from "@microsoft/microsoft-graph-client";
+import { findUnlinkedDsiUsers } from "../../src/functions/reconcileEntraDsiDrift";
+import { User } from "../../src/infrastructure/database/directories/User";
+
+jest.mock("@azure/functions");
+jest.mock("../../src/infrastructure/database/directories/User");
+
+describe("findUnlinkedDsiUsers", () => {
+  const contextMock = jest.mocked(InvocationContext);
+  const userMock = jest.mocked(User);
+
+  const apiMock = {
+    filter: jest.fn().mockReturnThis(),
+    select: jest.fn().mockReturnThis(),
+    get: jest.fn(),
+  };
+  const entraClientMock = {
+    api: jest.fn().mockReturnValue(apiMock),
+  } as unknown as Client;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    apiMock.filter.mockReturnThis();
+    apiMock.select.mockReturnThis();
+    // jest.config.js sets resetMocks: true, which wipes mockReturnValue before
+    // every test, so the api() -> chain mock must be re-established here too.
+    (entraClientMock.api as jest.Mock).mockReturnValue(apiMock);
+  });
+
+  it("returns no anomalies when there are no unlinked internal user candidates", async () => {
+    userMock.findAll.mockResolvedValue([]);
+
+    const result = await findUnlinkedDsiUsers(
+      entraClientMock,
+      new InvocationContext(),
+      14,
+    );
+
+    expect(result).toEqual([]);
+    expect(apiMock.get).not.toHaveBeenCalled();
+  });
+
+  it("flags a candidate that has a matching Entra account", async () => {
+    userMock.findAll.mockResolvedValue([
+      {
+        id: "8f6a9b1e-9e3a-4b8e-9f1a-9b2c3d4e5f6a",
+        email: "jo.bradford@example.com",
+        createdAt: new Date("2026-06-01T00:00:00.000Z"),
+      } as User,
+    ]);
+    apiMock.get.mockResolvedValue({
+      value: [{ id: "21892c65-88df-4268-b025-d06f51c52404" }],
+    });
+
+    const result = await findUnlinkedDsiUsers(
+      entraClientMock,
+      new InvocationContext(),
+      14,
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({
+      type: "support",
+      subType: "unlinked-entra-account",
+      userId: "8f6a9b1e-9e3a-4b8e-9f1a-9b2c3d4e5f6a",
+    });
+  });
+
+  it("does not flag a candidate with no matching Entra account", async () => {
+    userMock.findAll.mockResolvedValue([
+      {
+        id: "8f6a9b1e-9e3a-4b8e-9f1a-9b2c3d4e5f6a",
+        email: "jo.bradford@example.com",
+        createdAt: new Date("2026-06-01T00:00:00.000Z"),
+      } as User,
+    ]);
+    apiMock.get.mockResolvedValue({ value: [] });
+
+    const result = await findUnlinkedDsiUsers(
+      entraClientMock,
+      new InvocationContext(),
+      14,
+    );
+
+    expect(result).toEqual([]);
+  });
+
+  it("logs and skips a candidate when the Graph API lookup fails, without throwing", async () => {
+    userMock.findAll.mockResolvedValue([
+      {
+        id: "8f6a9b1e-9e3a-4b8e-9f1a-9b2c3d4e5f6a",
+        email: "jo.bradford@example.com",
+        createdAt: new Date("2026-06-01T00:00:00.000Z"),
+      } as User,
+    ]);
+    apiMock.get.mockRejectedValue(new Error("Graph API unavailable"));
+
+    const result = await findUnlinkedDsiUsers(
+      entraClientMock,
+      new InvocationContext(),
+      14,
+    );
+
+    expect(result).toEqual([]);
+    expect(contextMock.prototype.error).toHaveBeenCalled();
+  });
+});
