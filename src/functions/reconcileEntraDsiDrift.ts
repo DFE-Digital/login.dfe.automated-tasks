@@ -1,8 +1,17 @@
-import { InvocationContext } from "@azure/functions";
+import { InvocationContext, Timer } from "@azure/functions";
 import { Client } from "@microsoft/microsoft-graph-client";
 import { Op, Sequelize } from "sequelize";
 import { AuditLevel, type AuditLog } from "../infrastructure/AuditLogger";
-import { User } from "../infrastructure/database/directories/User";
+import { AuditLogger } from "../infrastructure/AuditLogger";
+import { createEntraGraphClient } from "../infrastructure/api/entraGraph/createEntraGraphClient";
+import {
+  connection,
+  DatabaseName,
+} from "../infrastructure/database/common/connection";
+import {
+  User,
+  initialiseUser,
+} from "../infrastructure/database/directories/User";
 
 /**
  * Escapes single quotes for safe use inside an OData filter string literal.
@@ -154,4 +163,52 @@ export async function findOrphanedEntraUsers(
   );
 
   return anomalies;
+}
+
+const UNLINKED_DSI_USER_MIN_AGE_DAYS = 14;
+const ORPHANED_ENTRA_USER_LOOKBACK_DAYS = 7;
+
+/**
+ * Detects Entra/DSI account drift in both directions and reports anomalies via the audit log,
+ * without making any automated changes. See NSA-9931.
+ *
+ * @param timer - Azure function {@link Timer} implementing object.
+ * @param context - Azure function {@link InvocationContext} to log and retrieve invocation data.
+ *
+ * @throws Error if any infrastructure connections fail or the audit log fails to send.
+ */
+export async function reconcileEntraDsiDrift(
+  timer: Timer,
+  context: InvocationContext,
+): Promise<void> {
+  if (timer.isPastDue) {
+    context.warn(
+      "reconcileEntraDsiDrift: Timer is marked as past due, and attempted to run the function",
+    );
+    return;
+  }
+
+  const entraClient = createEntraGraphClient();
+  const auditLogger = new AuditLogger();
+
+  initialiseUser(connection(DatabaseName.Directories));
+
+  const [unlinkedAnomalies, orphanedAnomalies] = await Promise.all([
+    findUnlinkedDsiUsers(entraClient, context, UNLINKED_DSI_USER_MIN_AGE_DAYS),
+    findOrphanedEntraUsers(
+      entraClient,
+      context,
+      ORPHANED_ENTRA_USER_LOOKBACK_DAYS,
+    ),
+  ]);
+
+  const anomalies = [...unlinkedAnomalies, ...orphanedAnomalies];
+
+  context.info(
+    `reconcileEntraDsiDrift: ${anomalies.length} total anomaly/anomalies found`,
+  );
+
+  if (anomalies.length > 0) {
+    await auditLogger.batchedLog(anomalies);
+  }
 }

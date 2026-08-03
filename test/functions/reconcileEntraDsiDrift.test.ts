@@ -1,13 +1,23 @@
-import { InvocationContext } from "@azure/functions";
+import { InvocationContext, Timer } from "@azure/functions";
 import { Client } from "@microsoft/microsoft-graph-client";
 import { Op, Sequelize } from "sequelize";
 import {
   findOrphanedEntraUsers,
   findUnlinkedDsiUsers,
+  reconcileEntraDsiDrift,
 } from "../../src/functions/reconcileEntraDsiDrift";
+import { AuditLogger } from "../../src/infrastructure/AuditLogger";
+import { createEntraGraphClient } from "../../src/infrastructure/api/entraGraph/createEntraGraphClient";
+import {
+  connection,
+  DatabaseName,
+} from "../../src/infrastructure/database/common/connection";
 import { User } from "../../src/infrastructure/database/directories/User";
 
 jest.mock("@azure/functions");
+jest.mock("../../src/infrastructure/AuditLogger");
+jest.mock("../../src/infrastructure/api/entraGraph/createEntraGraphClient");
+jest.mock("../../src/infrastructure/database/common/connection");
 jest.mock("../../src/infrastructure/database/directories/User");
 
 describe("findUnlinkedDsiUsers", () => {
@@ -228,5 +238,93 @@ describe("findOrphanedEntraUsers", () => {
     );
 
     expect(result).toEqual([]);
+  });
+});
+
+describe("reconcileEntraDsiDrift", () => {
+  const contextMock = jest.mocked(InvocationContext);
+  const auditLoggerMock = jest.mocked(AuditLogger);
+  const createEntraClientMock = jest.mocked(createEntraGraphClient);
+  const connectionMock = jest.mocked(connection);
+  const userMock = jest.mocked(User);
+
+  const apiMock = {
+    header: jest.fn().mockReturnThis(),
+    count: jest.fn().mockReturnThis(),
+    filter: jest.fn().mockReturnThis(),
+    select: jest.fn().mockReturnThis(),
+    get: jest.fn(),
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    apiMock.header.mockReturnThis();
+    apiMock.count.mockReturnThis();
+    apiMock.filter.mockReturnThis();
+    apiMock.select.mockReturnThis();
+    apiMock.get.mockResolvedValue({ value: [] });
+    createEntraClientMock.mockReturnValue({
+      api: jest.fn().mockReturnValue(apiMock),
+    } as unknown as Client);
+    userMock.findAll.mockResolvedValue([]);
+    auditLoggerMock.prototype.batchedLog.mockResolvedValue();
+  });
+
+  it("logs a warning if the timer is marked as past due, without executing", async () => {
+    await reconcileEntraDsiDrift(
+      { isPastDue: true } as Timer,
+      new InvocationContext(),
+    );
+
+    expect(
+      contextMock.prototype.warn(
+        "reconcileEntraDsiDrift: Timer is marked as past due, and attempted to run the function",
+      ),
+    );
+    expect(userMock.findAll).not.toHaveBeenCalled();
+  });
+
+  it("does not write to the audit log when no anomalies are found", async () => {
+    await reconcileEntraDsiDrift(
+      { isPastDue: false } as Timer,
+      new InvocationContext(),
+    );
+
+    expect(connectionMock).toHaveBeenCalledWith(DatabaseName.Directories);
+    expect(auditLoggerMock.prototype.batchedLog).not.toHaveBeenCalled();
+  });
+
+  it("batches anomalies from both directions into a single audit log call", async () => {
+    userMock.findAll.mockResolvedValueOnce([
+      {
+        id: "8f6a9b1e-9e3a-4b8e-9f1a-9b2c3d4e5f6a",
+        email: "jo.bradford@example.com",
+        createdAt: new Date("2026-06-01T00:00:00.000Z"),
+      } as User,
+    ]);
+    apiMock.get
+      .mockResolvedValueOnce({
+        value: [{ id: "21892c65-88df-4268-b025-d06f51c52404" }],
+      })
+      .mockResolvedValueOnce({
+        value: [
+          {
+            id: "c64bc171-ceef-4656-b22d-43918c14210f",
+            mail: "alex.johnson@example.com",
+            createdDateTime: "2026-07-30T00:00:00.000Z",
+          },
+        ],
+      });
+    userMock.findAll.mockResolvedValueOnce([]);
+
+    await reconcileEntraDsiDrift(
+      { isPastDue: false } as Timer,
+      new InvocationContext(),
+    );
+
+    expect(auditLoggerMock.prototype.batchedLog).toHaveBeenCalledTimes(1);
+    const loggedAnomalies =
+      auditLoggerMock.prototype.batchedLog.mock.calls[0][0];
+    expect(loggedAnomalies).toHaveLength(2);
   });
 });
