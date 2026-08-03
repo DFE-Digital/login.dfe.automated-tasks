@@ -34,6 +34,8 @@ export class User extends Model<
   declare isEntra: boolean;
   declare entraId: string | null;
   declare entraLinkedAt: Date | null;
+  declare isInternalUser: boolean;
+  declare entraDeferUntil: Date | null;
   declare passwordPolicies?: NonAttribute<UserPasswordPolicy[]>;
 }
 
@@ -126,6 +128,15 @@ export function initialiseUser(connection: Sequelize): void {
       entraLinkedAt: {
         type: DataTypes.DATE,
         field: "entra_linked",
+      },
+      isInternalUser: {
+        type: DataTypes.BOOLEAN,
+        field: "is_internal_user",
+        allowNull: false,
+      },
+      entraDeferUntil: {
+        type: DataTypes.DATE,
+        field: "entra_defer_until",
       },
     },
     {
