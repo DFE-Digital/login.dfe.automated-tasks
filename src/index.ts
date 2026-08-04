@@ -2,6 +2,7 @@ import { app, type RetryOptions } from "@azure/functions";
 import { deactivateUnusedAccounts } from "./functions/deactivateUnusedAccounts";
 import { removeGeneratedTestAccounts } from "./functions/removeGeneratedTestAccounts";
 import { removeUnresolvedInvitations } from "./functions/removeUnresolvedInvitations";
+import { reconcileEntraDsiDrift } from "./functions/reconcileEntraDsiDrift";
 import { rejectOldOrganisationRequests } from "./functions/rejectOldOrganisationRequests";
 import { rejectOldServiceRequests } from "./functions/rejectOldServiceRequests";
 
@@ -43,5 +44,11 @@ app.timer("removeGeneratedTestAccounts", {
 app.timer("removeUnresolvedInvitations", {
   schedule: "%TIMER_REMOVE_UNRESOLVED_INVITATIONS%",
   handler: removeUnresolvedInvitations,
+  retry: defaultRetryStrategy,
+});
+
+app.timer("reconcileEntraDsiDrift", {
+  schedule: "%TIMER_RECONCILE_ENTRA_DSI_DRIFT%",
+  handler: reconcileEntraDsiDrift,
   retry: defaultRetryStrategy,
 });
