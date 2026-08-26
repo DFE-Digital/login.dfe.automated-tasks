@@ -12,6 +12,10 @@ import {
 import { initialiseUserBanner } from "../organisations/UserBanner";
 import { initialiseUserOrganisationRequest } from "../organisations/UserOrganisationRequest";
 import { initialiseUserServiceRequest } from "../organisations/UserServiceRequest";
+import { initialiseUserStatusChangeReason } from "../directories/UserStatusChangeReason";
+import { initialiseUserLegacyUsername } from "../directories/UserLegacyUsername";
+import { initialisePasswordHistory } from "../directories/PasswordHistory";
+import { initialiseUserPasswordHistory } from "../directories/UserPasswordHistory";
 
 /**
  * Initialise all "User..." models including User, and create model relationships.
@@ -65,4 +69,23 @@ export function initialiseAllInvitationModels(
   InvitationCallback.belongsTo(Invitation, {
     as: "invitation",
   });
+}
+
+/**
+ * Initialise the User model plus every model representing a user's identity records in the
+ * directories database that don't have a dedicated relationship elsewhere, so they can be
+ * queried/destroyed together (e.g. as part of permanently deleting an account).
+ *
+ * @param directoriesConnection - A {@link Sequelize} object connected to the directories database.
+ */
+export function initialiseAccountDeletionModels(
+  directoriesConnection: Sequelize,
+): void {
+  initialiseUser(directoriesConnection);
+  initialiseUserPasswordPolicy(directoriesConnection);
+  initialiseUserStatusChangeReason(directoriesConnection);
+  initialiseUserLegacyUsername(directoriesConnection);
+  initialisePasswordHistory(directoriesConnection);
+  initialiseUserPasswordHistory(directoriesConnection);
+  initialiseInvitation(directoriesConnection);
 }

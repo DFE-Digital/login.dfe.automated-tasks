@@ -1,5 +1,6 @@
 import { app, type RetryOptions } from "@azure/functions";
 import { deactivateUnusedAccounts } from "./functions/deactivateUnusedAccounts";
+import { deleteDeactivatedAccounts } from "./functions/deleteDeactivatedAccounts";
 import { removeGeneratedTestAccounts } from "./functions/removeGeneratedTestAccounts";
 import { removeUnresolvedInvitations } from "./functions/removeUnresolvedInvitations";
 import { rejectOldOrganisationRequests } from "./functions/rejectOldOrganisationRequests";
@@ -19,6 +20,12 @@ const defaultRetryStrategy: RetryOptions = {
 app.timer("deactivateUnusedAccounts", {
   schedule: "%TIMER_DEACTIVATE_UNUSED_ACCOUNTS%",
   handler: deactivateUnusedAccounts,
+  retry: defaultRetryStrategy,
+});
+
+app.timer("deleteDeactivatedAccounts", {
+  schedule: "%TIMER_DELETE_DEACTIVATED_ACCOUNTS%",
+  handler: deleteDeactivatedAccounts,
   retry: defaultRetryStrategy,
 });
 
