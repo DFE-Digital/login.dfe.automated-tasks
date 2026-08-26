@@ -157,15 +157,44 @@ describe("Delete deactivated accounts automated task", () => {
 
     expect(userMock.findAll).toHaveBeenCalledWith(
       expect.objectContaining({
-        attributes: ["id", "email", "entraId"],
         // Sequelize is auto-mocked, so Sequelize.literal(...) resolves to undefined here -
         // matches how deactivateUnusedAccounts.test.ts asserts nested Sequelize.fn calls.
+        attributes: [
+          "id",
+          "email",
+          "entraId",
+          [undefined, "usedFallbackShipDate"],
+        ],
         where: {
           [Op.and]: [{ status: 0 }, undefined],
         },
         limit: 500,
         replacements: { shipDate: "2026-09-01" },
       }),
+    );
+  });
+
+  it("it logs the config values used for the run before querying", async () => {
+    process.env.DELETE_DEACTIVATED_ACCOUNTS_BATCH_CAP = "500";
+
+    await deleteDeactivatedAccounts({} as Timer, new InvocationContext());
+
+    expect(contextMock.prototype.info).toHaveBeenCalledWith(
+      "deleteDeactivatedAccounts: Starting run with dryRun=false, batchCap=500, shipDate=2026-09-01",
+    );
+  });
+
+  it("it logs a breakdown of how many candidates used a real status-change reason vs the ship-date fallback", async () => {
+    const users = generateUsers(3, { status: 0 }).map((user, index) => ({
+      ...user,
+      usedFallbackShipDate: index < 2,
+    }));
+    userMock.findAll.mockResolvedValue(users as unknown as User[]);
+
+    await deleteDeactivatedAccounts({} as Timer, new InvocationContext());
+
+    expect(contextMock.prototype.info).toHaveBeenCalledWith(
+      "deleteDeactivatedAccounts: 3 eligible users found (1 via user_status_change_reasons, 2 via ship-date fallback)",
     );
   });
 
@@ -189,7 +218,7 @@ describe("Delete deactivated accounts automated task", () => {
       await deleteDeactivatedAccounts({} as Timer, new InvocationContext());
 
       expect(contextMock.prototype.info).toHaveBeenCalledWith(
-        "deleteDeactivatedAccounts: 3 eligible users found (dryRun=true)",
+        "deleteDeactivatedAccounts: Starting run with dryRun=true, batchCap=2000, shipDate=2026-09-01",
       );
       expect(contextMock.prototype.info).toHaveBeenCalledWith(
         "deleteDeactivatedAccounts: [DRY RUN] Completed - no accounts were deleted",
@@ -217,8 +246,14 @@ describe("Delete deactivated accounts automated task", () => {
     });
 
     it("it sends an audit log entry per candidate describing what would be deleted", async () => {
-      const users = generateUsers(2, { status: 0, entraId: "entra-id" });
-      userMock.findAll.mockResolvedValue(users);
+      const users = generateUsers(2, {
+        status: 0,
+        entraId: "entra-id",
+      }).map((user, index) => ({
+        ...user,
+        usedFallbackShipDate: index === 1,
+      }));
+      userMock.findAll.mockResolvedValue(users as unknown as User[]);
       await deleteDeactivatedAccounts({} as Timer, new InvocationContext());
 
       expect(auditLoggerMock.prototype.batchedLog).toHaveBeenCalledWith(
@@ -231,6 +266,7 @@ describe("Delete deactivated accounts automated task", () => {
               "Automated task - Account deactivated for 12 months or more.",
             editedUser: user.id.toUpperCase(),
             hasEntraRecord: "true",
+            usedFallbackShipDate: String(user.usedFallbackShipDate),
           },
         })),
       );

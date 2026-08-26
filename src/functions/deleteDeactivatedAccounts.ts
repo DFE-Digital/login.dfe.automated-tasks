@@ -38,9 +38,12 @@ type apiClients = {
 };
 
 /**
- * The subset of a user's fields this function needs.
+ * The subset of a user's fields this function needs, plus whether the ship-date fallback (as
+ * opposed to a real `user_status_change_reasons` row) was used to determine eligibility.
  */
-type deletionCandidate = Pick<User, "id" | "email" | "entraId">;
+type deletionCandidate = Pick<User, "id" | "email" | "entraId"> & {
+  usedFallbackShipDate: boolean;
+};
 
 /**
  * Records returned for a user from our APIs.
@@ -57,14 +60,23 @@ const DELETION_REASON =
   "Automated task - Account deactivated for 12 months or more.";
 
 /**
- * Builds the eligibility date SQL expression: the latest deactivation reason date for a user,
- * falling back to the feature's ship date (bound via the `:shipDate` replacement) for users
- * with no `user_status_change_reasons` row (see NSA-9963/NSA-9964).
+ * The latest deactivation reason date for a user, or SQL NULL if they have no
+ * `user_status_change_reasons` row (see NSA-9963/NSA-9964).
  */
-const ELIGIBILITY_DATE_EXPRESSION = `COALESCE(
-  (SELECT MAX(r.createdAt) FROM user_status_change_reasons r WHERE r.user_id = [User].[sub] AND r.new_status = 0),
-  CAST(:shipDate AS DATETIME2)
+const LATEST_REASON_DATE_EXPRESSION = `(
+  SELECT MAX(r.createdAt) FROM user_status_change_reasons r WHERE r.user_id = [User].[sub] AND r.new_status = 0
 )`;
+
+/**
+ * The eligibility date SQL expression: {@link LATEST_REASON_DATE_EXPRESSION}, falling back to
+ * the feature's ship date (bound via the `:shipDate` replacement) for users with no reason row.
+ */
+const ELIGIBILITY_DATE_EXPRESSION = `COALESCE(${LATEST_REASON_DATE_EXPRESSION}, CAST(:shipDate AS DATETIME2))`;
+
+/**
+ * Whether the ship-date fallback (rather than a real reason row) determined a user's eligibility.
+ */
+const USED_FALLBACK_SHIP_DATE_EXPRESSION = `CASE WHEN ${LATEST_REASON_DATE_EXPRESSION} IS NULL THEN 1 ELSE 0 END`;
 
 /**
  * Finds deactivated accounts eligible for permanent deletion: deactivated 12+ months ago,
@@ -79,8 +91,16 @@ async function getEligibleUsers(
   batchCap: number,
   shipDate: string,
 ): Promise<deletionCandidate[]> {
-  return User.findAll({
-    attributes: ["id", "email", "entraId"],
+  return (await User.findAll({
+    attributes: [
+      "id",
+      "email",
+      "entraId",
+      [
+        Sequelize.literal(USED_FALLBACK_SHIP_DATE_EXPRESSION),
+        "usedFallbackShipDate",
+      ],
+    ],
     where: {
       [Op.and]: [
         { status: 0 },
@@ -92,7 +112,7 @@ async function getEligibleUsers(
     order: [[Sequelize.literal(ELIGIBILITY_DATE_EXPRESSION), "ASC"]],
     limit: batchCap,
     replacements: { shipDate },
-  });
+  })) as unknown as deletionCandidate[];
 }
 
 /**
@@ -341,10 +361,17 @@ export async function deleteDeactivatedAccounts(
 
     initialiseAccountDeletionModels(connection(DatabaseName.Directories));
 
+    context.info(
+      `deleteDeactivatedAccounts: Starting run with dryRun=${dryRun}, batchCap=${batchCap}, shipDate=${shipDate}`,
+    );
+
     const users = await getEligibleUsers(batchCap, shipDate);
+    const fallbackCount = users.filter((user) =>
+      Boolean(user.usedFallbackShipDate),
+    ).length;
 
     context.info(
-      `deleteDeactivatedAccounts: ${users.length} eligible users found (dryRun=${dryRun})`,
+      `deleteDeactivatedAccounts: ${users.length} eligible users found (${users.length - fallbackCount} via user_status_change_reasons, ${fallbackCount} via ship-date fallback)`,
     );
 
     if (dryRun) {
@@ -361,6 +388,7 @@ export async function deleteDeactivatedAccounts(
                 typeof user.entraId === "string" &&
                   user.entraId.trim().length > 0,
               ),
+              usedFallbackShipDate: String(Boolean(user.usedFallbackShipDate)),
             },
           })),
         );
