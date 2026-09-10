@@ -25,7 +25,6 @@ import { UserPasswordHistory } from "../infrastructure/database/directories/User
 import { PasswordHistory } from "../infrastructure/database/directories/PasswordHistory";
 import { Invitation } from "../infrastructure/database/directories/Invitation";
 import { AuditLogger } from "../infrastructure/AuditLogger";
-import { checkEnv } from "../infrastructure/utils";
 import { Client } from "@microsoft/microsoft-graph-client";
 
 /**
@@ -38,11 +37,12 @@ type apiClients = {
 };
 
 /**
- * The subset of a user's fields this function needs, plus whether the ship-date fallback (as
- * opposed to a real `user_status_change_reasons` row) was used to determine eligibility.
+ * The subset of a user's fields this function needs, plus whether eligibility was determined via
+ * the NSA-10047 no-signal fallback (no `user_status_change_reasons` row and no `deactivated_at`)
+ * rather than a real 12-month clock.
  */
 type deletionCandidate = Pick<User, "id" | "email" | "entraId"> & {
-  usedFallbackShipDate: boolean;
+  usedNoSignalFallback: boolean;
 };
 
 /**
@@ -69,27 +69,93 @@ const LATEST_REASON_DATE_EXPRESSION = `(
 
 /**
  * The eligibility date SQL expression: {@link LATEST_REASON_DATE_EXPRESSION}, falling back to
- * the feature's ship date (bound via the `:shipDate` replacement) for users with no reason row.
+ * the user's `deactivated_at` column (populated at deactivation time, or backfilled as a proxy
+ * value by {@link stampProxyDeactivationDates} - see NSA-10055) for users with no reason row.
+ *
+ * Still SQL NULL when neither source has a value - see {@link getAccountsNeedingProxyDeactivationDate}
+ * for why that means the account has no reliable historical deactivation signal at all (NSA-10047).
  */
-const ELIGIBILITY_DATE_EXPRESSION = `COALESCE(${LATEST_REASON_DATE_EXPRESSION}, CAST(:shipDate AS DATETIME2))`;
+const ELIGIBILITY_DATE_EXPRESSION = `COALESCE(${LATEST_REASON_DATE_EXPRESSION}, [User].[deactivated_at])`;
 
 /**
- * Whether the ship-date fallback (rather than a real reason row) determined a user's eligibility.
+ * Whether an account has no reliable historical deactivation signal at all (no reason row, no
+ * `deactivated_at`) - i.e. it's only eligible via the NSA-10047 no-signal fallback rather than a
+ * real 12-month clock.
  */
-const USED_FALLBACK_SHIP_DATE_EXPRESSION = `CASE WHEN ${LATEST_REASON_DATE_EXPRESSION} IS NULL THEN 1 ELSE 0 END`;
+const USED_NO_SIGNAL_FALLBACK_EXPRESSION = `CASE WHEN ${ELIGIBILITY_DATE_EXPRESSION} IS NULL THEN 1 ELSE 0 END`;
 
 /**
- * Finds deactivated accounts eligible for permanent deletion: deactivated 12+ months ago,
- * using the latest `user_status_change_reasons` row where available, or the feature's ship
- * date as a fallback for accounts with no such row.
+ * Finds deactivated accounts with no `user_status_change_reasons` row and no `deactivated_at`
+ * value - i.e. no reliable historical deactivation signal at all - whose `last_login` is within
+ * the last 3 months.
+ *
+ * Per NSA-9963/NSA-10047: these accounts are retained rather than deleted, but their
+ * `deactivated_at` is backfilled from `last_login` as a proxy so they graduate onto the standard
+ * `deactivated_at` + 12 months eligibility rule once that proxy value is itself 12+ months old,
+ * rather than being re-evaluated against a `last_login` that can keep changing.
+ *
+ * @returns A promise containing the IDs of accounts needing a proxy `deactivated_at`.
+ */
+async function getAccountsNeedingProxyDeactivationDate(): Promise<
+  Pick<User, "id">[]
+> {
+  return User.findAll({
+    attributes: ["id"],
+    where: {
+      [Op.and]: [
+        { status: 0 },
+        { deactivatedAt: null },
+        {
+          lastLogin: {
+            [Op.gte]: Sequelize.literal("DATEADD(MONTH, -3, GETDATE())"),
+          },
+        },
+        Sequelize.literal(`${LATEST_REASON_DATE_EXPRESSION} IS NULL`),
+      ],
+    },
+  });
+}
+
+/**
+ * Backfills `deactivated_at` (from `last_login`) for accounts found by
+ * {@link getAccountsNeedingProxyDeactivationDate}. Runs regardless of dry-run mode, since this is
+ * data capture rather than deletion.
+ *
+ * @param context - Azure function {@link InvocationContext} to log the outcome to.
+ * @returns A promise containing the number of accounts stamped.
+ */
+async function stampProxyDeactivationDates(
+  context: InvocationContext,
+): Promise<number> {
+  const accounts = await getAccountsNeedingProxyDeactivationDate();
+
+  if (accounts.length > 0) {
+    await User.update(
+      { deactivatedAt: Sequelize.col("lastLogin") },
+      { where: { id: accounts.map((account) => account.id) } },
+    );
+  }
+
+  context.info(
+    `deleteDeactivatedAccounts: Stamped a proxy deactivated_at (from last_login) for ${accounts.length} accounts with no reliable historical deactivation signal (NSA-10047)`,
+  );
+
+  return accounts.length;
+}
+
+/**
+ * Finds deactivated accounts eligible for permanent deletion: deactivated 12+ months ago, using
+ * the latest `user_status_change_reasons` row or `deactivated_at` where available; or, for
+ * accounts with neither (no reliable historical deactivation signal at all), immediately eligible
+ * per the NSA-10047 no-signal fallback - {@link stampProxyDeactivationDates} has already excluded
+ * any of these with a recent `last_login` before this runs.
  *
  * @param batchCap - The maximum number of candidates to return in one run.
- * @param shipDate - The fallback eligibility date for accounts with no status-change reason.
- * @returns A promise containing the eligible {@link deletionCandidate} users, oldest-eligible-first.
+ * @returns A promise containing the eligible {@link deletionCandidate} users, oldest-eligible-first
+ * (accounts using the no-signal fallback, having no eligibility date, sort first).
  */
 async function getEligibleUsers(
   batchCap: number,
-  shipDate: string,
 ): Promise<deletionCandidate[]> {
   return (await User.findAll({
     attributes: [
@@ -97,21 +163,20 @@ async function getEligibleUsers(
       "email",
       "entraId",
       [
-        Sequelize.literal(USED_FALLBACK_SHIP_DATE_EXPRESSION),
-        "usedFallbackShipDate",
+        Sequelize.literal(USED_NO_SIGNAL_FALLBACK_EXPRESSION),
+        "usedNoSignalFallback",
       ],
     ],
     where: {
       [Op.and]: [
         { status: 0 },
         Sequelize.literal(
-          `${ELIGIBILITY_DATE_EXPRESSION} < DATEADD(MONTH, -12, GETDATE())`,
+          `(${ELIGIBILITY_DATE_EXPRESSION} IS NULL OR ${ELIGIBILITY_DATE_EXPRESSION} < DATEADD(MONTH, -12, GETDATE()))`,
         ),
       ],
     },
     order: [[Sequelize.literal(ELIGIBILITY_DATE_EXPRESSION), "ASC"]],
     limit: batchCap,
-    replacements: { shipDate },
   })) as unknown as deletionCandidate[];
 }
 
@@ -337,18 +402,12 @@ export async function deleteDeactivatedAccounts(
   }
 
   try {
-    checkEnv(
-      ["FEATURE_SHIP_DATE_DELETE_DEACTIVATED_ACCOUNTS"],
-      "delete deactivated accounts",
-    );
-
     const batchSize = 100;
     const batchCap =
       Number(process.env.DELETE_DEACTIVATED_ACCOUNTS_BATCH_CAP) || 2000;
     const dryRun =
       process.env.DRY_RUN_DELETE_DEACTIVATED_ACCOUNTS?.toLowerCase() !==
       "false";
-    const shipDate = process.env.FEATURE_SHIP_DATE_DELETE_DEACTIVATED_ACCOUNTS;
     const correlationId = context.invocationId;
 
     const apis = {
@@ -362,16 +421,18 @@ export async function deleteDeactivatedAccounts(
     initialiseAccountDeletionModels(connection(DatabaseName.Directories));
 
     context.info(
-      `deleteDeactivatedAccounts: Starting run with dryRun=${dryRun}, batchCap=${batchCap}, shipDate=${shipDate}`,
+      `deleteDeactivatedAccounts: Starting run with dryRun=${dryRun}, batchCap=${batchCap}`,
     );
 
-    const users = await getEligibleUsers(batchCap, shipDate);
-    const fallbackCount = users.filter((user) =>
-      Boolean(user.usedFallbackShipDate),
+    await stampProxyDeactivationDates(context);
+
+    const users = await getEligibleUsers(batchCap);
+    const noSignalCount = users.filter((user) =>
+      Boolean(user.usedNoSignalFallback),
     ).length;
 
     context.info(
-      `deleteDeactivatedAccounts: ${users.length} eligible users found (${users.length - fallbackCount} via user_status_change_reasons, ${fallbackCount} via ship-date fallback)`,
+      `deleteDeactivatedAccounts: ${users.length} eligible users found (${users.length - noSignalCount} via user_status_change_reasons/deactivated_at, ${noSignalCount} via NSA-10047 no-signal fallback)`,
     );
 
     if (dryRun) {
@@ -388,7 +449,7 @@ export async function deleteDeactivatedAccounts(
                 typeof user.entraId === "string" &&
                   user.entraId.trim().length > 0,
               ),
-              usedFallbackShipDate: String(Boolean(user.usedFallbackShipDate)),
+              usedNoSignalFallback: String(Boolean(user.usedNoSignalFallback)),
             },
           })),
         );

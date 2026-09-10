@@ -67,7 +67,6 @@ describe("Delete deactivated accounts automated task", () => {
   beforeEach(() => {
     process.env = {
       ...originalEnv,
-      FEATURE_SHIP_DATE_DELETE_DEACTIVATED_ACCOUNTS: "2026-09-01",
       DRY_RUN_DELETE_DEACTIVATED_ACCOUNTS: "false",
     };
 
@@ -97,15 +96,6 @@ describe("Delete deactivated accounts automated task", () => {
     expect(contextMock.prototype.warn).toHaveBeenCalledWith(
       "deleteDeactivatedAccounts: Timer is marked as past due, and attempted to run the function",
     );
-    expect(userMock.findAll).not.toHaveBeenCalled();
-  });
-
-  it("it throws an error if the feature ship date environment variable is missing", async () => {
-    delete process.env.FEATURE_SHIP_DATE_DELETE_DEACTIVATED_ACCOUNTS;
-
-    await expect(
-      deleteDeactivatedAccounts({} as Timer, new InvocationContext()),
-    ).rejects.toThrow(/deleteDeactivatedAccounts:/);
     expect(userMock.findAll).not.toHaveBeenCalled();
   });
 
@@ -163,13 +153,12 @@ describe("Delete deactivated accounts automated task", () => {
           "id",
           "email",
           "entraId",
-          [undefined, "usedFallbackShipDate"],
+          [undefined, "usedNoSignalFallback"],
         ],
         where: {
           [Op.and]: [{ status: 0 }, undefined],
         },
         limit: 500,
-        replacements: { shipDate: "2026-09-01" },
       }),
     );
   });
@@ -180,22 +169,101 @@ describe("Delete deactivated accounts automated task", () => {
     await deleteDeactivatedAccounts({} as Timer, new InvocationContext());
 
     expect(contextMock.prototype.info).toHaveBeenCalledWith(
-      "deleteDeactivatedAccounts: Starting run with dryRun=false, batchCap=500, shipDate=2026-09-01",
+      "deleteDeactivatedAccounts: Starting run with dryRun=false, batchCap=500",
     );
   });
 
-  it("it logs a breakdown of how many candidates used a real status-change reason vs the ship-date fallback", async () => {
+  it("it logs a breakdown of how many candidates used a real deactivation signal vs the NSA-10047 no-signal fallback", async () => {
     const users = generateUsers(3, { status: 0 }).map((user, index) => ({
       ...user,
-      usedFallbackShipDate: index < 2,
+      usedNoSignalFallback: index < 2,
     }));
-    userMock.findAll.mockResolvedValue(users as unknown as User[]);
+    userMock.findAll
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce(users as unknown as User[]);
 
     await deleteDeactivatedAccounts({} as Timer, new InvocationContext());
 
     expect(contextMock.prototype.info).toHaveBeenCalledWith(
-      "deleteDeactivatedAccounts: 3 eligible users found (1 via user_status_change_reasons, 2 via ship-date fallback)",
+      "deleteDeactivatedAccounts: 3 eligible users found (1 via user_status_change_reasons/deactivated_at, 2 via NSA-10047 no-signal fallback)",
     );
+  });
+
+  describe("proxy deactivation date stamping (NSA-10047)", () => {
+    it("it queries accounts with no reason row, no deactivated_at, and a last_login within 3 months", async () => {
+      await deleteDeactivatedAccounts({} as Timer, new InvocationContext());
+
+      expect(userMock.findAll).toHaveBeenCalledWith({
+        attributes: ["id"],
+        where: {
+          [Op.and]: [
+            { status: 0 },
+            { deactivatedAt: null },
+            { lastLogin: { [Op.gte]: undefined } },
+            undefined,
+          ],
+        },
+      });
+    });
+
+    it("it stamps deactivated_at from last_login for accounts found needing a proxy value", async () => {
+      const accountsNeedingStamp = generateUsers(2, { status: 0 }).map(
+        (user) => ({ id: user.id }),
+      );
+      userMock.findAll.mockResolvedValueOnce(
+        accountsNeedingStamp as unknown as User[],
+      );
+
+      await deleteDeactivatedAccounts({} as Timer, new InvocationContext());
+
+      expect(userMock.update).toHaveBeenCalledWith(
+        { deactivatedAt: undefined },
+        {
+          where: { id: accountsNeedingStamp.map((account) => account.id) },
+        },
+      );
+    });
+
+    it("it logs how many accounts were stamped", async () => {
+      const accountsNeedingStamp = generateUsers(2, { status: 0 }).map(
+        (user) => ({ id: user.id }),
+      );
+      userMock.findAll.mockResolvedValueOnce(
+        accountsNeedingStamp as unknown as User[],
+      );
+
+      await deleteDeactivatedAccounts({} as Timer, new InvocationContext());
+
+      expect(contextMock.prototype.info).toHaveBeenCalledWith(
+        "deleteDeactivatedAccounts: Stamped a proxy deactivated_at (from last_login) for 2 accounts with no reliable historical deactivation signal (NSA-10047)",
+      );
+    });
+
+    it("it does not call update when no accounts need a proxy deactivation date", async () => {
+      await deleteDeactivatedAccounts({} as Timer, new InvocationContext());
+
+      expect(userMock.update).not.toHaveBeenCalled();
+      expect(contextMock.prototype.info).toHaveBeenCalledWith(
+        "deleteDeactivatedAccounts: Stamped a proxy deactivated_at (from last_login) for 0 accounts with no reliable historical deactivation signal (NSA-10047)",
+      );
+    });
+
+    it("it stamps proxy deactivation dates even when the run is in dry-run mode", async () => {
+      delete process.env.DRY_RUN_DELETE_DEACTIVATED_ACCOUNTS;
+      const accountsNeedingStamp = generateUsers(1, { status: 0 }).map(
+        (user) => ({ id: user.id }),
+      );
+      userMock.findAll.mockResolvedValueOnce(
+        accountsNeedingStamp as unknown as User[],
+      );
+
+      await deleteDeactivatedAccounts({} as Timer, new InvocationContext());
+
+      expect(userMock.update).toHaveBeenCalledWith(
+        { deactivatedAt: undefined },
+        { where: { id: [accountsNeedingStamp[0].id] } },
+      );
+    });
   });
 
   it("it defaults the batch cap to 2000 when not configured", async () => {
@@ -218,7 +286,7 @@ describe("Delete deactivated accounts automated task", () => {
       await deleteDeactivatedAccounts({} as Timer, new InvocationContext());
 
       expect(contextMock.prototype.info).toHaveBeenCalledWith(
-        "deleteDeactivatedAccounts: Starting run with dryRun=true, batchCap=2000, shipDate=2026-09-01",
+        "deleteDeactivatedAccounts: Starting run with dryRun=true, batchCap=2000",
       );
       expect(contextMock.prototype.info).toHaveBeenCalledWith(
         "deleteDeactivatedAccounts: [DRY RUN] Completed - no accounts were deleted",
@@ -251,9 +319,11 @@ describe("Delete deactivated accounts automated task", () => {
         entraId: "entra-id",
       }).map((user, index) => ({
         ...user,
-        usedFallbackShipDate: index === 1,
+        usedNoSignalFallback: index === 1,
       }));
-      userMock.findAll.mockResolvedValue(users as unknown as User[]);
+      userMock.findAll
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce(users as unknown as User[]);
       await deleteDeactivatedAccounts({} as Timer, new InvocationContext());
 
       expect(auditLoggerMock.prototype.batchedLog).toHaveBeenCalledWith(
@@ -266,7 +336,7 @@ describe("Delete deactivated accounts automated task", () => {
               "Automated task - Account deactivated for 12 months or more.",
             editedUser: user.id.toUpperCase(),
             hasEntraRecord: "true",
-            usedFallbackShipDate: String(user.usedFallbackShipDate),
+            usedNoSignalFallback: String(user.usedNoSignalFallback),
           },
         })),
       );
