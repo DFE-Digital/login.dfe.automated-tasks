@@ -96,6 +96,10 @@ describe("User database model", () => {
             type: DataTypes.DATE,
             field: "entra_linked",
           },
+          deactivatedAt: {
+            type: DataTypes.DATE,
+            field: "deactivated_at",
+          },
         },
         {
           tableName: "user",

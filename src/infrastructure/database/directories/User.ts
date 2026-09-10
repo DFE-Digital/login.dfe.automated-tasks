@@ -34,6 +34,7 @@ export class User extends Model<
   declare isEntra: boolean;
   declare entraId: string | null;
   declare entraLinkedAt: Date | null;
+  declare deactivatedAt: Date | null;
   declare passwordPolicies?: NonAttribute<UserPasswordPolicy[]>;
 }
 
@@ -126,6 +127,10 @@ export function initialiseUser(connection: Sequelize): void {
       entraLinkedAt: {
         type: DataTypes.DATE,
         field: "entra_linked",
+      },
+      deactivatedAt: {
+        type: DataTypes.DATE,
+        field: "deactivated_at",
       },
     },
     {
