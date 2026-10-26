@@ -60,6 +60,70 @@ const DELETION_REASON =
   "Automated task - Account deactivated for 12 months or more.";
 
 /**
+ * Long-lived automation/regression test account emails that must never be processed by this job,
+ * even if they'd otherwise be eligible - deleting them breaks QA regression packs across
+ * environments. Final list from NSA-9838 (Sahithi Dondeti, comment dated 2026-10-23, "Final List
+ * from all environments"), superseding the shorter list requested earlier on the same ticket.
+ */
+const EXCLUDED_TEST_ACCOUNT_EMAILS = [
+  "testdsisignin@n0n3fzi0.mailosaur.net",
+  "manageUser@qnnm4siw.mailosaur.net",
+  "orgApproverReqTab@lx9ykkqg.mailosaur.net",
+  "orgApproverEmail@lx9ykkqg.mailosaur.net",
+  "orgApproverEmail-1@lx9ykkqg.mailosaur.net",
+  "euReqOrg@pohzxoae.mailosaur.net",
+  "serviceAppApproveReqTab@exgy7050.mailosaur.net",
+  "testdsisignin+23@gmail.com",
+  "serviceAppRejectEmail@wjk35nmg.mailosaur.net",
+  "serviceAppApproveEmail@5bbklcsg.mailosaur.net",
+  "serviceAppApproveEmail-1@5bbklcsg.mailosaur.net",
+  "oneOrgApprover@kocb2hr7.mailosaur.net",
+  "subServiceEURejectEmail@t2jax9at.mailosaur.net",
+  "subServiceEUApproveEmail@jayrhfhu.mailosaur.net",
+  "subServiceAppApproveEmail@6306lc72.mailosaur.net",
+  "subServiceAppApproveEmail-1@6306lc72.mailosaur.net",
+  "subServiceAppRejectEmail@15drleec.mailosaur.net",
+  "EUWithoutService@kkzcdtax.mailosaur.net",
+  "EUSingleOrgAndService@wrbq8cav.mailosaur.net",
+  "EUMultipleOrgs@fdued2l8.mailosaur.net",
+  "serviceEURejectEmail@hgrooduz.mailosaur.net",
+  "serviceEUApproveReqTab@sbfcrmhg.mailosaur.net",
+  "serviceEURejectReqTab@kgvaucbu.mailosaur.net",
+  "serviceAppRejectReqTab@tn0dugc9.mailosaur.net",
+  "testendusersubservice.9aszydft@mailosaur.io",
+  "euOrgWithoutServices@bauzymzt.mailosaur.net",
+  "appAndEU@i7wb7azb.mailosaur.net",
+  "inviteExistingUser@nlj6vcro.mailosaur.net",
+  "supportDeactivateUser@jmznvbbf.mailosaur.net",
+  "editPermissionLevel@zxdqaesn.mailosaur.net",
+  "profileApprover@crkzek9j.mailosaur.net",
+  "viewUserRequests@xseqyvvo.mailosaur.net",
+  "deactivatedUser@iyvlbgpw.mailosaur.net",
+  "subServiceAppApproveReqTab@eduxa11m.mailosaur.net",
+  "subServiceEUApproveReqTab@j6lzbotn.mailosaur.net",
+  "subServiceEURejectReqTab@9aszydft.mailosaur.net",
+  "subServiceAppRejectReqTab@w1ey0cjl.mailosaur.net",
+  "bulkDeactivateApprover@aisgnctr.mailosaur.net",
+  "bulkDeactvateUser-1@aisgnctr.mailosaur.net",
+  "bulkDeactvateUser-2@aisgnctr.mailosaur.net",
+  "bulkDeactvateUser-3@aisgnctr.mailosaur.net",
+  "forgotPassword@8ao8anxd.mailosaur.net",
+  "forgotPasswordErrors@rusqjd5o.mailosaur.net",
+  "ChangeEmailWithoutLogin@lwrukdnj.mailosaur.net",
+  "ChangeEmailWithoutLogin-1@lwrukdnj.mailosaur.net",
+  "invitedTestUser@nlj6vcro.mailosaur.net",
+  "entraforgotpassword.aqijm9ax@mailosaur.net",
+  "changeEmailEntra@qirq1l7a.mailosaur.net",
+  "entraSignin@aisgnctr.mailosaur.net",
+  "manageSearchUser@cmjqr90v.mailosaur.net",
+  "supportUser@gzx54sm8.mailosaur.net",
+  "supportInviteUser@if5yqdg4.mailosaur.net",
+  "changeEmail@lwrukdnj.mailosaur.net",
+  "changeEmailErrors@mbdh9cts.mailosaur.net",
+  "endServiceUser@qokfns6g.mailosaur.net",
+];
+
+/**
  * The latest deactivation reason date for a user, or SQL NULL if they have no
  * `user_status_change_reasons` row (see NSA-9963/NSA-9964).
  */
@@ -87,7 +151,8 @@ const USED_NO_SIGNAL_FALLBACK_EXPRESSION = `CASE WHEN ${ELIGIBILITY_DATE_EXPRESS
 /**
  * Finds deactivated accounts with no `user_status_change_reasons` row and no `deactivated_at`
  * value - i.e. no reliable historical deactivation signal at all - whose `last_login` is within
- * the last 3 months.
+ * the last 3 months. Excludes {@link EXCLUDED_TEST_ACCOUNT_EMAILS}, so protected QA accounts never
+ * get a proxy date backfilled either.
  *
  * Per NSA-9963/NSA-10047: these accounts are retained rather than deleted, but their
  * `deactivated_at` is backfilled from `last_login` as a proxy so they graduate onto the standard
@@ -105,6 +170,7 @@ async function getAccountsNeedingProxyDeactivationDate(): Promise<
       [Op.and]: [
         { status: 0 },
         { deactivatedAt: null },
+        { email: { [Op.notIn]: EXCLUDED_TEST_ACCOUNT_EMAILS } },
         {
           lastLogin: {
             [Op.gte]: Sequelize.literal("DATEADD(MONTH, -3, GETDATE())"),
@@ -149,7 +215,8 @@ async function stampProxyDeactivationDates(
  * the latest `user_status_change_reasons` row or `deactivated_at` where available; or, for
  * accounts with neither (no reliable historical deactivation signal at all), immediately eligible
  * per the NSA-10047 no-signal fallback - {@link stampProxyDeactivationDates} has already excluded
- * any of these with a recent `last_login` before this runs.
+ * any of these with a recent `last_login` before this runs. Excludes
+ * {@link EXCLUDED_TEST_ACCOUNT_EMAILS} regardless of which path would otherwise apply.
  *
  * @param batchCap - The maximum number of candidates to return in one run.
  * @returns A promise containing the eligible {@link deletionCandidate} users, oldest-eligible-first
@@ -176,6 +243,7 @@ async function getEligibleUsers(
     where: {
       [Op.and]: [
         { status: 0 },
+        { email: { [Op.notIn]: EXCLUDED_TEST_ACCOUNT_EMAILS } },
         Sequelize.literal(
           `(${ELIGIBILITY_DATE_EXPRESSION} IS NULL OR ${ELIGIBILITY_DATE_EXPRESSION} < DATEADD(MONTH, -12, GETDATE()))`,
         ),

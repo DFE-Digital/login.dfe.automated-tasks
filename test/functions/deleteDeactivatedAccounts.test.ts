@@ -157,10 +157,99 @@ describe("Delete deactivated accounts automated task", () => {
           [undefined, "usedNoSignalFallback"],
         ],
         where: {
-          [Op.and]: [{ status: 0 }, undefined],
+          [Op.and]: [
+            { status: 0 },
+            {
+              email: {
+                [Op.notIn]: expect.arrayContaining([
+                  "deactivatedUser@iyvlbgpw.mailosaur.net",
+                  "testdsisignin@n0n3fzi0.mailosaur.net",
+                ]),
+              },
+            },
+            undefined,
+          ],
         },
         limit: 500,
       }),
+    );
+  });
+
+  it("it excludes exactly the 55 protected QA automation account emails from NSA-9838's final list (comment 79122)", async () => {
+    await deleteDeactivatedAccounts({} as Timer, new InvocationContext());
+
+    const call = userMock.findAll.mock.calls.find(
+      (args) => args[0]?.attributes?.[0] === "id",
+    );
+    expect(call).toBeDefined();
+    const whereAnd = call?.[0]?.where?.[Op.and] as unknown[];
+    const emailCondition = whereAnd.find(
+      (condition): condition is { email: { [key: symbol]: string[] } } =>
+        typeof condition === "object" &&
+        condition !== null &&
+        "email" in condition,
+    );
+    const excludedEmails = emailCondition?.email[Op.notIn];
+
+    expect(excludedEmails).toHaveLength(55);
+    expect(excludedEmails).toEqual(
+      expect.arrayContaining([
+        "testdsisignin@n0n3fzi0.mailosaur.net",
+        "manageUser@qnnm4siw.mailosaur.net",
+        "orgApproverReqTab@lx9ykkqg.mailosaur.net",
+        "orgApproverEmail@lx9ykkqg.mailosaur.net",
+        "orgApproverEmail-1@lx9ykkqg.mailosaur.net",
+        "euReqOrg@pohzxoae.mailosaur.net",
+        "serviceAppApproveReqTab@exgy7050.mailosaur.net",
+        "testdsisignin+23@gmail.com",
+        "serviceAppRejectEmail@wjk35nmg.mailosaur.net",
+        "serviceAppApproveEmail@5bbklcsg.mailosaur.net",
+        "serviceAppApproveEmail-1@5bbklcsg.mailosaur.net",
+        "oneOrgApprover@kocb2hr7.mailosaur.net",
+        "subServiceEURejectEmail@t2jax9at.mailosaur.net",
+        "subServiceEUApproveEmail@jayrhfhu.mailosaur.net",
+        "subServiceAppApproveEmail@6306lc72.mailosaur.net",
+        "subServiceAppApproveEmail-1@6306lc72.mailosaur.net",
+        "subServiceAppRejectEmail@15drleec.mailosaur.net",
+        "EUWithoutService@kkzcdtax.mailosaur.net",
+        "EUSingleOrgAndService@wrbq8cav.mailosaur.net",
+        "EUMultipleOrgs@fdued2l8.mailosaur.net",
+        "serviceEURejectEmail@hgrooduz.mailosaur.net",
+        "serviceEUApproveReqTab@sbfcrmhg.mailosaur.net",
+        "serviceEURejectReqTab@kgvaucbu.mailosaur.net",
+        "serviceAppRejectReqTab@tn0dugc9.mailosaur.net",
+        "testendusersubservice.9aszydft@mailosaur.io",
+        "euOrgWithoutServices@bauzymzt.mailosaur.net",
+        "appAndEU@i7wb7azb.mailosaur.net",
+        "inviteExistingUser@nlj6vcro.mailosaur.net",
+        "supportDeactivateUser@jmznvbbf.mailosaur.net",
+        "editPermissionLevel@zxdqaesn.mailosaur.net",
+        "profileApprover@crkzek9j.mailosaur.net",
+        "viewUserRequests@xseqyvvo.mailosaur.net",
+        "deactivatedUser@iyvlbgpw.mailosaur.net",
+        "subServiceAppApproveReqTab@eduxa11m.mailosaur.net",
+        "subServiceEUApproveReqTab@j6lzbotn.mailosaur.net",
+        "subServiceEURejectReqTab@9aszydft.mailosaur.net",
+        "subServiceAppRejectReqTab@w1ey0cjl.mailosaur.net",
+        "bulkDeactivateApprover@aisgnctr.mailosaur.net",
+        "bulkDeactvateUser-1@aisgnctr.mailosaur.net",
+        "bulkDeactvateUser-2@aisgnctr.mailosaur.net",
+        "bulkDeactvateUser-3@aisgnctr.mailosaur.net",
+        "forgotPassword@8ao8anxd.mailosaur.net",
+        "forgotPasswordErrors@rusqjd5o.mailosaur.net",
+        "ChangeEmailWithoutLogin@lwrukdnj.mailosaur.net",
+        "ChangeEmailWithoutLogin-1@lwrukdnj.mailosaur.net",
+        "invitedTestUser@nlj6vcro.mailosaur.net",
+        "entraforgotpassword.aqijm9ax@mailosaur.net",
+        "changeEmailEntra@qirq1l7a.mailosaur.net",
+        "entraSignin@aisgnctr.mailosaur.net",
+        "manageSearchUser@cmjqr90v.mailosaur.net",
+        "supportUser@gzx54sm8.mailosaur.net",
+        "supportInviteUser@if5yqdg4.mailosaur.net",
+        "changeEmail@lwrukdnj.mailosaur.net",
+        "changeEmailErrors@mbdh9cts.mailosaur.net",
+        "endServiceUser@qokfns6g.mailosaur.net",
+      ]),
     );
   });
 
@@ -200,6 +289,14 @@ describe("Delete deactivated accounts automated task", () => {
           [Op.and]: [
             { status: 0 },
             { deactivatedAt: null },
+            {
+              email: {
+                [Op.notIn]: expect.arrayContaining([
+                  "deactivatedUser@iyvlbgpw.mailosaur.net",
+                  "testdsisignin@n0n3fzi0.mailosaur.net",
+                ]),
+              },
+            },
             { lastLogin: { [Op.gte]: undefined } },
             undefined,
           ],
