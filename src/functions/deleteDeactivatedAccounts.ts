@@ -30,7 +30,7 @@ import { Client } from "@microsoft/microsoft-graph-client";
 /**
  * API clients used throughout this function.
  */
-type apiClients = {
+export type apiClients = {
   access: Access;
   directories: Directories;
   organisations: Organisations;
@@ -41,14 +41,14 @@ type apiClients = {
  * the NSA-10047 no-signal fallback (no `user_status_change_reasons` row and no `deactivated_at`)
  * rather than a real 12-month clock.
  */
-type deletionCandidate = Pick<User, "id" | "email" | "entraId"> & {
+export type deletionCandidate = Pick<User, "id" | "email" | "entraId"> & {
   usedNoSignalFallback: boolean;
 };
 
 /**
  * Records returned for a user from our APIs.
  */
-type userApiRecords = {
+export type userApiRecords = {
   services: userServiceRecord[];
   organisations: userOrganisationRecord[];
 };
@@ -56,7 +56,7 @@ type userApiRecords = {
 /**
  * The reason for deactivation.
  */
-const DELETION_REASON =
+export const DELETION_REASON =
   "Automated task - Account deactivated for 12 months or more.";
 
 /**
@@ -65,7 +65,7 @@ const DELETION_REASON =
  * environments. Final list from NSA-9838 (Sahithi Dondeti, comment dated 2026-10-23, "Final List
  * from all environments"), superseding the shorter list requested earlier on the same ticket.
  */
-const EXCLUDED_TEST_ACCOUNT_EMAILS = [
+export const EXCLUDED_TEST_ACCOUNT_EMAILS = [
   "testdsisignin@n0n3fzi0.mailosaur.net",
   "manageUser@qnnm4siw.mailosaur.net",
   "orgApproverReqTab@lx9ykkqg.mailosaur.net",
@@ -262,7 +262,7 @@ async function getEligibleUsers(
  * @param correlationId - Correlation ID to be passed with API requests.
  * @returns A promise containing the API records for the requested user {@link userApiRecords}.
  */
-async function getUserApiRecords(
+export async function getUserApiRecords(
   apis: apiClients,
   userId: string,
   correlationId: string,
@@ -309,7 +309,7 @@ async function getUserApiRecords(
  * @param correlationId - Correlation ID to be passed with API requests.
  * @returns A promise containing the results of the API removals {@link actionResult}.
  */
-async function deleteUserApiRecords(
+export async function deleteUserApiRecords(
   apis: apiClients,
   userId: string,
   apiRecords: userApiRecords,
@@ -385,7 +385,7 @@ async function deleteUserApiRecords(
  *
  * @throws Error if any Graph API responses are not successful or 404 failures.
  */
-async function deleteUserEntraRecords(
+export async function deleteUserEntraRecords(
   userEntraIds: string[],
   entraClient: Client,
 ): Promise<void> {
@@ -421,7 +421,7 @@ async function deleteUserEntraRecords(
  *
  * @param userIds - IDs of users to delete database records for.
  */
-async function deleteUserDbRecords(userIds: string[]): Promise<void> {
+export async function deleteUserDbRecords(userIds: string[]): Promise<void> {
   const destroyByUserId = { where: { userId: userIds } };
 
   const passwordHistoryLinks: Pick<UserPasswordHistory, "passwordHistoryId">[] =
@@ -457,15 +457,26 @@ async function deleteUserDbRecords(userIds: string[]): Promise<void> {
 const LOG_SAMPLE_SIZE = 15;
 
 /**
+ * A minimal logger shape satisfied by both Azure Functions' {@link InvocationContext} and the
+ * global `console`, so shared deletion logic can run identically from a Timer function or a
+ * manually-run script (e.g. NSA-10119).
+ */
+export type BatchLogger = {
+  info: (message: string) => void;
+};
+
+/**
  * Logs a capped, comma-separated sample of account email/ID pairs, so testers can spot-check
  * specific accounts against the database without needing to query the audit log.
  *
- * @param context - Azure function {@link InvocationContext} to log to.
+ * @param logger - Where to log the sample to.
+ * @param logPrefix - Prefix identifying the caller, matching its other log lines.
  * @param verb - Past-tense verb describing what happened to these accounts (e.g. "Deleted").
  * @param accounts - The accounts to summarise.
  */
-function logAccountSample(
-  context: InvocationContext,
+export function logAccountSample(
+  logger: BatchLogger,
+  logPrefix: string,
   verb: string,
   accounts: { id: string; email: string }[],
 ): void {
@@ -479,8 +490,8 @@ function logAccountSample(
   const sample = summaries.slice(0, LOG_SAMPLE_SIZE).join(", ");
   const remaining = summaries.length - LOG_SAMPLE_SIZE;
 
-  context.info(
-    `deleteDeactivatedAccounts: ${verb} ${accounts.length} accounts in this run. First ${Math.min(LOG_SAMPLE_SIZE, accounts.length)} for spot-checking: ${sample}${remaining > 0 ? ` (and ${remaining} more)` : ""}`,
+  logger.info(
+    `${logPrefix}: ${verb} ${accounts.length} accounts in this run. First ${Math.min(LOG_SAMPLE_SIZE, accounts.length)} for spot-checking: ${sample}${remaining > 0 ? ` (and ${remaining} more)` : ""}`,
   );
 }
 
@@ -564,7 +575,12 @@ export async function deleteDeactivatedAccounts(
       context.info(
         "deleteDeactivatedAccounts: [DRY RUN] Completed - no accounts were deleted",
       );
-      logAccountSample(context, "Would delete", users);
+      logAccountSample(
+        context,
+        "deleteDeactivatedAccounts",
+        "Would delete",
+        users,
+      );
       return;
     }
 
@@ -668,7 +684,12 @@ export async function deleteDeactivatedAccounts(
       }
     }
 
-    logAccountSample(context, "Deleted", deletedAccounts);
+    logAccountSample(
+      context,
+      "deleteDeactivatedAccounts",
+      "Deleted",
+      deletedAccounts,
+    );
   } catch (error) {
     throw new Error(`deleteDeactivatedAccounts: ${error.message}`);
   }
