@@ -105,16 +105,6 @@ Each function is registered in `src/index.ts` and configured with:
 
 > **Testing `deleteDeactivatedAccounts` safely:** this is the only automated task that permanently deletes account data (DB rows + Entra ID records) with no undo. When testing against a lower environment: (1) leave `DRY_RUN_DELETE_DEACTIVATED_ACCOUNTS` as `"true"` and use "Execute Function Now" — the run log and the audit entries it writes (`subType: "account-deletion-dry-run"`) show exactly which accounts, and how many via each eligibility path, would be deleted; (2) only once that output looks correct, set the flag to `"false"` with a small `DELETE_DEACTIVATED_ACCOUNTS_BATCH_CAP` and re-run against a small number of known test accounts before trusting it against a full dataset.
 
-## Manual Scripts
-
-Standalone scripts under `scripts/` that are deliberately **not** wired up as scheduled Azure Functions — they're built for an engineer to run on demand, and aren't registered in `src/index.ts`.
-
-- `scripts/deleteNoSignalStaleAccounts.ts` (NSA-10119):
-  - Run with: `npm run build && npm run delete-no-signal-stale-accounts`
-  - Description: deletes deactivated accounts with no `user_status_change_reasons` row, no `deactivated_at`, and a `last_login` 3+ months old (or none at all) — the specific low-risk cohort Jane approved for immediate deletion (NSA-9963), ahead of the rest of the ~157k backlog's normal rollout through the monthly `deleteDeactivatedAccounts` job. Deliberately scoped narrower than that job's own eligibility query: it excludes any account with a reason row or a `deactivated_at` value (even an old one), so it never touches accounts the monthly job is already handling. Reuses the exact same deletion mechanics (API associations, Entra ID, directories DB records) as `deleteDeactivatedAccounts`.
-  - Needs the same environment variables as any other function in this app (`DATABASE_DIRECTORIES_*`, `ENTRA_*`, `API_INTERNAL_*`, `AUDIT_CONNECTION_STRING`, `AUDIT_TOPIC_NAME` — see the table in [Running any functions locally](#running-any-functions-locally)) present in `process.env` when it runs — export them in your shell, or run via a tool that loads `local.settings.json`/an `.env` file into the environment first.
-  - `DELETE_NO_SIGNAL_STALE_ACCOUNTS_DRY_RUN` (default `true`, same convention as the automated job — only the literal string `"false"` disables it) and `DELETE_NO_SIGNAL_STALE_ACCOUNTS_BATCH_SIZE` (default `1000`, per Jane's ~500–1000-per-batch request) control each run. Run it again for the next batch — there's no built-in scheduling or auto-continuation, that pacing is the point, so the team can watch for a support ticket spike between batches.
-
 ## Local Debugging
 
 To ease local running/debugging of these functions, please install the recommended VSCode extensions:
