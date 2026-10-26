@@ -131,7 +131,8 @@ async function stampProxyDeactivationDates(
 
   if (accounts.length > 0) {
     await User.update(
-      { deactivatedAt: Sequelize.col("lastLogin") },
+      // Sequelize.col takes the database column name, not the model attribute name.
+      { deactivatedAt: Sequelize.col("last_login") },
       { where: { id: accounts.map((account) => account.id) } },
     );
   }

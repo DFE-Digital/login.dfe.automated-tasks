@@ -1,5 +1,5 @@
 import { InvocationContext, Timer } from "@azure/functions";
-import { Op } from "sequelize";
+import { Op, Sequelize } from "sequelize";
 import {
   generateUsers,
   generateUserOrganisations,
@@ -222,6 +222,16 @@ describe("Delete deactivated accounts automated task", () => {
           where: { id: accountsNeedingStamp.map((account) => account.id) },
         },
       );
+    });
+
+    it("it references the last_login database column, not the lastLogin model attribute", async () => {
+      userMock.findAll.mockResolvedValueOnce([
+        { id: "user-1" },
+      ] as unknown as User[]);
+
+      await deleteDeactivatedAccounts({} as Timer, new InvocationContext());
+
+      expect(Sequelize.col).toHaveBeenCalledWith("last_login");
     });
 
     it("it logs how many accounts were stamped", async () => {
