@@ -147,6 +147,7 @@ describe("Delete deactivated accounts automated task", () => {
 
     expect(userMock.findAll).toHaveBeenCalledWith(
       expect.objectContaining({
+        raw: true,
         // Sequelize is auto-mocked, so Sequelize.literal(...) resolves to undefined here -
         // matches how deactivateUnusedAccounts.test.ts asserts nested Sequelize.fn calls.
         attributes: [

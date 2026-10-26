@@ -158,7 +158,12 @@ async function stampProxyDeactivationDates(
 async function getEligibleUsers(
   batchCap: number,
 ): Promise<deletionCandidate[]> {
+  // raw: true is required - without it, findAll() returns Model instances, and
+  // usedNoSignalFallback (a computed literal column, not part of the User model's
+  // declared attributes) lands in the instance's dataValues but has no direct-property
+  // getter, so `user.usedNoSignalFallback` reads as undefined regardless of its real value.
   return (await User.findAll({
+    raw: true,
     attributes: [
       "id",
       "email",
