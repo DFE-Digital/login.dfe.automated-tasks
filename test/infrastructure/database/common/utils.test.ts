@@ -1,5 +1,6 @@
 import { DataTypes, Sequelize } from "sequelize";
 import {
+  initialiseAccountDeletionModels,
   initialiseAllInvitationModels,
   initialiseAllUserModels,
 } from "../../../../src/infrastructure/database/common/utils";
@@ -22,6 +23,10 @@ import {
 import { initialiseUserBanner } from "../../../../src/infrastructure/database/organisations/UserBanner";
 import { initialiseUserOrganisationRequest } from "../../../../src/infrastructure/database/organisations/UserOrganisationRequest";
 import { initialiseUserServiceRequest } from "../../../../src/infrastructure/database/organisations/UserServiceRequest";
+import { initialiseUserStatusChangeReason } from "../../../../src/infrastructure/database/directories/UserStatusChangeReason";
+import { initialiseUserLegacyUsername } from "../../../../src/infrastructure/database/directories/UserLegacyUsername";
+import { initialisePasswordHistory } from "../../../../src/infrastructure/database/directories/PasswordHistory";
+import { initialiseUserPasswordHistory } from "../../../../src/infrastructure/database/directories/UserPasswordHistory";
 
 jest.mock("sequelize");
 jest.mock("../../../../src/infrastructure/database/directories/User");
@@ -38,6 +43,18 @@ jest.mock(
 );
 jest.mock(
   "../../../../src/infrastructure/database/organisations/UserServiceRequest",
+);
+jest.mock(
+  "../../../../src/infrastructure/database/directories/UserStatusChangeReason",
+);
+jest.mock(
+  "../../../../src/infrastructure/database/directories/UserLegacyUsername",
+);
+jest.mock(
+  "../../../../src/infrastructure/database/directories/PasswordHistory",
+);
+jest.mock(
+  "../../../../src/infrastructure/database/directories/UserPasswordHistory",
 );
 
 describe("Cross-database utility functions", () => {
@@ -105,6 +122,24 @@ describe("Cross-database utility functions", () => {
       expect(InvitationCallback.belongsTo).toHaveBeenCalledWith(Invitation, {
         as: "invitation",
       });
+    });
+  });
+
+  describe("initialiseAccountDeletionModels", () => {
+    const directoriesDb = new Sequelize();
+
+    it("it initialises the User model and every model needed to permanently delete an account, using the directories database connection", () => {
+      initialiseAccountDeletionModels(directoriesDb);
+
+      expect(initialiseUser).toHaveBeenCalledWith(directoriesDb);
+      expect(initialiseUserPasswordPolicy).toHaveBeenCalledWith(directoriesDb);
+      expect(initialiseUserStatusChangeReason).toHaveBeenCalledWith(
+        directoriesDb,
+      );
+      expect(initialiseUserLegacyUsername).toHaveBeenCalledWith(directoriesDb);
+      expect(initialisePasswordHistory).toHaveBeenCalledWith(directoriesDb);
+      expect(initialiseUserPasswordHistory).toHaveBeenCalledWith(directoriesDb);
+      expect(initialiseInvitation).toHaveBeenCalledWith(directoriesDb);
     });
   });
 });

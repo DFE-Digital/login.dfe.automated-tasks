@@ -90,6 +90,9 @@ Each function is registered in `src/index.ts` and configured with:
 - `deactivateUnusedAccounts`:
   - Default Timer: Midnight on the first day of every month.
   - Description: Deactivates and creates audit records for any users whose last login is older than 2 years from the current run date, or if their account was created over 2 years from the current run date and they never logged in since verifying their email address.
+- `deleteDeactivatedAccounts`:
+  - Default Timer: 2am on the first day of every month (offset from `deactivateUnusedAccounts`/`removeUnresolvedInvitations` to avoid contention).
+  - Description: Permanently deletes accounts deactivated for 12+ months, from the directories database, organisation/service associations, and Entra ID. Eligibility uses the latest `user_status_change_reasons` row, falling back to the account's `deactivated_at` column for accounts with neither. Before checking eligibility, the run backfills `deactivated_at` (from `last_login`) for accounts with no reason row and no `deactivated_at` value *and* a `last_login` within the last 3 months - these are retained rather than deleted this run, but graduate onto the standard `deactivated_at` + 12 months clock from that backfilled value. Accounts with no reason row, no `deactivated_at`, and a `last_login` older than 3 months (or none at all) have no reliable historical deactivation signal at all, so they're immediately eligible for deletion this run instead of waiting (see NSA-9963/NSA-10047). Runs in dry-run mode (audits candidates, deletes nothing) unless `DRY_RUN_DELETE_DEACTIVATED_ACCOUNTS` is explicitly `"false"`, and processes at most `DELETE_DEACTIVATED_ACCOUNTS_BATCH_CAP` candidates per run. The `deactivated_at` backfill itself always runs, even in dry-run mode, since it's data capture rather than deletion.
 - `rejectOldOrganisationRequests`:
   - Default Timer: Midnight on every Monday.
   - Description: Rejects any organisation requests that are overdue or have no approvers, and were created over 3 months ago.
@@ -99,6 +102,8 @@ Each function is registered in `src/index.ts` and configured with:
 - `removeUnresolvedInvitations`:
   - Default Timer: Midnight on the first day of every month.
   - Description: Removes invitations that have not been completed in the past 3 months, where no user is linked to them (manually in the DB) and they are not deactivated.
+
+> **Testing `deleteDeactivatedAccounts` safely:** this is the only automated task that permanently deletes account data (DB rows + Entra ID records) with no undo. When testing against a lower environment: (1) leave `DRY_RUN_DELETE_DEACTIVATED_ACCOUNTS` as `"true"` and use "Execute Function Now" — the run log and the audit entries it writes (`subType: "account-deletion-dry-run"`) show exactly which accounts, and how many via each eligibility path, would be deleted; (2) only once that output looks correct, set the flag to `"false"` with a small `DELETE_DEACTIVATED_ACCOUNTS_BATCH_CAP` and re-run against a small number of known test accounts before trusting it against a full dataset.
 
 ## Local Debugging
 
@@ -121,9 +126,12 @@ To ease local running/debugging of these functions, please install the recommend
     "AzureFunctionsJobHost__logging__logLevel__default": "Trace",
     "DEBUG": "true",
     "TIMER_DEACTIVATE_UNUSED_ACCOUNTS": "0 0 0 1 * *",
+    "TIMER_DELETE_DEACTIVATED_ACCOUNTS": "0 0 2 1 * *",
     "TIMER_REJECT_OLD_ORGANISATION_REQUESTS": "0 0 0 * * 1",
     "TIMER_REMOVE_GENERATED_TEST_ACCOUNTS": "0 0 0 * * 1",
     "TIMER_REMOVE_UNRESOLVED_INVITATIONS": "0 0 0 1 * *",
+    "DRY_RUN_DELETE_DEACTIVATED_ACCOUNTS": "true",
+    "DELETE_DEACTIVATED_ACCOUNTS_BATCH_CAP": "10",
     "API_INTERNAL_ACCESS_HOST": "",
     "API_INTERNAL_DIRECTORIES_HOST": "",
     "API_INTERNAL_ORGANISATIONS_HOST": "",
@@ -170,6 +178,9 @@ To ease local running/debugging of these functions, please install the recommend
 | AzureFunctionsJobHost__logging__logLevel__default | Sets the log level for the locally running functions, to set what is shown/hidden in the debug console. | Change to one of the following values: `Trace`, `Debug`, `Information`, `Warning`, `Error`, `Critical`. | `Trace` |
 | DEBUG | Turns on additional logging for sequelize, lowers the log level for MSAL to info instead of error, and connects to service bus via Websockets to get around the VPN all to assist with debugging issues. | Simple toggle, change to `false` to disable additional logging. | `true` |
 | TIMER_DEACTIVATE_UNUSED_ACCOUNTS | The NCronTab expression that sets the schedule for the `deactivateUnusedAccounts` function (`./src/functions/deactivateUnusedAccounts`). | Read the [documentation on NCrontab formatting](https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-timer?tabs=python-v2%2Cisolated-process%2Cnodejs-v4&pivots=programming-language-typescript#ncrontab-expressions) and use a [tester](https://ncrontab.swimburger.net/) to verify your expression runs as you'd expect. | `0 0 0 1 * *` Runs at 12AM UTC on the first day of every month. |
+| TIMER_DELETE_DEACTIVATED_ACCOUNTS | The NCronTab expression that sets the schedule for the `deleteDeactivatedAccounts` function (`./src/functions/deleteDeactivatedAccounts`). | Read the [documentation on NCrontab formatting](https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-timer?tabs=python-v2%2Cisolated-process%2Cnodejs-v4&pivots=programming-language-typescript#ncrontab-expressions) and use a [tester](https://ncrontab.swimburger.net/) to verify your expression runs as you'd expect. | `0 0 2 1 * *` Runs at 2AM UTC on the first day of every month. |
+| DRY_RUN_DELETE_DEACTIVATED_ACCOUNTS | Whether `deleteDeactivatedAccounts` only audits candidates (`true`, default) or actually deletes them (`false`). Always test with this `true` first against a lower environment's data before ever setting it to `false`. | Simple toggle, only `"false"` disables dry-run — any other value (including unset) keeps it on. | `"true"` |
+| DELETE_DEACTIVATED_ACCOUNTS_BATCH_CAP | The maximum number of candidates `deleteDeactivatedAccounts` processes in one run; leftover candidates roll into the next run. Keep this small while testing locally. | Any positive integer. | `2000` |
 | TIMER_REJECT_OLD_ORGANISATION_REQUESTS | The NCronTab expression that sets the schedule for the `rejectOldOrganisationRequests` function (`./src/functions/rejectOldOrganisationRequests`). | Read the [documentation on NCrontab formatting](https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-timer?tabs=python-v2%2Cisolated-process%2Cnodejs-v4&pivots=programming-language-typescript#ncrontab-expressions) and use a [tester](https://ncrontab.swimburger.net/) to verify your expression runs as you'd expect. | `0 0 0 * * 1` Runs at 12AM UTC on every Monday. |
 | TIMER_REMOVE_GENERATED_TEST_ACCOUNTS | The NCronTab expression that sets the schedule for the `removeGeneratedTestAccounts` function (`./src/functions/removeGeneratedTestAccounts`). | Read the [documentation on NCrontab formatting](https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-timer?tabs=python-v2%2Cisolated-process%2Cnodejs-v4&pivots=programming-language-typescript#ncrontab-expressions) and use a [tester](https://ncrontab.swimburger.net/) to verify your expression runs as you'd expect. | `0 0 0 * * 1` Runs at 12AM UTC on every Monday. |
 | TIMER_REMOVE_UNRESOLVED_INVITATIONS | The NCronTab expression that sets the schedule for the `removeUnresolvedInvitations` function (`./src/functions/removeUnresolvedInvitations`). | Read the [documentation on NCrontab formatting](https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-timer?tabs=python-v2%2Cisolated-process%2Cnodejs-v4&pivots=programming-language-typescript#ncrontab-expressions) and use a [tester](https://ncrontab.swimburger.net/) to verify your expression runs as you'd expect. | `0 0 0 1 * *` Runs at 12AM UTC on the first day of every month. |
