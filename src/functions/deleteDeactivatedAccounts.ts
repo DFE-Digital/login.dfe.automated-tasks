@@ -384,6 +384,39 @@ async function deleteUserDbRecords(userIds: string[]): Promise<void> {
 }
 
 /**
+ * The number of account email/ID pairs to include in the spot-check log sample.
+ */
+const LOG_SAMPLE_SIZE = 15;
+
+/**
+ * Logs a capped, comma-separated sample of account email/ID pairs, so testers can spot-check
+ * specific accounts against the database without needing to query the audit log.
+ *
+ * @param context - Azure function {@link InvocationContext} to log to.
+ * @param verb - Past-tense verb describing what happened to these accounts (e.g. "Deleted").
+ * @param accounts - The accounts to summarise.
+ */
+function logAccountSample(
+  context: InvocationContext,
+  verb: string,
+  accounts: { id: string; email: string }[],
+): void {
+  if (accounts.length === 0) {
+    return;
+  }
+
+  const summaries = accounts.map(
+    (account) => `${account.email} (${account.id.toUpperCase()})`,
+  );
+  const sample = summaries.slice(0, LOG_SAMPLE_SIZE).join(", ");
+  const remaining = summaries.length - LOG_SAMPLE_SIZE;
+
+  context.info(
+    `deleteDeactivatedAccounts: ${verb} ${accounts.length} accounts in this run. First ${Math.min(LOG_SAMPLE_SIZE, accounts.length)} for spot-checking: ${sample}${remaining > 0 ? ` (and ${remaining} more)` : ""}`,
+  );
+}
+
+/**
  * Permanently deletes accounts that have been deactivated for 12 months or more, from the
  * directories/organisations databases and Microsoft Entra ID.
  *
@@ -463,8 +496,11 @@ export async function deleteDeactivatedAccounts(
       context.info(
         "deleteDeactivatedAccounts: [DRY RUN] Completed - no accounts were deleted",
       );
+      logAccountSample(context, "Would delete", users);
       return;
     }
+
+    const deletedAccounts: { id: string; email: string }[] = [];
 
     for (let index = 0; index < users.length; index += batchSize) {
       const batch = users.slice(index, index + batchSize);
@@ -554,8 +590,17 @@ export async function deleteDeactivatedAccounts(
             },
           })),
         );
+
+        deletedAccounts.push(
+          ...successful.objects.map((user) => ({
+            id: user.id,
+            email: user.email,
+          })),
+        );
       }
     }
+
+    logAccountSample(context, "Deleted", deletedAccounts);
   } catch (error) {
     throw new Error(`deleteDeactivatedAccounts: ${error.message}`);
   }

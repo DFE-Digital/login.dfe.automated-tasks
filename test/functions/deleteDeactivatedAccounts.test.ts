@@ -359,6 +359,41 @@ describe("Delete deactivated accounts automated task", () => {
 
       expect(auditLoggerMock.prototype.batchedLog).not.toHaveBeenCalled();
     });
+
+    it("it logs a spot-check sample of accounts that would be deleted", async () => {
+      const users = generateUsers(2);
+      userMock.findAll.mockResolvedValue(users);
+
+      await deleteDeactivatedAccounts({} as Timer, new InvocationContext());
+
+      expect(contextMock.prototype.info).toHaveBeenCalledWith(
+        `deleteDeactivatedAccounts: Would delete 2 accounts in this run. First 2 for spot-checking: ${users[0].email} (${users[0].id.toUpperCase()}), ${users[1].email} (${users[1].id.toUpperCase()})`,
+      );
+    });
+
+    it("it caps the spot-check sample at 15 accounts and notes how many more there were", async () => {
+      const users = generateUsers(20);
+      userMock.findAll.mockResolvedValue(users);
+
+      await deleteDeactivatedAccounts({} as Timer, new InvocationContext());
+
+      const expectedSample = users
+        .slice(0, 15)
+        .map((user) => `${user.email} (${user.id.toUpperCase()})`)
+        .join(", ");
+      expect(contextMock.prototype.info).toHaveBeenCalledWith(
+        `deleteDeactivatedAccounts: Would delete 20 accounts in this run. First 15 for spot-checking: ${expectedSample} (and 5 more)`,
+      );
+    });
+
+    it("it does not log a spot-check sample if there are no eligible candidates", async () => {
+      userMock.findAll.mockResolvedValue([]);
+      await deleteDeactivatedAccounts({} as Timer, new InvocationContext());
+
+      expect(contextMock.prototype.info).not.toHaveBeenCalledWith(
+        expect.stringContaining("Would delete"),
+      );
+    });
   });
 
   describe("live mode", () => {
@@ -492,6 +527,28 @@ describe("Delete deactivated accounts automated task", () => {
 
       expect(userMock.destroy).not.toHaveBeenCalled();
       expect(auditLoggerMock.prototype.batchedLog).not.toHaveBeenCalled();
+    });
+
+    it("it logs a spot-check sample of the accounts actually deleted across all batches", async () => {
+      const users = generateUsers(2, { status: 0 });
+      userMock.findAll.mockResolvedValue(users);
+
+      await deleteDeactivatedAccounts({} as Timer, new InvocationContext());
+
+      expect(contextMock.prototype.info).toHaveBeenCalledWith(
+        `deleteDeactivatedAccounts: Deleted 2 accounts in this run. First 2 for spot-checking: ${users[0].email} (${users[0].id.toUpperCase()}), ${users[1].email} (${users[1].id.toUpperCase()})`,
+      );
+    });
+
+    it("it does not log a spot-check sample if no accounts were successfully deleted", async () => {
+      userMock.findAll.mockResolvedValue(generateUsers(1, { status: 0 }));
+      directoriesMock.prototype.deleteUserCode.mockResolvedValue(false);
+
+      await deleteDeactivatedAccounts({} as Timer, new InvocationContext());
+
+      expect(contextMock.prototype.info).not.toHaveBeenCalledWith(
+        expect.stringContaining("Deleted"),
+      );
     });
   });
 });
