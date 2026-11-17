@@ -96,6 +96,15 @@ describe("User database model", () => {
             type: DataTypes.DATE,
             field: "entra_linked",
           },
+          isInternalUser: {
+            type: DataTypes.BOOLEAN,
+            field: "is_internal_user",
+            allowNull: false,
+          },
+          entraDeferUntil: {
+            type: DataTypes.DATE,
+            field: "entra_defer_until",
+          },
         },
         {
           tableName: "user",
